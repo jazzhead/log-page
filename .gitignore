@@ -1,0 +1,4 @@
+*.scpt
+*.scptd
+*.app
+build/
