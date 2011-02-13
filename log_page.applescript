@@ -47,6 +47,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 	TODO: Change the following local-only config before any public release.
 	The log file should be: $GTD_IN/logs/urls/urls.YYYY.txt
 	Or just: $GTD_IN/logs/urls.txt
+
+	TODO: The edit_log() function is currently incomplete. It will only launch
+	an editor from the shell and only if that editor is a GUI editor (in this
+	case, MacVim). If I release this script publicly, I will still need to
+	implement funtionality to launch a GUI editor normally (with the 'open'
+	AppleScript commmand) as well as a command-line editor run in the Terminal.
 *)
 
 property script_name : "Log Page"
@@ -54,8 +60,8 @@ property script_version : "@@VERSION@@"
 
 ---------- USER CONFIGURATION ----------------------------------------
 -- Default log directory to use if one is not read from config file:
-set log_dir to POSIX path of (path to application support folder from user domain) & "Jazzhead/Log Page/"
---set log_dir to POSIX path of (path to desktop folder) & "Log Page/" -- :DEBUG:
+--set log_dir to POSIX path of (path to application support folder from user domain) & "Jazzhead/Log Page/"
+set log_dir to POSIX path of (path to desktop folder) & "Log Page/" -- :DEBUG:
 
 -- Log file name:
 set log_name to "urls.txt"
@@ -75,6 +81,19 @@ Health
 Health:Diet
 Health:Fitness
 General"
+
+-- Text editor to use if manually editing the log file.
+--
+-- This example:
+--	1. Opens the file using MacVim ('mvim' as installed by MacPorts)
+--	2. Switches the local working directory for just that buffer to the
+--	    directory containing the file ('lcd')
+--	3. Gives the MacVim window a name ('--servername').
+--
+set text_editor to "/opt/local/bin/mvim \"+lcd %:p:h\" --servername LOG_PAGE"
+
+-- Should the specified editor be launched from the unix shell?
+set should_use_shell to true
 ---------- END User Configuration ----------------------------------------
 
 
@@ -118,7 +137,34 @@ set shell_status to (do shell script s) as integer
 -- Source the config file and echo the desired variable:
 if shell_status is 0 then -- (means that grep found a match)
 	set s to ". " & quoted form of cfg_file & " && echo $" & env_var
-	set log_dir to (do shell script s) & "/logs/"
+	set gtd_in_dir to do shell script s
+	set log_dir to gtd_in_dir & "/logs/"
+	
+	--------------------
+	-- OPTIONAL: Override the Text editor to integrate with my GTD system.
+	--
+	-- This example:
+	--	1. Opens the file using MacVim ('mvim' as installed by MacPorts)
+	--	2. Switches the local working directory ('lcd') for just that buffer to
+	--	    my GTD content directory ($GTD_IN after escaping potential spaces)
+	--	3. Gives the MacVim window a name ('--servername').
+	
+	----- First, escape any potential spaces in the directory path:
+	--
+	--set gtd_in_dir to gtd_in_dir & " foo    bar" -- :DEBUG: spaces in path
+	--
+	set s to "echo " & quoted form of gtd_in_dir & " | sed 's/ \\{1,\\}/\\\\ /g'" -- escape spaces
+	set gtd_in_dir to do shell script s
+	--
+	--log gtd_in_dir -- :DEBUG: need to use 'log' to see the value w/o AppleScript escapes
+	
+	----- Finally, set the editor with all of the options:
+	--
+	set text_editor to "/opt/local/bin/mvim \"+lcd " & gtd_in_dir & "\" --servername GTD --remote-silent"
+	--
+	--log text_editor -- :DEBUG:
+	--return text_editor -- :DEBUG:
+	--------------------
 end if
 ---------- END Advanced --------------------------------------------------------
 --*)
@@ -242,7 +288,7 @@ set cat_choice to choose from list cat_list with title script_name with prompt m
 if cat_choice is false then set cat_choice to "Please enter a category..."
 
 -- Modify or enter a new category
-set btns to {"Cancel", "TODO: Edit Log File", "Append URL to File"}
+set btns to {"Cancel", "Manually Edit Log File", "Append URL to Log File"}
 set msg to "To log the URL for:" & return & return Â
 	& tab & "\"" & this_title & "\"" & return & return & Â
 	"please provide a category and any optional subcategories (or edit your selected category) for the URL. Example: \"Development:AppleScript:Mail\""
@@ -261,8 +307,15 @@ if btn_pressed is last item of btns then
 		rec_sep}, linefeed) & linefeed
 	_IO's append_file(log_file, final_text)
 else
-	edit_log()
+	if should_use_shell then
+		set this_log_file to quoted form of log_file_posix
+	else
+		set this_log_file to log_file
+	end if
+	edit_log(this_log_file, text_editor, should_use_shell)
 end if
+
+--display alert "Log Page" message "DEBUG: Script complete."
 
 
 (************************************************************
@@ -271,7 +324,7 @@ end if
 
 -- ===== Main Functions =====
 
-on edit_log()
+on edit_log(log_file, text_editor, should_use_shell)
 	(*
 		TODO:MAYBE:
 		Have a configuration variable in the main script to specify which text
@@ -284,11 +337,17 @@ on edit_log()
 		since I have a Vim shortcut for quickly changing the working directory
 		if need be.
 	*)
-	set t to script_name
-	set m to ":TODO: Implement edit_log() function."
-	set b to {"Cancel"}
-	display alert t message m buttons b cancel button 1 as critical
-	return false
+	if should_use_shell then
+		set s to text_editor & space & log_file & space & "> /dev/null 2>&1"
+		do shell script s
+		return
+	else
+		set t to script_name
+		set m to ":TODO: edit_log() function: use non-shell-invoked editor."
+		set b to {"Cancel"}
+		display alert t message m buttons b cancel button 1 as critical
+		return false
+	end if
 end edit_log
 
 -- ===== Utility Functions =====
