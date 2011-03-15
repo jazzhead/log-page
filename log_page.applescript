@@ -2,7 +2,7 @@
 	Log Page - Log categorized web page bookmarks to a text file
 
 	Version: @@VERSION@@
-	Date:    2011-02-09
+	Date:    2011-03-14
 	Author:  Steve Wheeler
 
 	Get the title, URL, current date and time, and a user-definable
@@ -282,29 +282,44 @@ set cat_list to paragraphs of cat_txt
 --
 
 -- Select an existing category
-set msg to "Please select a category for the URL you want to log. You will have a chance to edit your choice."
-set cat_choice to choose from list cat_list with title script_name with prompt msg OK button name "Select"
+set t to "" & script_name & " (1/3)"
+set m to "Please select a category for the URL you want to log. You will have a chance to edit your choice."
+set cat_choice to choose from list cat_list with title t with prompt m OK button name "Select"
 --if cat_choice is false then return false
 if cat_choice is false then set cat_choice to "Please enter a category..."
 
 -- Modify or enter a new category
-set btns to {"Cancel", "Manually Edit Log File", "Append URL to Log File"}
-set msg to "To log the URL for:" & return & return Â
+set b to {"Cancel", "Manually Edit Log File", "Append URL to Log File..."}
+set t to "" & script_name & " (2/3)"
+set m to "To log the URL for:" & return & return Â
 	& tab & "\"" & this_title & "\"" & return & return & Â
 	"please provide a category and any optional subcategories (or edit your selected category) for the URL. Example: \"Development:AppleScript:Mail\""
-display dialog msg default answer cat_choice with title script_name buttons btns default button last item of btns
+display dialog m default answer cat_choice with title t buttons b default button last item of b
 set {this_label, btn_pressed} to {text returned of result, button returned of result}
+
+-- Optionally add note
+if btn_pressed is last item of b then
+	set last item of b to "Append URL to Log File"
+	set t to "" & script_name & " (3/3)"
+	set m to "Optionally add a short note. Just leave the field blank if you don't want to add a note."
+	display dialog m default answer "" with title t buttons b default button last item of b
+	set {this_note, btn_pressed} to {text returned of result, button returned of result}
+end if
 
 --
 -- Append or edit the log file
 --
-if btn_pressed is last item of btns then
+if btn_pressed is last item of b then
 	set final_text to join_list({Â
 		"Date " & field_sep & date_time, Â
 		"Label" & field_sep & this_label, Â
 		"Title" & field_sep & this_title, Â
-		"URL  " & field_sep & this_url, Â
-		rec_sep}, linefeed) & linefeed
+		"URL  " & field_sep & this_url}, linefeed) & linefeed
+	if this_note is not "" then
+		set final_text to final_text & "Note " & field_sep & this_note & linefeed
+	end if
+	set final_text to final_text & rec_sep & linefeed
+	--return "[DEBUG]" & return & final_text
 	_IO's append_file(log_file, final_text)
 else
 	if should_use_shell then
