@@ -275,31 +275,45 @@ set cat_txt to do shell script s
 set cat_list to paragraphs of cat_txt
 --return cat_list -- :DEBUG:
 
+--
+-- Prompt for title, category/subcategories and optional note for URL
+--
 
---
--- Prompt for category/subcategory of URL
---
+-- Accept or modify URL title
+set b to {"Cancel", "Manually Edit Log File", "Next..."}
+set t to "" & script_name & ": Title (1/4)"
+set m to "To log the URL for:" & return & return Â
+	& tab & "\"" & this_title & "\"" & return & return & Â
+	"first accept or edit the title."
+display dialog m default answer this_title with title t buttons b default button last item of b
+set {this_title, btn_pressed} to {text returned of result, button returned of result}
+if btn_pressed is item 2 of b then
+	if should_use_shell then
+		set this_log_file to quoted form of log_file_posix
+	else
+		set this_log_file to log_file
+	end if
+	editLog(this_log_file, text_editor, should_use_shell)
+	return "Script ended with '" & (item 2 of b as text) & "'"
+end if
 
 -- Select an existing category
-set t to "" & script_name & " (1/3)"
+set t to "" & script_name & ": Category (2/4)"
 set m to "Please select a category for the URL you want to log. You will have a chance to edit your choice."
-set cat_choice to choose from list cat_list with title t with prompt m OK button name "Select"
+set cat_choice to choose from list cat_list with title t with prompt m OK button name "Next..."
 --if cat_choice is false then return false
 if cat_choice is false then set cat_choice to "Please enter a category..."
 
--- Modify or enter a new category
-set b to {"Cancel", "Manually Edit Log File", "Append URL to Log File..."}
-set t to "" & script_name & " (2/3)"
-set m to "To log the URL for:" & return & return Â
-	& tab & "\"" & this_title & "\"" & return & return & Â
-	"please provide a category and any optional subcategories (or edit your selected category) for the URL. Example: \"Development:AppleScript:Mail\""
+-- Modify selected category or enter a new category
+set t to "" & script_name & ": Category (3/4)"
+set m to "Please provide a category and any optional subcategories (or edit your selected category) for the URL. Example: \"Development:AppleScript:Mail\""
 display dialog m default answer cat_choice with title t buttons b default button last item of b
 set {this_label, btn_pressed} to {text returned of result, button returned of result}
 
 -- Optionally add note
 if btn_pressed is last item of b then
 	set last item of b to "Append URL to Log File"
-	set t to "" & script_name & " (3/3)"
+	set t to "" & script_name & ": Note (4/4)"
 	set m to "Optionally add a short note. Just leave the field blank if you don't want to add a note."
 	display dialog m default answer "" with title t buttons b default button last item of b
 	set {this_note, btn_pressed} to {text returned of result, button returned of result}
