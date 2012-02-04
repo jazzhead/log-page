@@ -2,7 +2,7 @@
 	Log Page - Log categorized web page bookmarks to a text file
 
 	Version: @@VERSION@@
-	Date:    2011-03-14
+	Date:    2012-01-04
 	Author:  Steve Wheeler
 
 	Get the title, URL, current date and time, and a user-definable
@@ -14,7 +14,7 @@
 *)
 
 (*
-Copyright (c) 2011 Steve Wheeler
+Copyright (c) 2011-2012 Steve Wheeler
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -113,7 +113,7 @@ set should_use_shell to true
 --         # ~/.gtdrc
 --         #
 --         # File locations for GTD documents
---
+--         #
 --         export GTD_DIR=$HOME/Documents/org  # GTD root directory
 --         export GTD_IN=$GTD_DIR/content      # source/input files
 --         export GTD_OUT=$GTD_DIR/html        # generated HTML output files
@@ -265,8 +265,7 @@ else
 end if
 
 -- Parse any existing labels from the "Label" fields of the URLs file:
-set s to "egrep '^Label ' " & quoted form of log_file_posix & Â
-	" | sed 's/^Label | //' | sort | uniq"
+set s to "sed -n 's/^Label | //p' " & quoted form of log_file_posix & " | sort | uniq"
 --return s
 set used_cats to do shell script s without altering line endings
 -- Sort those along with the manually entered categories/labels:
@@ -368,6 +367,14 @@ end edit_log
 -- ===== Utility Functions =====
 
 on convert_to_ascii(non_ascii_txt)
+	--
+	-- From 'man iconv_open':
+	--
+	--    When  the string "//TRANSLIT" is appended to tocode, transliteration is
+	--    activated. This means that when a character cannot  be  represented  in
+	--    the target character set, it can be approximated through one or several
+	--    characters that look similar to the original character.
+	--
 	set s to "iconv -f UTF-8 -t US-ASCII//TRANSLIT <<<" & quoted form of non_ascii_txt
 	do shell script s
 end convert_to_ascii
