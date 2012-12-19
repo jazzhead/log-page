@@ -30,14 +30,13 @@ TARGET     = Log\ Page.scpt
 OSACOMPILE = osacompile -o
 
 # Build directory
-BUILD     = build
+BUILD     = _build
 # Build target
 PROG     :=  $(BUILD)/$(TARGET)
 
 prefix    = $(HOME)
 # Installation directory
 bindir   := $(prefix)/Library/Scripts/Applications/Safari
-#bindir   := tmp
 
 INSTALL      = install
 INSTDIR     := $(bindir)

@@ -1,4 +1,7 @@
+# Any directory that begins with an underscore
+_*/
+
+# Compiled scripts
 *.scpt
 *.scptd
 *.app
-build/
