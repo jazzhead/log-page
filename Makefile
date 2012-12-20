@@ -78,11 +78,11 @@ $(PROG): $(SOURCE)
 		echo "--->  Creating directory $(BUILD)..."; \
 		mkdir -pvm0700 $(BUILD);                     \
 	}
-	@if [ 0 = $$(grep -cm1 '@@VERSION@@' $<) ]; then                       \
-		echo "--->  Compiling $@ from $<...";                              \
-		$(OSACOMPILE) "$@" $<;                                             \
-	else                                                                   \
-		echo "--->  Inserting VERSION number and compiling $@ from $<..."; \
-		sed -e 's/@@VERSION@@/$(VERSION)/g' $< | $(OSACOMPILE) "$@";       \
+	@if [ 0 = $$(grep -cm1 '@@VERSION@@' $<) ]; then                        \
+		echo "--->  Compiling $@ from $<...";                               \
+		$(OSACOMPILE) "$@" $<;                                              \
+	else                                                                    \
+		echo "--->  Inserting VERSION number and compiling $@ from $<...";  \
+		LANG=C sed -e 's/@@VERSION@@/$(VERSION)/g' $< | $(OSACOMPILE) "$@"; \
 	fi
 
