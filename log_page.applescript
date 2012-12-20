@@ -2,7 +2,7 @@
 	Log Page - Log categorized web page bookmarks to a text file
 
 	Version: @@VERSION@@
-	Date:    2012-01-04
+	Date:    2012-12-19
 	Author:  Steve Wheeler
 
 	Get the title, URL, current date and time, and a user-definable
@@ -171,6 +171,7 @@ end if
 
 --return log_dir -- :DEBUG:
 
+property uRule : Çdata utxt2500È as Unicode text -- BOX DRAWINGS LIGHT HORIZONTAL
 
 --
 -- Get URL and title from front browser window
@@ -255,65 +256,112 @@ if should_init then
 # END: category/label list
 " & head_sep & linefeed
 	tell _IO to write_file(log_file, file_header)
-	set cat_txt to default_cats
+	set cat_txt_all to default_cats
 else
 	-- Read categories from file
 	(*
 		:TODO: Error handling.
 	*)
-	set cat_txt to text 2 thru -2 of (item 3 of split_text(_IO's read_file(log_file), head_sep))
+	set cat_txt_all to text 2 thru -2 of (item 3 of split_text(_IO's read_file(log_file), head_sep))
 end if
 
 -- Parse any existing labels from the "Label" fields of the URLs file:
-set s to "sed -n 's/^Label | //p' " & quoted form of log_file_posix & " | sort | uniq"
+set s to "LANG=C sed -n 's/^Label | //p' " & quoted form of log_file_posix & " | sort | uniq"
 --return s
 set used_cats to do shell script s without altering line endings
 -- Sort those along with the manually entered categories/labels:
-set s to "echo \"" & cat_txt & linefeed & used_cats & "\" | egrep -v '^$' | sort | uniq"
-set cat_txt to do shell script s
+set s to "echo \"" & cat_txt_all & linefeed & used_cats & "\" | egrep -v '^$' | sort | uniq"
+set cat_txt_all to do shell script s without altering line endings
+--return cat_txt_all -- :DEBUG:
 -- Coerce the lines into a list:
-set cat_list to paragraphs of cat_txt
---return cat_list -- :DEBUG:
+set cat_list_all to paragraphs of cat_txt_all
+if cat_list_all's last item is "" then set cat_list_all to cat_list_all's items 1 thru -2
+--return cat_list_all -- :DEBUG:
+
+-- Get top-level categories:
+set s to "LANG=C echo \"" & cat_txt_all & "\" | sed -n 's/^\\([^:]\\{1,\\}\\).*/\\1/p' | uniq"
+set cat_txt_top to do shell script s without altering line endings
+--return cat_txt_top -- :DEBUG:
+-- Coerce the lines into a list:
+set cat_list_top to paragraphs of cat_txt_top
+if cat_list_top's last item is "" then set cat_list_top to cat_list_top's items 1 thru -2
+--return cat_list_top -- :DEBUG:
 
 --
 -- Prompt for title, category/subcategories and optional note for URL
 --
 
+-- The number of dialog prompts will vary depending on if a subcategory list is requested.
+set prompt_count to 1 -- increment with every dialog or list prompt
+set prompt_total to 4 -- increment if the subcategory list is displayed
+
 -- Accept or modify URL title
 set b to {"Cancel", "Manually Edit Log File", "Next..."}
-set t to "" & script_name & ": Title (1/4)"
+set t to "" & script_name & ": Title (" & prompt_count & "/" & prompt_total & ")"
 set m to "To log the URL for:" & return & return Â
 	& tab & "\"" & this_title & "\"" & return & return & Â
 	"first accept or edit the title."
 display dialog m default answer this_title with title t buttons b default button last item of b
 set {this_title, btn_pressed} to {text returned of result, button returned of result}
+set prompt_count to prompt_count + 1
 if btn_pressed is item 2 of b then
 	if should_use_shell then
 		set this_log_file to quoted form of log_file_posix
 	else
 		set this_log_file to log_file
 	end if
-	editLog(this_log_file, text_editor, should_use_shell)
+	edit_log(this_log_file, text_editor, should_use_shell)
 	return "Script ended with '" & (item 2 of b as text) & "'"
 end if
 
--- Select an existing category
-set t to "" & script_name & ": Category (2/4)"
-set m to "Please select a category for the URL you want to log. You will have a chance to edit your choice."
-set cat_choice to choose from list cat_list with title t with prompt m OK button name "Next..."
+-- Select an existing top-level category
+set extra_items to {"Show full list with subcategories...", multiply_text(uRule, 20)}
+set cat_choice to choose_top_category(cat_list_top, extra_items, prompt_count, prompt_total)
+set prompt_count to prompt_count + 1
+--return cat_choice
+
 --if cat_choice is false then return false
-if cat_choice is false then set cat_choice to "Please enter a category..."
+if cat_choice is false then -- skip the subcategory list
+	set cat_choice to "Please enter a category..."
+else
+	set prompt_threshold to 1
+	if cat_choice as text is extra_items's first item then
+		set cat_list_sub to cat_list_all
+	else
+		set extra_items to {"Show full list of existing categories...", multiply_text(uRule, 35)}
+		--set cat_list_sub to {}
+		copy extra_items to cat_list_sub -- use 'copy' instead of 'set' for separate lists
+		-- Account for extra menu items:
+		set prompt_threshold to prompt_threshold + (count of extra_items)
+		-- Build subcategory list:
+		repeat with this_cat in cat_list_all
+			if (this_cat as text) is (cat_choice as text) Â
+				or (this_cat as text) starts with (cat_choice & ":") then
+				set end of cat_list_sub to this_cat as text
+			end if
+		end repeat
+	end if
+	--return cat_list_sub
+	
+	-- Only show a subcategory list if there is more than one item:
+	if (count of cat_list_sub) is greater than prompt_threshold then
+		set cat_choice to choose_subcategory(cat_list_all, cat_list_sub, extra_items, prompt_count, prompt_total)
+		set prompt_count to prompt_count + 1
+		set prompt_total to prompt_total + 1
+	end if
+end if
 
 -- Modify selected category or enter a new category
-set t to "" & script_name & ": Category (3/4)"
+set t to "" & script_name & ": Category (" & prompt_count & "/" & prompt_total & ")"
 set m to "Please provide a category and any optional subcategories (or edit your selected category) for the URL. Example: \"Development:AppleScript:Mail\""
 display dialog m default answer cat_choice with title t buttons b default button last item of b
 set {this_label, btn_pressed} to {text returned of result, button returned of result}
+set prompt_count to prompt_count + 1
 
 -- Optionally add note
 if btn_pressed is last item of b then
 	set last item of b to "Append URL to Log File"
-	set t to "" & script_name & ": Note (4/4)"
+	set t to "" & script_name & ": Note (" & prompt_count & "/" & prompt_total & ")"
 	set m to "Optionally add a short note. Just leave the field blank if you don't want to add a note."
 	display dialog m default answer "" with title t buttons b default button last item of b
 	set {this_note, btn_pressed} to {text returned of result, button returned of result}
@@ -351,6 +399,41 @@ end if
  ************************************************************)
 
 -- ===== Main Functions =====
+
+on choose_top_category(cat_list_top, extra_items, prompt_count, prompt_total)
+	--log "[debug] in choose_top_category()"
+	set t to "" & script_name & ": Category (" & prompt_count & "/" & prompt_total & ")"
+	set m to "Please select a top-level category for the URL you want to log. Next you will be able to select subcategories."
+	set cat_choice to choose from list extra_items & cat_list_top with title t with prompt m OK button name "Next..."
+	-- If the list separator was selected instead of a list item, then recursively prompt again:
+	if cat_choice as text is extra_items's last item then
+		set cat_choice to choose_top_category(cat_list_top, extra_items, prompt_count, prompt_total)
+	end if
+	return cat_choice
+end choose_top_category
+
+on choose_subcategory(cat_list_all, cat_list_sub, extra_items, prompt_count, prompt_total)
+	--log "[debug] in choose_subcategory()"
+	
+	-- Select an existing category
+	set t to "" & script_name & ": Category (" & prompt_count & "/" & prompt_total & ")"
+	set m to "Please select a category or subcategory for the URL you want to log. You will have a chance to edit your choice (to add a new category or subcategory)."
+	--set cat_choice to choose from list cat_list_all with title t with prompt m OK button name "Next..."
+	set cat_choice to choose from list cat_list_sub with title t with prompt m OK button name "Next..."
+	--if cat_choice is false then return false
+	if cat_choice is false then set cat_choice to "Please enter a category..."
+	
+	if cat_choice as text is extra_items's last item then
+		--log "[debug] choose_subcategory(): choice is extra_items's last item"
+		-- If list separator was selected instead of a list item, then recursively prompt again:
+		set cat_choice to choose_subcategory(cat_list_all, cat_list_sub, extra_items, prompt_count, prompt_total)
+	else if cat_choice as text is extra_items's first item then
+		--log "[debug] choose_subcategory(): choice is extra_items's first item"
+		-- If full list was selected, then recursively prompt using that list (note that the full list is used for both list arguments):
+		set cat_choice to choose_subcategory(cat_list_all, cat_list_all, extra_items, prompt_count, prompt_total)
+	end if
+	return cat_choice
+end choose_subcategory
 
 on edit_log(log_file, text_editor, should_use_shell)
 	(*
