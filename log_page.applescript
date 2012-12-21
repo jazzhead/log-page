@@ -2,7 +2,7 @@
 	Log Page - Log categorized web page bookmarks to a text file
 
 	Version: @@VERSION@@
-	Date:    2012-12-19
+	Date:    2012-12-20
 	Author:  Steve Wheeler
 
 	Get the title, URL, current date and time, and a user-definable
@@ -57,6 +57,17 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 property script_name : "Log Page"
 property script_version : "@@VERSION@@"
+
+property uRule : Çdata utxt2500È as Unicode text -- BOX DRAWINGS LIGHT HORIZONTAL
+
+--property p_list_types : {"top", "sub", "all"}
+
+global g_top_categories, g_all_categories, g_previous_categories
+global g_list_type, g_previous_list_type
+
+set g_list_type to missing value
+set g_previous_list_type to missing value
+
 
 ---------- USER CONFIGURATION ----------------------------------------
 -- Default log directory to use if one is not read from config file:
@@ -171,8 +182,6 @@ end if
 
 --return log_dir -- :DEBUG:
 
-property uRule : Çdata utxt2500È as Unicode text -- BOX DRAWINGS LIGHT HORIZONTAL
-
 --
 -- Get URL and title from front browser window
 --
@@ -252,40 +261,40 @@ if should_init then
 # Optionally list some categories/labels of URLs below that might not yet
 # be used. Any categories/lables listed here or in the web page records
 # will be presented as a list to select from when saving new URLs.
-" & head_sep & linefeed & default_cats & linefeed & head_sep & "
+" & head_sep & linefeed & default_categories & linefeed & head_sep & "
 # END: category/label list
 " & head_sep & linefeed
 	tell _IO to write_file(log_file, file_header)
-	set cat_txt_all to default_cats
+	set all_category_txt to default_categories
 else
 	-- Read categories from file
 	(*
 		:TODO: Error handling.
 	*)
-	set cat_txt_all to text 2 thru -2 of (item 3 of split_text(_IO's read_file(log_file), head_sep))
+	set all_category_txt to text 2 thru -2 of (item 3 of split_text(_IO's read_file(log_file), head_sep))
 end if
 
 -- Parse any existing labels from the "Label" fields of the URLs file:
 set s to "LANG=C sed -n 's/^Label | //p' " & quoted form of log_file_posix & " | sort | uniq"
 --return s
-set used_cats to do shell script s without altering line endings
+set categories_used to do shell script s without altering line endings
 -- Sort those along with the manually entered categories/labels:
-set s to "echo \"" & cat_txt_all & linefeed & used_cats & "\" | egrep -v '^$' | sort | uniq"
-set cat_txt_all to do shell script s without altering line endings
---return cat_txt_all -- :DEBUG:
+set s to "echo \"" & all_category_txt & linefeed & categories_used & "\" | egrep -v '^$' | sort | uniq"
+set all_category_txt to do shell script s without altering line endings
+--return all_category_txt -- :DEBUG:
 -- Coerce the lines into a list:
-set cat_list_all to paragraphs of cat_txt_all
-if cat_list_all's last item is "" then set cat_list_all to cat_list_all's items 1 thru -2
---return cat_list_all -- :DEBUG:
+set g_all_categories to paragraphs of all_category_txt
+if g_all_categories's last item is "" then set g_all_categories to g_all_categories's items 1 thru -2
+--return g_all_categories -- :DEBUG:
 
 -- Get top-level categories:
-set s to "LANG=C echo \"" & cat_txt_all & "\" | sed -n 's/^\\([^:]\\{1,\\}\\).*/\\1/p' | uniq"
-set cat_txt_top to do shell script s without altering line endings
---return cat_txt_top -- :DEBUG:
+set s to "LANG=C echo \"" & all_category_txt & "\" | sed -n 's/^\\([^:]\\{1,\\}\\).*/\\1/p' | uniq"
+set top_category_txt to do shell script s without altering line endings
+--return top_category_txt -- :DEBUG:
 -- Coerce the lines into a list:
-set cat_list_top to paragraphs of cat_txt_top
-if cat_list_top's last item is "" then set cat_list_top to cat_list_top's items 1 thru -2
---return cat_list_top -- :DEBUG:
+set g_top_categories to paragraphs of top_category_txt
+if g_top_categories's last item is "" then set g_top_categories to g_top_categories's items 1 thru -2
+--return g_top_categories -- :DEBUG:
 
 --
 -- Prompt for title, category/subcategories and optional note for URL
@@ -314,47 +323,14 @@ if btn_pressed is item 2 of b then
 	return "Script ended with '" & (item 2 of b as text) & "'"
 end if
 
--- Select an existing top-level category
-set extra_items to {"Show full list with subcategories...", multiply_text(uRule, 20)}
-set cat_choice to choose_top_category(cat_list_top, extra_items, prompt_count, prompt_total)
-set prompt_count to prompt_count + 1
---return cat_choice
-
---if cat_choice is false then return false
-if cat_choice is false then -- skip the subcategory list
-	set cat_choice to "Please enter a category..."
-else
-	set prompt_threshold to 1
-	if cat_choice as text is extra_items's first item then
-		set cat_list_sub to cat_list_all
-	else
-		set extra_items to {"Show full list of existing categories...", multiply_text(uRule, 35)}
-		--set cat_list_sub to {}
-		copy extra_items to cat_list_sub -- use 'copy' instead of 'set' for separate lists
-		-- Account for extra menu items:
-		set prompt_threshold to prompt_threshold + (count of extra_items)
-		-- Build subcategory list:
-		repeat with this_cat in cat_list_all
-			if (this_cat as text) is (cat_choice as text) Â
-				or (this_cat as text) starts with (cat_choice & ":") then
-				set end of cat_list_sub to this_cat as text
-			end if
-		end repeat
-	end if
-	--return cat_list_sub
-	
-	-- Only show a subcategory list if there is more than one item:
-	if (count of cat_list_sub) is greater than prompt_threshold then
-		set cat_choice to choose_subcategory(cat_list_all, cat_list_sub, extra_items, prompt_count, prompt_total)
-		set prompt_count to prompt_count + 1
-		set prompt_total to prompt_total + 1
-	end if
-end if
+-- Select a category
+set chosen_category to choose_category(g_top_categories, "top")
+if chosen_category is false then error number -128 -- User canceled
 
 -- Modify selected category or enter a new category
 set t to "" & script_name & ": Category (" & prompt_count & "/" & prompt_total & ")"
 set m to "Please provide a category and any optional subcategories (or edit your selected category) for the URL. Example: \"Development:AppleScript:Mail\""
-display dialog m default answer cat_choice with title t buttons b default button last item of b
+display dialog m default answer chosen_category with title t buttons b default button last item of b
 set {this_label, btn_pressed} to {text returned of result, button returned of result}
 set prompt_count to prompt_count + 1
 
@@ -400,40 +376,83 @@ end if
 
 -- ===== Main Functions =====
 
-on choose_top_category(cat_list_top, extra_items, prompt_count, prompt_total)
-	--log "[debug] in choose_top_category()"
-	set t to "" & script_name & ": Category (" & prompt_count & "/" & prompt_total & ")"
-	set m to "Please select a top-level category for the URL you want to log. Next you will be able to select subcategories."
-	set cat_choice to choose from list extra_items & cat_list_top with title t with prompt m OK button name "Next..."
-	-- If the list separator was selected instead of a list item, then recursively prompt again:
-	if cat_choice as text is extra_items's last item then
-		set cat_choice to choose_top_category(cat_list_top, extra_items, prompt_count, prompt_total)
+on choose_category(cur_list, cur_list_type)
+	log "[debug] in choose_category(_list_, \"" & cur_list_type & "\")"
+	
+	if cur_list_type is not "all" then copy cur_list to g_previous_categories
+	
+	log "[debug] g_previous_categories: " & joinList(g_previous_categories, ", ")
+	
+	set_list_type(cur_list_type)
+	
+	set extra_items to get_extra_items(cur_list_type)
+	set list_rule to extra_items's last item
+	
+	-- :TODO: Customize dialog message
+	-- :TODO: Customize dialog title with dialog number
+	
+	repeat 10 times -- limit loops as a precaution
+		set chosen_category to choose from list extra_items & cur_list
+		if chosen_category as text is not list_rule then exit repeat
+	end repeat
+	if chosen_category is false then return false
+	
+	-- Call this handler recursively if another list was requested:
+	if cur_list_type is in {"top", "sub"} and chosen_category as text is extra_items's first item then
+		log "[debug] recurse to choose_category(g_all_categories, \"all\")"
+		set chosen_category to choose_category(g_all_categories, "all")
+	else if cur_list_type is "sub" and chosen_category as text is extra_items's second item then
+		log "[debug] recurse to choose_category(g_top_categories, \"top\")"
+		set chosen_category to choose_category(g_top_categories, "top")
+	else if cur_list_type is "all" and chosen_category as text is extra_items's first item then
+		if g_previous_list_type is "sub" then
+			log "[debug] recurse to choose_category(g_previous_categories, \"sub\")"
+			set chosen_category to choose_category(g_previous_categories, "sub")
+		else if g_previous_list_type is "top" then
+			log "[debug] recurse to choose_category(g_top_categories, \"top\")"
+			set chosen_category to choose_category(g_top_categories, "top")
+		end if
+	else if cur_list_type is "top" then
+		set sub_categories to get_subcategories(chosen_category)
+		log "[debug] recurse to choose_category(sub_categories, \"sub\")"
+		set chosen_category to choose_category(sub_categories, "sub")
 	end if
-	return cat_choice
-end choose_top_category
+	
+	return chosen_category
+end choose_category
 
-on choose_subcategory(cat_list_all, cat_list_sub, extra_items, prompt_count, prompt_total)
-	--log "[debug] in choose_subcategory()"
+on get_subcategories(chosen_category)
+	set sub_categories to {}
+	repeat with this_cat in g_all_categories
+		if (this_cat as text) is (chosen_category as text) Â
+			or (this_cat as text) starts with (chosen_category & ":") then
+			set end of sub_categories to this_cat as text
+		end if
+	end repeat
+	return sub_categories
+end get_subcategories
+
+on set_list_type(cur_type)
+	-- verify that 'cur_type' is in 'p_list_types'
 	
-	-- Select an existing category
-	set t to "" & script_name & ": Category (" & prompt_count & "/" & prompt_total & ")"
-	set m to "Please select a category or subcategory for the URL you want to log. You will have a chance to edit your choice (to add a new category or subcategory)."
-	--set cat_choice to choose from list cat_list_all with title t with prompt m OK button name "Next..."
-	set cat_choice to choose from list cat_list_sub with title t with prompt m OK button name "Next..."
-	--if cat_choice is false then return false
-	if cat_choice is false then set cat_choice to "Please enter a category..."
-	
-	if cat_choice as text is extra_items's last item then
-		--log "[debug] choose_subcategory(): choice is extra_items's last item"
-		-- If list separator was selected instead of a list item, then recursively prompt again:
-		set cat_choice to choose_subcategory(cat_list_all, cat_list_sub, extra_items, prompt_count, prompt_total)
-	else if cat_choice as text is extra_items's first item then
-		--log "[debug] choose_subcategory(): choice is extra_items's first item"
-		-- If full list was selected, then recursively prompt using that list (note that the full list is used for both list arguments):
-		set cat_choice to choose_subcategory(cat_list_all, cat_list_all, extra_items, prompt_count, prompt_total)
+	set g_previous_list_type to g_list_type
+	set g_list_type to cur_type
+end set_list_type
+
+on get_extra_items(list_type)
+	if list_type is "top" then
+		
+		-- :TODO: Add choice to make a new category
+		
+		return {"Show full list with subcategories...", multiplyTxt(uRule, 20)}
+	else if list_type is "sub" then
+		return {"Show full list of categories...", "Go back to previous list...", multiplyTxt(uRule, 35)}
+	else if list_type is "all" then
+		return {"Go back to previous list...", multiplyTxt(uRule, 35)}
+	else
+		return false
 	end if
-	return cat_choice
-end choose_subcategory
+end get_extra_items
 
 on edit_log(log_file, text_editor, should_use_shell)
 	(*
