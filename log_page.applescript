@@ -484,12 +484,18 @@ on choose_category(cur_list, cur_list_type)
 		return ""
 	else if cur_list_type is "top" then
 		set sub_categories to get_subcategories(chosen_category)
-		--log "[debug] incrementing both prompt count and total"
-		set g_prompt_count to g_prompt_count + 1
-		set g_prompt_total to g_prompt_total + 1
-		--log "[debug] recurse to choose_category(sub_categories, \"sub\")"
-		set chosen_category to choose_category(sub_categories, "sub")
+		if (count of sub_categories) is greater than 1 then
+			--log "[debug] incrementing both prompt count and total"
+			set g_prompt_count to g_prompt_count + 1
+			set g_prompt_total to g_prompt_total + 1
+			--log "[debug] recurse to choose_category(sub_categories, \"sub\")"
+			set chosen_category to choose_category(sub_categories, "sub")
+		else
+			-- Advance to next dialog (category editing)
+			set g_prompt_count to g_prompt_count + 1
+		end if
 	else
+		-- Advance to next dialog (category editing)
 		--log "[debug] incrementing prompt count"
 		set g_prompt_count to g_prompt_count + 1
 	end if
