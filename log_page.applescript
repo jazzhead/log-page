@@ -58,8 +58,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 property script_name : "Log Page"
 property script_version : "@@VERSION@@"
 
-property uRule : Çdata utxt2500È as Unicode text -- BOX DRAWINGS LIGHT HORIZONTAL
-
 property p_list_types : {"top", "sub", "all"}
 
 global g_top_categories, g_all_categories, g_previous_categories
@@ -68,6 +66,21 @@ global g_prompt_count, g_prompt_total
 
 set g_list_type to missing value
 set g_previous_list_type to missing value
+
+
+-- Unicode characters for list dialogs
+property uRule : Çdata utxt2500È as Unicode text -- BOX DRAWINGS LIGHT HORIZONTAL
+
+--property uBullet : Çdata utxt25B6È as Unicode text -- BLACK RIGHT-POINTING TRIANGLE
+--property uBullet : Çdata utxt27A1È as Unicode text -- BLACK RIGHTWARDS ARROW
+--property uBullet : "¥"
+--property uBullet : Çdata utxt25CFÈ as Unicode text -- BLACK CIRCLE
+--property uBullet : Çdata utxt2043È as Unicode text -- HYPHEN BULLET
+property uBullet : Çdata utxt25A0È as Unicode text -- BLACK SQUARE
+
+--property uBack : Çdata utxt25C0È as Unicode text -- BLACK LEFT-POINTING TRIANGLE
+property uBack : Çdata utxt2B05È as Unicode text -- LEFTWARDS BLACK ARROW
+
 
 
 ---------- USER CONFIGURATION ----------------------------------------
@@ -496,11 +509,19 @@ end set_list_type
 
 on get_extra_items(list_type)
 	if list_type is "top" then
-		return {"Show full list with subcategoriesÉ", "Create a new category...", multiplyTxt(uRule, 20)}
+		return {Â
+			" " & uBullet & "  Show full list with subcategoriesÉ", Â
+			" " & uBullet & "  Create a new category...", Â
+			multiplyTxt(uRule, 20)}
 	else if list_type is "sub" then
-		return {"Show full list of categories...", "Go back to previous list...", multiplyTxt(uRule, 35)}
+		return {Â
+			" " & uBullet & "  Show full list of categories...", Â
+			uBack & "  Go back to previous list...", Â
+			multiplyTxt(uRule, 35)}
 	else if list_type is "all" then
-		return {"Go back to previous list...", multiplyTxt(uRule, 35)}
+		return {Â
+			uBack & "  Go back to previous list...", Â
+			multiplyTxt(uRule, 35)}
 	else
 		return false
 	end if
