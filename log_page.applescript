@@ -60,7 +60,7 @@ property script_version : "@@VERSION@@"
 
 property uRule : Çdata utxt2500È as Unicode text -- BOX DRAWINGS LIGHT HORIZONTAL
 
---property p_list_types : {"top", "sub", "all"}
+property p_list_types : {"top", "sub", "all"}
 
 global g_top_categories, g_all_categories, g_previous_categories
 global g_list_type, g_previous_list_type
@@ -389,16 +389,28 @@ end if
 on choose_category(cur_list, cur_list_type)
 	--log "[debug] in choose_category(_list_, \"" & cur_list_type & "\")"
 	
+	if cur_list_type is not in p_list_types then
+		set t to "Error: Bad list type"
+		set m to "choose_category():  The supplied list type parameter, '" & cur_list_type & "', is not a valid list type from the 'p_list_types' property. Please report this bug to the developer."
+		-- This bug is probably the result of a typo in the recursive section below.
+		display alert t message m buttons {"Cancel"} cancel button 1 as critical
+	end if
+	
 	if cur_list_type is not "all" then copy cur_list to g_previous_categories
 	
 	--log "[debug] g_previous_categories: " & joinList(g_previous_categories, ", ")
 	
 	set_list_type(cur_list_type) -- set global current and previous list types
 	
+	--
+	-- Configure the non-category navigation selections for the category list dialogs
+	--
 	set extra_items to get_extra_items(cur_list_type)
 	set list_rule to extra_items's last item
 	
+	--
 	-- Customize list dialog properties
+	--
 	set t to "" & script_name & ": Category (" & g_prompt_count & "/" & g_prompt_total & ")"
 	if cur_list_type is "top" then
 		set m to "Please select a top-level category for the URL you want to log. Next you will be able to select subcategories unless you are creating a new category."
@@ -407,13 +419,20 @@ on choose_category(cur_list, cur_list_type)
 	end if
 	set b to "Next..."
 	
+	--
+	-- Prompt the user for category and/or subcategory choices
+	--
 	repeat 10 times -- limit loops as a precaution
 		set chosen_category to choose from list extra_items & cur_list with title t with prompt m OK button name b
 		if chosen_category as text is not list_rule then exit repeat
 	end repeat
 	if chosen_category is false then return false
 	
-	-- Call this handler recursively if another list was requested:
+	--
+	-- Call this handler recursively if another list was requested.
+	-- When specifying a 'cur_list_type' parameter to choose_category(), make
+	-- sure it is one of the allowed types from the 'p_list_types' property.
+	--
 	if cur_list_type is in {"top", "sub"} and chosen_category as text is extra_items's first item then
 		--log "[debug] incrementing both prompt count and total"
 		set g_prompt_count to g_prompt_count + 1
@@ -467,8 +486,6 @@ on get_subcategories(chosen_category)
 end get_subcategories
 
 on set_list_type(cur_type)
-	-- :TODO: verify that 'cur_type' is in 'p_list_types'
-	
 	set g_previous_list_type to g_list_type
 	set g_list_type to cur_type
 end set_list_type
