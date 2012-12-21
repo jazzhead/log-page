@@ -386,7 +386,7 @@ on choose_category(cur_list, cur_list_type)
 	
 	--log "[debug] g_previous_categories: " & joinList(g_previous_categories, ", ")
 	
-	set_list_type(cur_list_type)
+	set_list_type(cur_list_type) -- set global current and previous list types
 	
 	set extra_items to get_extra_items(cur_list_type)
 	set list_rule to extra_items's last item
@@ -394,7 +394,7 @@ on choose_category(cur_list, cur_list_type)
 	-- Customize list dialog properties
 	set t to "" & script_name & ": Category (" & g_prompt_count & "/" & g_prompt_total & ")"
 	if cur_list_type is "top" then
-		set m to "Please select a top-level category for the URL you want to log. Next you will be able to select subcategories."
+		set m to "Please select a top-level category for the URL you want to log. Next you will be able to select subcategories unless you are creating a new category."
 	else if cur_list_type is in {"sub", "all"} then
 		set m to "Please select a category or subcategory for the URL you want to log. You will have a chance to edit your choice (to add a new category or subcategory)."
 	end if
@@ -430,6 +430,9 @@ on choose_category(cur_list, cur_list_type)
 			--log "[debug] recurse to choose_category(g_top_categories, \"top\")"
 			set chosen_category to choose_category(g_top_categories, "top")
 		end if
+	else if cur_list_type is "top" and chosen_category as text is extra_items's second item then
+		set g_prompt_count to g_prompt_count + 1
+		return ""
 	else if cur_list_type is "top" then
 		set sub_categories to get_subcategories(chosen_category)
 		--log "[debug] incrementing both prompt count and total"
@@ -465,10 +468,7 @@ end set_list_type
 
 on get_extra_items(list_type)
 	if list_type is "top" then
-		
-		-- :TODO: Add choice to make a new category, bypassing subcategory dialog
-		
-		return {"Show full list with subcategories...", multiplyTxt(uRule, 20)}
+		return {"Show full list with subcategories…", "Create a new category...", multiplyTxt(uRule, 20)}
 	else if list_type is "sub" then
 		return {"Show full list of categories...", "Go back to previous list...", multiplyTxt(uRule, 35)}
 	else if list_type is "all" then
