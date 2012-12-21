@@ -331,13 +331,13 @@ if chosen_category is false then error number -128 -- User canceled
 -- Modify selected category or enter a new category
 set t to "" & script_name & ": Category (" & g_prompt_count & "/" & g_prompt_total & ")"
 set m to "Please provide a category and any optional subcategories (or edit your selected category) for the URL. Example: \"Development:AppleScript:Mail\""
-repeat 10 times -- limit loops as a precaution
+repeat --10 times -- limit loops as a precaution during development
 	display dialog m default answer chosen_category with title t buttons b default button last item of b cancel button second item of b
 	set {this_label, btn_pressed} to {text returned of result, button returned of result}
 	if this_label is not "" then
 		exit repeat
 	else
-		display alert "Category required" message "Please supply a category for the URL."
+		display alert "Category required" message "Please supply a category for the URL." as warning
 	end if
 end repeat
 set g_prompt_count to g_prompt_count + 1
@@ -422,9 +422,13 @@ on choose_category(cur_list, cur_list_type)
 	--
 	-- Prompt the user for category and/or subcategory choices
 	--
-	repeat 10 times -- limit loops as a precaution
+	repeat --10 times -- limit loops as a precaution during development
 		set chosen_category to choose from list extra_items & cur_list with title t with prompt m OK button name b
-		if chosen_category as text is not list_rule then exit repeat
+		if chosen_category as text is not list_rule then
+			exit repeat
+		else
+			display alert "Invalid selection" message "Please select a category." as warning
+		end if
 	end repeat
 	if chosen_category is false then return false
 	
