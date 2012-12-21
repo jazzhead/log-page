@@ -64,6 +64,7 @@ property uRule : Çdata utxt2500È as Unicode text -- BOX DRAWINGS LIGHT HORIZONTA
 
 global g_top_categories, g_all_categories, g_previous_categories
 global g_list_type, g_previous_list_type
+global g_prompt_count, g_prompt_total
 
 set g_list_type to missing value
 set g_previous_list_type to missing value
@@ -301,18 +302,18 @@ if g_top_categories's last item is "" then set g_top_categories to g_top_categor
 --
 
 -- The number of dialog prompts will vary depending on if a subcategory list is requested.
-set prompt_count to 1 -- increment with every dialog or list prompt
-set prompt_total to 4 -- increment if the subcategory list is displayed
+set g_prompt_count to 1 -- increment with every dialog or list prompt, decrement if going back
+set g_prompt_total to 4 -- increment if sub/full lists are displayed, decrement if going back
 
 -- Accept or modify URL title
 set b to {"Cancel", "Manually Edit Log File", "Next..."}
-set t to "" & script_name & ": Title (" & prompt_count & "/" & prompt_total & ")"
+set t to "" & script_name & ": Title (" & g_prompt_count & "/" & g_prompt_total & ")"
 set m to "To log the URL for:" & return & return Â
 	& tab & "\"" & this_title & "\"" & return & return & Â
 	"first accept or edit the title."
 display dialog m default answer this_title with title t buttons b default button last item of b
 set {this_title, btn_pressed} to {text returned of result, button returned of result}
-set prompt_count to prompt_count + 1
+set g_prompt_count to g_prompt_count + 1
 if btn_pressed is item 2 of b then
 	if should_use_shell then
 		set this_log_file to quoted form of log_file_posix
@@ -328,16 +329,16 @@ set chosen_category to choose_category(g_top_categories, "top")
 if chosen_category is false then error number -128 -- User canceled
 
 -- Modify selected category or enter a new category
-set t to "" & script_name & ": Category (" & prompt_count & "/" & prompt_total & ")"
+set t to "" & script_name & ": Category (" & g_prompt_count & "/" & g_prompt_total & ")"
 set m to "Please provide a category and any optional subcategories (or edit your selected category) for the URL. Example: \"Development:AppleScript:Mail\""
 display dialog m default answer chosen_category with title t buttons b default button last item of b
 set {this_label, btn_pressed} to {text returned of result, button returned of result}
-set prompt_count to prompt_count + 1
+set g_prompt_count to g_prompt_count + 1
 
 -- Optionally add note
 if btn_pressed is last item of b then
 	set last item of b to "Append URL to Log File"
-	set t to "" & script_name & ": Note (" & prompt_count & "/" & prompt_total & ")"
+	set t to "" & script_name & ": Note (" & g_prompt_count & "/" & g_prompt_total & ")"
 	set m to "Optionally add a short note. Just leave the field blank if you don't want to add a note."
 	display dialog m default answer "" with title t buttons b default button last item of b
 	set {this_note, btn_pressed} to {text returned of result, button returned of result}
@@ -376,46 +377,69 @@ end if
 
 -- ===== Main Functions =====
 
+----- Dialog Views
+
 on choose_category(cur_list, cur_list_type)
-	log "[debug] in choose_category(_list_, \"" & cur_list_type & "\")"
+	--log "[debug] in choose_category(_list_, \"" & cur_list_type & "\")"
 	
 	if cur_list_type is not "all" then copy cur_list to g_previous_categories
 	
-	log "[debug] g_previous_categories: " & joinList(g_previous_categories, ", ")
+	--log "[debug] g_previous_categories: " & joinList(g_previous_categories, ", ")
 	
 	set_list_type(cur_list_type)
 	
 	set extra_items to get_extra_items(cur_list_type)
 	set list_rule to extra_items's last item
 	
-	-- :TODO: Customize dialog message
-	-- :TODO: Customize dialog title with dialog number
+	-- Customize list dialog properties
+	set t to "" & script_name & ": Category (" & g_prompt_count & "/" & g_prompt_total & ")"
+	if cur_list_type is "top" then
+		set m to "Please select a top-level category for the URL you want to log. Next you will be able to select subcategories."
+	else if cur_list_type is in {"sub", "all"} then
+		set m to "Please select a category or subcategory for the URL you want to log. You will have a chance to edit your choice (to add a new category or subcategory)."
+	end if
+	set b to "Next..."
 	
 	repeat 10 times -- limit loops as a precaution
-		set chosen_category to choose from list extra_items & cur_list
+		set chosen_category to choose from list extra_items & cur_list with title t with prompt m OK button name b
 		if chosen_category as text is not list_rule then exit repeat
 	end repeat
 	if chosen_category is false then return false
 	
 	-- Call this handler recursively if another list was requested:
 	if cur_list_type is in {"top", "sub"} and chosen_category as text is extra_items's first item then
-		log "[debug] recurse to choose_category(g_all_categories, \"all\")"
+		--log "[debug] incrementing both prompt count and total"
+		set g_prompt_count to g_prompt_count + 1
+		set g_prompt_total to g_prompt_total + 1
+		--log "[debug] recurse to choose_category(g_all_categories, \"all\")"
 		set chosen_category to choose_category(g_all_categories, "all")
 	else if cur_list_type is "sub" and chosen_category as text is extra_items's second item then
-		log "[debug] recurse to choose_category(g_top_categories, \"top\")"
+		--log "[debug] decrementing both prompt count and total"
+		set g_prompt_count to g_prompt_count - 1
+		set g_prompt_total to g_prompt_total - 1
+		--log "[debug] recurse to choose_category(g_top_categories, \"top\")"
 		set chosen_category to choose_category(g_top_categories, "top")
 	else if cur_list_type is "all" and chosen_category as text is extra_items's first item then
+		--log "[debug] decrementing both prompt count and total"
+		set g_prompt_count to g_prompt_count - 1
+		set g_prompt_total to g_prompt_total - 1
 		if g_previous_list_type is "sub" then
-			log "[debug] recurse to choose_category(g_previous_categories, \"sub\")"
+			--log "[debug] recurse to choose_category(g_previous_categories, \"sub\")"
 			set chosen_category to choose_category(g_previous_categories, "sub")
 		else if g_previous_list_type is "top" then
-			log "[debug] recurse to choose_category(g_top_categories, \"top\")"
+			--log "[debug] recurse to choose_category(g_top_categories, \"top\")"
 			set chosen_category to choose_category(g_top_categories, "top")
 		end if
 	else if cur_list_type is "top" then
 		set sub_categories to get_subcategories(chosen_category)
-		log "[debug] recurse to choose_category(sub_categories, \"sub\")"
+		--log "[debug] incrementing both prompt count and total"
+		set g_prompt_count to g_prompt_count + 1
+		set g_prompt_total to g_prompt_total + 1
+		--log "[debug] recurse to choose_category(sub_categories, \"sub\")"
 		set chosen_category to choose_category(sub_categories, "sub")
+	else
+		--log "[debug] incrementing prompt count"
+		set g_prompt_count to g_prompt_count + 1
 	end if
 	
 	return chosen_category
@@ -433,7 +457,7 @@ on get_subcategories(chosen_category)
 end get_subcategories
 
 on set_list_type(cur_type)
-	-- verify that 'cur_type' is in 'p_list_types'
+	-- :TODO: verify that 'cur_type' is in 'p_list_types'
 	
 	set g_previous_list_type to g_list_type
 	set g_list_type to cur_type
@@ -442,7 +466,7 @@ end set_list_type
 on get_extra_items(list_type)
 	if list_type is "top" then
 		
-		-- :TODO: Add choice to make a new category
+		-- :TODO: Add choice to make a new category, bypassing subcategory dialog
 		
 		return {"Show full list with subcategories...", multiplyTxt(uRule, 20)}
 	else if list_type is "sub" then
@@ -453,6 +477,8 @@ on get_extra_items(list_type)
 		return false
 	end if
 end get_extra_items
+
+----- External Views
 
 on edit_log(log_file, text_editor, should_use_shell)
 	(*
