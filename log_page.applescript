@@ -440,7 +440,7 @@ on choose_category(cur_list, cur_list_type)
 		if chosen_category as text is not list_rule then
 			exit repeat
 		else
-			display alert "Invalid selection" message "Please select a category." as warning
+			display alert "Invalid selection" message "Please select a category or an action." as warning
 		end if
 	end repeat
 	if chosen_category is false then return false
