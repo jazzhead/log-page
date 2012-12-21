@@ -306,22 +306,22 @@ set g_prompt_count to 1 -- increment with every dialog or list prompt, decrement
 set g_prompt_total to 4 -- increment if sub/full lists are displayed, decrement if going back
 
 -- Accept or modify URL title
-set b to {"Cancel", "Manually Edit Log File", "Next..."}
+set b to {"Manually Edit Log File", "Cancel", "Next..."}
 set t to "" & script_name & ": Title (" & g_prompt_count & "/" & g_prompt_total & ")"
 set m to "To log the URL for:" & return & return Â
 	& tab & "\"" & this_title & "\"" & return & return & Â
 	"first accept or edit the title."
-display dialog m default answer this_title with title t buttons b default button last item of b
+display dialog m default answer this_title with title t buttons b default button last item of b cancel button second item of b
 set {this_title, btn_pressed} to {text returned of result, button returned of result}
 set g_prompt_count to g_prompt_count + 1
-if btn_pressed is item 2 of b then
+if btn_pressed is first item of b then
 	if should_use_shell then
 		set this_log_file to quoted form of log_file_posix
 	else
 		set this_log_file to log_file
 	end if
 	edit_log(this_log_file, text_editor, should_use_shell)
-	return "Script ended with '" & (item 2 of b as text) & "'"
+	return "Script ended with '" & (first item of b as text) & "'"
 end if
 
 -- Select a category
@@ -331,8 +331,15 @@ if chosen_category is false then error number -128 -- User canceled
 -- Modify selected category or enter a new category
 set t to "" & script_name & ": Category (" & g_prompt_count & "/" & g_prompt_total & ")"
 set m to "Please provide a category and any optional subcategories (or edit your selected category) for the URL. Example: \"Development:AppleScript:Mail\""
-display dialog m default answer chosen_category with title t buttons b default button last item of b
-set {this_label, btn_pressed} to {text returned of result, button returned of result}
+repeat 10 times -- limit loops as a precaution
+	display dialog m default answer chosen_category with title t buttons b default button last item of b cancel button second item of b
+	set {this_label, btn_pressed} to {text returned of result, button returned of result}
+	if this_label is not "" then
+		exit repeat
+	else
+		display alert "Category required" message "Please supply a category for the URL."
+	end if
+end repeat
 set g_prompt_count to g_prompt_count + 1
 
 -- Optionally add note
