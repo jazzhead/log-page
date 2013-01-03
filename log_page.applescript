@@ -2,7 +2,7 @@
 	Log Page - Log categorized web page bookmarks to a text file
 
 	Version: @@VERSION@@
-	Date:    2012-12-21
+	Date:    2013-01-03
 	Author:  Steve Wheeler
 
 	Get the title, URL, current date and time, and a user-definable
@@ -14,7 +14,7 @@
 *)
 
 (*
-Copyright (c) 2011-2012 Steve Wheeler
+Copyright (c) 2011-2013 Steve Wheeler
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -69,18 +69,26 @@ set g_previous_list_type to missing value
 
 
 -- Unicode characters for list dialogs
-property uRule : Çdata utxt2500È as Unicode text -- BOX DRAWINGS LIGHT HORIZONTAL
+property u_dash : Çdata utxt2500È as Unicode text -- BOX DRAWINGS LIGHT HORIZONTAL
 
---property uBullet : Çdata utxt25B6È as Unicode text -- BLACK RIGHT-POINTING TRIANGLE
---property uBullet : Çdata utxt27A1È as Unicode text -- BLACK RIGHTWARDS ARROW
---property uBullet : "¥"
---property uBullet : Çdata utxt25CFÈ as Unicode text -- BLACK CIRCLE
---property uBullet : Çdata utxt2043È as Unicode text -- HYPHEN BULLET
-property uBullet : Çdata utxt25A0È as Unicode text -- BLACK SQUARE
+--property u_bullet : Çdata utxt25B6È as Unicode text -- BLACK RIGHT-POINTING TRIANGLE
+--property u_bullet : Çdata utxt27A1È as Unicode text -- BLACK RIGHTWARDS ARROW
+--property u_bullet : "¥" -- standard bullet, but slightly smaller than Unicode black circle
+property u_bullet : Çdata utxt25CFÈ as Unicode text -- BLACK CIRCLE
+--property u_bullet : Çdata utxt2043È as Unicode text -- HYPHEN BULLET
+--property u_bullet : Çdata utxt25A0È as Unicode text -- BLACK SQUARE
 
---property uBack : Çdata utxt25C0È as Unicode text -- BLACK LEFT-POINTING TRIANGLE
-property uBack : Çdata utxt2B05È as Unicode text -- LEFTWARDS BLACK ARROW
+-- property u_back : Çdata utxt25C0È as Unicode text -- BLACK LEFT-POINTING TRIANGLE
+--property u_back : Çdata utxt2B05È as Unicode text -- LEFTWARDS BLACK ARROW
+property u_back : Çdata utxt276EÈ as Unicode text -- HEAVY LEFT-POINTING ANGLE QUOTATION MARK ORNAMENT
+-- (I wish there was a smaller black left-pointing triangle, or a slightly more angled heavy left-pointing angle quotation mark ornament. The leftwards black arrow just doesn't seem Mac-like.)
 
+property u_bullet_ls : missing value -- for list items
+property u_back_ls : missing value -- for list items
+
+-- Format for dialogs
+set u_bullet_ls to " " & u_bullet & "  "
+set u_back_ls to " " & u_back & "  "
 
 
 ---------- USER CONFIGURATION ----------------------------------------
@@ -522,18 +530,18 @@ end set_list_type
 on get_extra_items(list_type)
 	if list_type is "top" then
 		return {Â
-			" " & uBullet & "  Show full list with subcategoriesÉ", Â
-			" " & uBullet & "  Create a new category...", Â
-			multiplyTxt(uRule, 20)}
+			u_bullet_ls & "Show full list with subcategoriesÉ", Â
+			u_bullet_ls & "Create a new category...", Â
+			multiplyTxt(u_dash, 20)}
 	else if list_type is "sub" then
 		return {Â
-			" " & uBullet & "  Show full list of categories...", Â
-			uBack & "  Go back to previous list...", Â
-			multiplyTxt(uRule, 35)}
+			u_bullet_ls & "Show full list of categories...", Â
+			u_back_ls & "Go back to previous list...", Â
+			multiplyTxt(u_dash, 35)}
 	else if list_type is "all" then
 		return {Â
-			uBack & "  Go back to previous list...", Â
-			multiplyTxt(uRule, 35)}
+			u_back_ls & "Go back to previous list...", Â
+			multiplyTxt(u_dash, 35)}
 	else
 		return false
 	end if
