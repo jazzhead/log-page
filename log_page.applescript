@@ -651,12 +651,16 @@ on convert_to_ascii(non_ascii_txt)
 	--
 	-- From 'man iconv_open':
 	--
-	--    When  the string "//TRANSLIT" is appended to tocode, transliteration is
-	--    activated. This means that when a character cannot  be  represented  in
-	--    the target character set, it can be approximated through one or several
-	--    characters that look similar to the original character.
+	--    When the string "//TRANSLIT" is appended to _tocode_, transliteration
+	--    is activated. This means that when a character cannot be represented
+	--    in the target character set, it can be approximated through one or
+	--    several characters that look similar to the original character.
 	--
-	set s to "iconv -f UTF-8 -t US-ASCII//TRANSLIT <<<" & quoted form of non_ascii_txt
+	--    When the string "//IGNORE" is appended to _tocode_, characters that
+	--    cannot be represented in the target character set will be silently
+	--    discarded.
+	--
+	set s to "iconv -f UTF-8 -t US-ASCII//TRANSLIT//IGNORE <<<" & quoted form of non_ascii_txt
 	do shell script s
 end convert_to_ascii
 
