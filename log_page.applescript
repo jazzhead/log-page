@@ -2,7 +2,7 @@
 	Log Page - Log categorized web page bookmarks to a text file
 
 	Version: @@VERSION@@
-	Date:    2013-01-03
+	Date:    2013-01-04
 	Author:  Steve Wheeler
 
 	Get the title, URL, current date and time, and a user-definable
@@ -53,6 +53,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 (*==== Init ====*)
+
+set io_obj to make_io() -- Instantiate an object for read/write/append file operations
+--set io_obj to make_null_io() -- :DEBUG: don't write to file; just read
 
 ---- properties and globals ----
 
@@ -238,7 +241,7 @@ set date_time to join_list({y, m, d}, "-") & " " & join_list({hh, mm, ss}, ":")
 --
 set should_init to false
 tell application "Finder"
-	if (not (exists log_file_mac)) or (_IO's read_file(log_file_mac) is "") then
+	if (not (exists log_file_mac)) or (io_obj's read_file(log_file_mac) is "") then
 		set should_init to true
 	end if
 end tell
@@ -254,14 +257,14 @@ if should_init then
 " & head_sep & linefeed & default_categories & linefeed & head_sep & "
 # END: category/label list
 " & head_sep & linefeed
-	tell _IO to write_file(log_file_mac, file_header)
+	tell io_obj to write_file(log_file_mac, file_header)
 	set all_category_txt to default_categories
 else
 	-- Read categories from file
 	(*
 		:TODO: Error handling.
 	*)
-	set all_category_txt to text 2 thru -2 of (item 3 of split_text(_IO's read_file(log_file_mac), head_sep))
+	set all_category_txt to text 2 thru -2 of (item 3 of split_text(io_obj's read_file(log_file_mac), head_sep))
 end if
 
 --
@@ -395,7 +398,7 @@ if btn_pressed is last item of b then
 	end if
 	set final_text to final_text & rec_sep & linefeed
 	--return "[DEBUG]" & return & final_text
-	_IO's append_file(log_file_mac, final_text)
+	io_obj's append_file(log_file_mac, final_text)
 else
 	(*if should_use_shell then
 		set this_log_file to quoted form of log_file_posix
@@ -1237,54 +1240,74 @@ on make_associative_list()
 	end script
 end make_associative_list
 
-script _IO
-	
-	(* == PUBLIC == *)
-	
-	on write_file(file_path, this_data)
-		_write_file(file_path, this_data, string, false) -- overwrite existing file
-	end write_file
-	
-	on append_file(file_path, this_data)
-		_write_file(file_path, this_data, string, true) -- append new data to end of existing file
-	end append_file
-	
-	on read_file(file_path)
-		_read_file(file_path, string)
-	end read_file
-	
-	(* == PRIVATE == *)
-	
-	on _write_file(file_path, this_data, data_class, should_append_data)
-		try
-			set file_path to file_path as text
-			set file_handle to Â
-				open for access file file_path with write permission
-			if not should_append_data then Â
-				set eof of the file_handle to 0
-			write this_data as data_class to file_handle starting at eof
-			close access file_handle
-			return true
-		on error err_msg number err_num
+on make_null_io()
+	script NullIO
+		property class : "NullIO"
+		property parent : make_io()
+
+		on write_file(file_path, this_data)
+			-- do nothing
+			log "[debug] NullIO: write_file(): not writing to file"
+		end write_file
+
+		on append_file(file_path, this_data)
+			-- do nothing
+			log "[debug] NullIO: append_file(): not appending to file"
+		end append_file
+	end script
+end make_null_io
+
+on make_io()
+	script IO
+		property class : "IO"
+		
+		(* == PUBLIC == *)
+		
+		on write_file(file_path, this_data)
+			_write_file(file_path, this_data, string, false) -- overwrite existing file
+		end write_file
+
+		on append_file(file_path, this_data)
+			_write_file(file_path, this_data, string, true) -- append new data to end of existing file
+		end append_file
+
+		on read_file(file_path)
+			_read_file(file_path, string)
+		end read_file
+		
+		(* == PRIVATE == *)
+		
+		on _write_file(file_path, this_data, data_class, should_append_data)
 			try
-				close access file file_path
+				set file_path to file_path as text
+				set file_handle to Â
+					open for access file file_path with write permission
+				if not should_append_data then Â
+					set eof of the file_handle to 0
+				write this_data as data_class to file_handle starting at eof
+				close access file_handle
+				return true
+			on error err_msg number err_num
+				try
+					close access file file_path
+				end try
+				error err_msg number err_num
+				return false
 			end try
-			error err_msg number err_num
-			return false
-		end try
-	end _write_file
-	
-	on _read_file(file_path, data_class)
-		try
-			set file_path to file_path as text
-			if (get eof file file_path) is 0 then
-				set file_contents to ""
-			else
-				set file_contents to read file file_path as data_class
-			end if
-			return file_contents
-		on error
-			return 0
-		end try
-	end _read_file
-end script
+		end _write_file
+
+		on _read_file(file_path, data_class)
+			try
+				set file_path to file_path as text
+				if (get eof file file_path) is 0 then
+					set file_contents to ""
+				else
+					set file_contents to read file file_path as data_class
+				end if
+				return file_contents
+			on error
+				return 0
+			end try
+		end _read_file
+	end script
+end make_io
