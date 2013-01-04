@@ -105,7 +105,7 @@ set plist_dir to "~/Desktop/Test Folder/Preferences/" -- :DEBUG:TEMP:
 
 set plist_path to plist_dir & bundle_id & ".plist"
 set plist_keys to {"logFile", "textEditor"}
-set state_keys to {"lastMainLabel", "lastFullLabel"}
+set state_keys to {"lastMainCategory", "lastFullCategory"}
 
 --set default_file to POSIX path of (path to application support folder from user domain) & "Jazzhead/Log Page/urls.txt"
 set default_file to POSIX path of (path to desktop folder from user domain) & "Test Folder/App Support/Log Page/urls.txt" -- :DEBUG:TEMP:
@@ -342,7 +342,7 @@ end if
 --
 -- Select a category
 --
-set chosen_category to choose_category(g_top_categories, "top")
+set chosen_category to choose_category(settings_model, g_top_categories, "top")
 if chosen_category is false then error number -128 -- User canceled
 
 --
@@ -410,6 +410,21 @@ else
 	edit_log(log_file_mac, text_editor)
 end if
 
+--
+-- Save category label to use as default for next run
+--
+set last_main_label to split_text(this_label, ":")'s first item
+--return {last_main_label, this_label} -- :DEBUG:
+tell settings_model
+	if read_pref("lastMainCategory") is not last_main_label then
+		write_pref("lastMainCategory", last_main_label)
+	end if
+	if read_pref("lastFullCategory") is not this_label then
+		write_pref("lastFullCategory", this_label)
+	end if
+end tell
+
+
 --display alert "Log Page" message "DEBUG: Script complete."
 
 
@@ -423,7 +438,7 @@ end if
 
 ----- Dialog Views
 
-on choose_category(cur_list, cur_list_type)
+on choose_category(settings_model, cur_list, cur_list_type)
 	--log "[debug] in choose_category(_list_, \"" & cur_list_type & "\")"
 	
 	if cur_list_type is not in p_list_types then
@@ -457,10 +472,30 @@ on choose_category(cur_list, cur_list_type)
 	set b to "Next..."
 	
 	--
+	-- Get last used category for default selections
+	--
+	try
+		set last_main_label to settings_model's read_pref("lastMainCategory")
+	on error
+		set last_main_label to ""
+	end try
+	try
+		set last_full_label to settings_model's read_pref("lastFullCategory")
+		if last_full_label is "" then error
+	on error
+		set last_full_label to last_main_label
+	end try
+	if cur_list_type is "top" then
+		set this_default_item to last_main_label
+	else
+		set this_default_item to last_full_label
+	end if
+
+	--
 	-- Prompt the user for category and/or subcategory choices
 	--
 	repeat --10 times -- limit loops as a precaution during development
-		set chosen_category to choose from list extra_items & cur_list with title t with prompt m OK button name b
+		set chosen_category to choose from list extra_items & cur_list with title t with prompt m OK button name b default items this_default_item
 		if chosen_category as text is not list_rule then
 			exit repeat
 		else
@@ -479,23 +514,23 @@ on choose_category(cur_list, cur_list_type)
 		set g_prompt_count to g_prompt_count + 1
 		set g_prompt_total to g_prompt_total + 1
 		--log "[debug] recurse to choose_category(g_all_categories, \"all\")"
-		set chosen_category to choose_category(g_all_categories, "all")
+		set chosen_category to choose_category(settings_model, g_all_categories, "all")
 	else if cur_list_type is "sub" and chosen_category as text is extra_items's second item then
 		--log "[debug] decrementing both prompt count and total"
 		set g_prompt_count to g_prompt_count - 1
 		set g_prompt_total to g_prompt_total - 1
 		--log "[debug] recurse to choose_category(g_top_categories, \"top\")"
-		set chosen_category to choose_category(g_top_categories, "top")
+		set chosen_category to choose_category(settings_model, g_top_categories, "top")
 	else if cur_list_type is "all" and chosen_category as text is extra_items's first item then
 		--log "[debug] decrementing both prompt count and total"
 		set g_prompt_count to g_prompt_count - 1
 		set g_prompt_total to g_prompt_total - 1
 		if g_previous_list_type is "sub" then
 			--log "[debug] recurse to choose_category(g_previous_categories, \"sub\")"
-			set chosen_category to choose_category(g_previous_categories, "sub")
+			set chosen_category to choose_category(settings_model, g_previous_categories, "sub")
 		else if g_previous_list_type is "top" then
 			--log "[debug] recurse to choose_category(g_top_categories, \"top\")"
-			set chosen_category to choose_category(g_top_categories, "top")
+			set chosen_category to choose_category(settings_model, g_top_categories, "top")
 		end if
 	else if cur_list_type is "top" and chosen_category as text is extra_items's second item then
 		set g_prompt_count to g_prompt_count + 1
@@ -507,7 +542,7 @@ on choose_category(cur_list, cur_list_type)
 			set g_prompt_count to g_prompt_count + 1
 			set g_prompt_total to g_prompt_total + 1
 			--log "[debug] recurse to choose_category(sub_categories, \"sub\")"
-			set chosen_category to choose_category(sub_categories, "sub")
+			set chosen_category to choose_category(settings_model, sub_categories, "sub")
 		else
 			-- Advance to next dialog (category editing)
 			set g_prompt_count to g_prompt_count + 1
