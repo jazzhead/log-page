@@ -384,10 +384,10 @@ if btn_pressed is last item of b then
 	set {this_note, btn_pressed} to {text returned of result, button returned of result}
 end if
 
---
--- Append or edit the log file
---
 if btn_pressed is last item of b then
+	--
+	-- Append or edit the log file
+	--
 	set final_text to join_list({Â
 		"Date " & field_sep & date_time, Â
 		"Label" & field_sep & this_label, Â
@@ -399,6 +399,20 @@ if btn_pressed is last item of b then
 	set final_text to final_text & rec_sep & linefeed
 	--return "[DEBUG]" & return & final_text
 	io_obj's append_file(log_file_mac, final_text)
+	
+	--
+	-- Save category label to use as default for next run
+	--
+	set last_main_label to split_text(this_label, ":")'s first item
+	--return {last_main_label, this_label} -- :DEBUG:
+	tell settings_model
+		if read_pref("lastMainCategory") is not last_main_label then
+			write_pref("lastMainCategory", last_main_label)
+		end if
+		if read_pref("lastFullCategory") is not this_label then
+			write_pref("lastFullCategory", this_label)
+		end if
+	end tell
 else
 	(*if should_use_shell then
 		set this_log_file to quoted form of log_file_posix
@@ -409,20 +423,6 @@ else
 	-- :TODO:2013.01.03: only opening file in GUI editor now, so need Mac path?
 	edit_log(log_file_mac, text_editor)
 end if
-
---
--- Save category label to use as default for next run
---
-set last_main_label to split_text(this_label, ":")'s first item
---return {last_main_label, this_label} -- :DEBUG:
-tell settings_model
-	if read_pref("lastMainCategory") is not last_main_label then
-		write_pref("lastMainCategory", last_main_label)
-	end if
-	if read_pref("lastFullCategory") is not this_label then
-		write_pref("lastFullCategory", this_label)
-	end if
-end tell
 
 
 --display alert "Log Page" message "DEBUG: Script complete."
@@ -490,7 +490,7 @@ on choose_category(settings_model, cur_list, cur_list_type)
 	else
 		set this_default_item to last_full_label
 	end if
-
+	
 	--
 	-- Prompt the user for category and/or subcategory choices
 	--
@@ -1279,12 +1279,12 @@ on make_null_io()
 	script NullIO
 		property class : "NullIO"
 		property parent : make_io()
-
+		
 		on write_file(file_path, this_data)
 			-- do nothing
 			log "[debug] NullIO: write_file(): not writing to file"
 		end write_file
-
+		
 		on append_file(file_path, this_data)
 			-- do nothing
 			log "[debug] NullIO: append_file(): not appending to file"
@@ -1330,7 +1330,7 @@ on make_io()
 				return false
 			end try
 		end _write_file
-
+		
 		on _read_file(file_path, data_class)
 			try
 				set file_path to file_path as text
