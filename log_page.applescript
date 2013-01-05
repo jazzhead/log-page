@@ -52,7 +52,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *)
 
 
-(*==== Init ====*)
+(* ==== Init ==== *)
 
 set io_obj to make_io() -- Instantiate an object for read/write/append file operations
 --set io_obj to make_null_io() -- :DEBUG: don't write to file; just read
@@ -137,7 +137,7 @@ Health:Fitness
 General"
 
 
-(*==== Read preferences ====*)
+(* ==== Read preferences ==== *)
 
 --
 -- Instantiate an object to store the preferences.
@@ -185,7 +185,7 @@ create_directory(first item of split_path_into_dir_and_file(log_file))
 ==================================================
 *)
 
-(*==== Get web page info ====*)
+(* ==== Get web page info ==== *)
 
 --
 -- Get URL and title from front browser window
@@ -209,7 +209,7 @@ set this_title to convert_to_ascii(this_title)
 --return this_title -- :DEBUG:
 
 
-(*==== Parse existing data (model-ish) ====*)
+(* ==== Parse existing data (model-ish) ==== *)
 
 --
 -- Format the record separator between log entries
@@ -301,7 +301,7 @@ if g_top_categories's last item is "" then set g_top_categories to g_top_categor
 --return g_top_categories -- :DEBUG:
 
 
-(*==== Main view(-ish) ====*)
+(* ==== Main view(-ish) ==== *)
 
 --
 -- Prompt for title, category/subcategories and optional note for URL
@@ -434,7 +434,7 @@ end if
 ==================================================
 *)
 
-(*==== Main Functions ====*)
+(* ==== Main Functions ==== *)
 
 ----- Dialog Views
 
@@ -622,7 +622,7 @@ on edit_log(log_file, text_editor)
 	--end if
 end edit_log
 
-(*==== Settings Functions ====*)
+(* ==== Settings Functions ==== *)
 
 on do_first_run(settings_model)
 	local settings_model
@@ -683,7 +683,7 @@ on set_preferences(settings_model, default_file, default_editor)
 end set_preferences
 
 
-(*==== Utility Functions ====*)
+(* ==== Utility Functions ==== *)
 
 on convert_to_ascii(non_ascii_txt)
 	(*
@@ -783,7 +783,7 @@ end join_list
 ==================================================
 *)
 
-(*==== Main Classes ====*)
+(* ==== Main Classes ==== *)
 
 -- MODEL: Settings
 on make_settings_model(plist_path, default_file, default_editor)
@@ -1173,7 +1173,7 @@ on make_settings_view(default_file, default_editor, cur_file, cur_editor)
 	return SettingsView
 end make_settings_view
 
-(*==== Utility Objects ====*)
+(* ==== Utility Objects ==== *)
 
 on make_associative_list()
 	(*
