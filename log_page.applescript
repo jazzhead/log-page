@@ -319,7 +319,7 @@ set t to "" & script_name & ": Title (" & g_prompt_count & "/" & g_prompt_total 
 set m to "To log the URL for:" & return & return Â
 	& tab & "\"" & this_title & "\"" & return & return & Â
 	"first accept or edit the title."
-display dialog m default answer this_title with title t buttons b default button last item of b cancel button second item of b with icon note
+display dialog m default answer this_title with title t buttons b default button 3 cancel button 2 with icon note
 set {this_title, btn_pressed} to {text returned of result, button returned of result}
 set g_prompt_count to g_prompt_count + 1
 if btn_pressed is first item of b then
@@ -356,7 +356,7 @@ set cur_info to "TITLE:" & tab & tab & this_title & return & "URL:" & tab & tab 
 set t to "" & script_name & ": Category (" & g_prompt_count & "/" & g_prompt_total & ")"
 set m to cur_info & return & return & "Please provide a category and any optional subcategories (or edit your selected category) for the URL. Example: \"Development:AppleScript:Mail\""
 repeat --10 times -- limit loops as a precaution during development
-	display dialog m default answer chosen_category with title t buttons b default button last item of b cancel button second item of b with icon note
+	display dialog m default answer chosen_category with title t buttons b default button 3 cancel button 2 with icon note
 	set {this_label, btn_pressed} to {text returned of result, button returned of result}
 	if this_label is not "" then
 		exit repeat
@@ -380,7 +380,7 @@ if btn_pressed is last item of b then
 	set last item of b to "Append URL to Log File"
 	set t to "" & script_name & ": Note (" & g_prompt_count & "/" & g_prompt_total & ")"
 	set m to cur_info & return & return & "Optionally add a short note. Just leave the field blank if you don't want to add a note."
-	display dialog m default answer "" with title t buttons b default button last item of b with icon note
+	display dialog m default answer "" with title t buttons b default button 3 with icon note
 	set {this_note, btn_pressed} to {text returned of result, button returned of result}
 end if
 
@@ -633,7 +633,7 @@ on do_first_run(settings_model)
 		& "You can continue using those defaults or change the settings now. You can also change the settings later by selecting the \"Preferences\" item from any list dialog. (You would have to manually move your old URLs file though if you wanted to keep appending to it.)"
 	-- :TODO: Offer to move the file when changing file location/name. (Not here.)
 	set b to {"Change settingsÉ", "Cancel", "Continue"}
-	display dialog m with title t buttons b default button b's last item with icon note
+	display dialog m with title t buttons b default button 3 with icon note
 	set btn_pressed to button returned of result
 	
 	--settings_model's set_item("logFile", "DEBUG: logFile: do_first_run()") -- :DEBUG:
@@ -1014,7 +1014,7 @@ on make_settings_view(default_file, default_editor, cur_file, cur_editor)
 				& " which is:" & return & return & tab & m4
 			set t to script_name & " > Settings"
 			set b to {_display_2_button, "Cancel", "Continue"}
-			display dialog m with title t buttons b default button b's last item with icon note
+			display dialog m with title t buttons b default button 3 with icon note
 			set btn_pressed to button returned of result
 			set _did_display_2 to true
 			
@@ -1095,7 +1095,7 @@ on make_settings_view(default_file, default_editor, cur_file, cur_editor)
 				set t to script_name & " > Settings > Choose File > Default"
 				set m to "The default URLs file is:" & return & return & tab & _default_file & return & return & "Use this file?" & return & return
 				set b to {"Choose a different fileÉ", "Cancel", "Use default"}
-				display dialog m with title t buttons b default button b's last item with icon note
+				display dialog m with title t buttons b default button 3 with icon note
 				set btn_pressed to button returned of result
 				if btn_pressed is b's first item then
 					set _cur_file to _choose_urls_file() -- recursion
@@ -1113,7 +1113,7 @@ on make_settings_view(default_file, default_editor, cur_file, cur_editor)
 				set t to script_name & " > Settings > Choose File > Enter Path"
 				set m to "Enter a full file path to use for saving the URLs." & return & return & "A '~' (tilde) can be used to indicate your home directory. Example:" & return & return & tab & "~/Desktop/urls.txt"
 				set b to {u_back_btn & "Back", "Cancel", "Continue"}
-				display dialog m with title t buttons b default answer _cur_file default button b's last item with icon note
+				display dialog m with title t buttons b default answer _cur_file default button 3 with icon note
 				set {this_path, btn_pressed} to {text returned of result, button returned of result}
 				if btn_pressed is b's first item then
 					set _cur_file to _choose_urls_file() -- recursion
@@ -1133,7 +1133,7 @@ on make_settings_view(default_file, default_editor, cur_file, cur_editor)
 			set t to script_name & " > Settings > Choose Editor"
 			set m to "Choose a text editor application for editing the URLs file:"
 			set b to {u_back_btn & "Back", "Use default editorÉ", "Choose another editor..."}
-			display dialog m with title t buttons b default button b's last item with icon note
+			display dialog m with title t buttons b default button 3 with icon note
 			set btn_pressed to button returned of result
 			
 			-- Level 3
@@ -1147,7 +1147,7 @@ on make_settings_view(default_file, default_editor, cur_file, cur_editor)
 				set t to script_name & " > Settings > Choose Editor > Default"
 				set m to "The default text editor app is:" & tab & _default_editor & return & return & "Use this app?" & return & return
 				set b to {u_back_btn & "Back", "Cancel", "Use default"}
-				display dialog m with title t buttons b default button b's last item with icon note
+				display dialog m with title t buttons b default button 3 with icon note
 				set btn_pressed to button returned of result
 				if btn_pressed is b's first item then
 					set _cur_editor to _choose_text_editor() -- recursion
