@@ -2,15 +2,12 @@
 	Log Page - Log categorized web page bookmarks to a text file
 
 	Version: @@VERSION@@
-	Date:    2013-01-04
+	Date:    2013-02-24
 	Author:  Steve Wheeler
 
 	Get the title, URL, current date and time, and a user-definable
 	category for the frontmost Safari window and log the info to a text
 	file.
-
-	Optionally, open the text file in the text editing application of
-	your choice.
 
 	This program is free software available under the terms of a
 	BSD-style (3-clause) open source license detailed below.
@@ -46,83 +43,208 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *)
 
-(*
-	TODO: The edit_log() function should also support opening the text
-	file in a command-line editor run in the Terminal.
-*)
 
+property __SCRIPT_NAME__ : "Log Page"
+property __SCRIPT_VERSION__ : "@@VERSION@@"
 
-(* ==== Init ==== *)
+property __NAMESPACE__ : "Jazzhead"
+property __BUNDLE_ID__ : "net.jazzhead.scpt.LogPage"
+property __PLIST_DIR__ : missing value
 
-set io_obj to make_io() -- Instantiate an object for read/write/append file operations
---set io_obj to make_null_io() -- :DEBUG: don't write to file; just read
+-- Debug settings
+property __DEBUG_LEVEL__ : 2 -- integer (0 = no event logging)
+property __NULL_IO__ : false -- boolean (if true, don't write to URL file)
 
----- properties and globals ----
+on run
+	-- Initialize any script properties here that should not be hardcoded
+	set __PLIST_DIR__ to POSIX path of (path to preferences from user domain)
+	--set __PLIST_DIR__ to "~/Desktop/Test Folder/Preferences/" -- :DEBUG:temp
+	
+	set app_controller to make_app_controller()
+	run app_controller
+end run
 
-property script_name : "Log Page"
-property script_version : "@@VERSION@@"
-property bundle_id : "net.jazzhead.scpt.Safari.LogPage"
+(******************** Main Controller ********************)
 
-property p_list_types : {"top", "sub", "all"}
+-- This is the main client controller that creates the models and creates
+-- and runs the other controllers.
 
-global g_top_categories, g_all_categories, g_previous_categories
-global g_list_type, g_previous_list_type
-global g_prompt_count, g_prompt_total
+on make_app_controller()
+	script this
+		property class : "AppController" -- the main controller
+		
+		on run
+			my debug_log(1, "--->  running " & my class & "...")
+			
+			(* == Settings == *)
+			
+			--
+			-- The settings controller is run first to load the saved
+			-- settings from disk or show a "first run" settings dialog
+			-- if there is no existing preferences file.
+			--
+			set settings_model to make_settings()
+			settings_model's init()
+			set settings_controller to make_settings_controller(settings_model)
+			run settings_controller
+			
+			(* == Data Retrieval == *)
+			
+			--
+			-- Get the web page info from the web browser
+			--
+			set browser_model to my WebBrowserFactory's make_browser()
+			browser_model's fetch_page_info()
+			
+			--
+			-- Create the main model
+			--
+			set page_log to make_page_log(settings_model)
+			tell page_log
+				-- Store the web page info in the main model
+				--
+				set_page_url(browser_model's get_url())
+				set_page_title(browser_model's get_title())
+				
+				my debug_log(1, "[debug] " & get_page_url())
+				my debug_log(1, "[debug] " & get_page_title())
+				
+				-- Parse the categories from the log file
+				--
+				parse_log()
+				
+				my debug_log(1, get_root_categories())
+				my debug_log(2, get_all_categories())
+			end tell
+			
+			(* == Controllers == *)
+			
+			--
+			-- Create the shared navigation controller for view controllers
+			--
+			set nav_controller to make_navigation_controller()
+			
+			--
+			-- Create any other needed controllers, passing the model to
+			-- all (and the shared navigation controller to all view
+			-- controllers).
+			--
+			-- -- View Controllers
+			set help_controller to make_help_controller(nav_controller, settings_model)
+			--
+			set title_controller to make_title_controller(nav_controller, page_log)
+			set url_controller to make_url_controller(nav_controller, page_log)
+			set label_controller to make_label_controller(nav_controller, page_log)
+			set sub_label_controller to make_sub_label_controller(nav_controller, page_log)
+			set all_label_controller to make_all_label_controller(nav_controller, page_log)
+			set label_edit_controller to make_label_edit_controller(nav_controller, page_log)
+			set note_controller to make_note_controller(nav_controller, page_log)
+			--
+			-- -- Action Controllers
+			set file_edit_controller to make_file_edit_controller(page_log)
+			
+			--
+			-- Dependency Injection
+			--
+			-- Each controller needs a reference to any other
+			-- controllers that it might add to the navigation stack.
+			-- (The injected controllers are referred to by index so for
+			-- ease of implementation, add the default action first. For
+			-- list dialogs, then add actions in the list order.)
+			--
+			help_controller's set_controllers({settings_controller})
+			title_controller's set_controllers({Â
+				help_controller, Â
+				url_controller})
+			url_controller's set_controllers({label_controller})
+			label_controller's set_controllers({Â
+				sub_label_controller, Â
+				all_label_controller, Â
+				label_edit_controller, Â
+				file_edit_controller, Â
+				settings_controller, Â
+				help_controller})
+			sub_label_controller's set_controllers({Â
+				label_edit_controller, Â
+				all_label_controller, Â
+				file_edit_controller, Â
+				settings_controller, Â
+				help_controller})
+			all_label_controller's set_controllers({Â
+				label_edit_controller, Â
+				file_edit_controller, Â
+				settings_controller, Â
+				help_controller})
+			label_edit_controller's set_controllers({note_controller})
+			
+			--
+			-- Load the first (root) controller onto the stack
+			--
+			nav_controller's push_root_controller(title_controller)
+			
+			my debug_log(1, my class & "'s History Stack: " & nav_controller's history_to_string())
+			my debug_log(1, my class & "'s Controller Stack: " & nav_controller's to_string())
+			
+			(* == UI == *)
+			
+			--
+			-- This is the main UI/View loop. It will loop through the
+			-- controller stack until empty prompting the user for info.
+			--
+			-- The controller stack can be modified by any controller so
+			-- the loop will run as long as controllers keep pushing
+			-- other controllers onto the stack in response to user
+			-- action.
+			--
+			if nav_controller's is_empty() then
+				error "The navigation controller stack needs at least one controller."
+			end if
+			repeat while not nav_controller's is_empty()
+				set this_controller to nav_controller's pop()
+				set ret_val to run this_controller --> returns boolean
+				
+				my debug_log(1, my class & "'s History Stack: " & nav_controller's history_to_string())
+				my debug_log(1, my class & "'s Controller Stack: " & nav_controller's to_string())
+				
+				if not ret_val then -- FileEditController will return false
+					my debug_log(1, "--->  finished " & my class)
+					return -- don't do any post-processing
+				end if
+			end repeat
+			
+			(* == Processing == *)
+			
+			--
+			-- All that's left is to append the data to the log file.
+			--
+			page_log's write_record()
+			
+			my debug_log(1, "--->  finished " & my class)
+		end run
+	end script
+	
+	my debug_log(1, "--->  new " & this's class & "()")
+	return this
+end make_app_controller
 
-set g_list_type to missing value
-set g_previous_list_type to missing value
+(******************** The Rest ********************)
 
+(* ==== Model ==== *)
 
----- Unicode characters for list dialogs ----
+-- -- -- Main App Models -- -- --
 
-property u_dash : Çdata utxt2500È as Unicode text -- BOX DRAWINGS LIGHT HORIZONTAL
-
-property u_bullet : Çdata utxt25CFÈ as Unicode text -- BLACK CIRCLE
---property u_bullet : "¥" -- standard bullet, but slightly smaller than Unicode black circle
---property u_bullet : Çdata utxt2043È as Unicode text -- HYPHEN BULLET
---property u_bullet : Çdata utxt25A0È as Unicode text -- BLACK SQUARE
---property u_bullet : Çdata utxt25B6È as Unicode text -- BLACK RIGHT-POINTING TRIANGLE
---property u_bullet : Çdata utxt27A1È as Unicode text -- BLACK RIGHTWARDS ARROW
-
-property u_back : Çdata utxt276EÈ as Unicode text -- HEAVY LEFT-POINTING ANGLE QUOTATION MARK ORNAMENT
--- property u_back : Çdata utxt25C0È as Unicode text -- BLACK LEFT-POINTING TRIANGLE
---property u_back : Çdata utxt2B05È as Unicode text -- LEFTWARDS BLACK ARROW
--- (A smaller black left-pointing triangle or a slightly more angled heavy left-pointing angle quotation mark ornament would be better. The leftwards black arrow just doesn't seem Mac-like.)
-
--- Format for dialogs
-property u_bullet_ls : missing value -- for list items
-property u_back_ls : missing value -- for list items
-property u_back_btn : missing value -- for buttons
-set u_bullet_ls to " " & u_bullet & "  "
-set u_back_ls to " " & u_back & "  "
-set u_back_btn to "" & u_back & "  "
-
-
----- Preferences ----
-
---set plist_dir to POSIX path of (path to preferences from user domain)
-set plist_dir to "~/Desktop/Test Folder/Preferences/" -- :DEBUG:TEMP:
-
-set plist_path to plist_dir & bundle_id & ".plist"
-set plist_keys to {"logFile", "textEditor"}
-set state_keys to {"lastMainCategory", "lastFullCategory"}
-
---set default_file to POSIX path of (path to application support folder from user domain) & "Jazzhead/Log Page/urls.txt"
-set default_file to POSIX path of (path to desktop folder from user domain) & "Test Folder/App Support/Log Page/urls.txt" -- :DEBUG:TEMP:
-
-set default_editor to "TextEdit"
-
-
----- Sample categories for URL file ----
-
--- Default categories/labels if none are found in (or there is no) URL file.
--- (These can be edited or deleted afterwards in the URL file).
---
--- :TODO: These should only be written to new URL files where they can be
---     later deleted. They should NOT be included in every list dialog. Maybe
---     change the name of this variable to 'sample_categories'.
---
-set default_categories to "Development
+on make_page_log(settings_model)
+	script this
+		property class : "PageLog" -- the main model
+		property parent : make_observable() -- extends Observable
+		property _settings : settings_model
+		property _io : missing value
+		
+		-- Sample categories (labels) if none are found in (or there is
+		-- no) URL file. After sample categories have been written to
+		-- file, any of them can be deleted, modified or added to there.
+		--
+		property _sample_categories : "Development
 Development:AppleScript
 Development:AppleScript:Mail
 Design
@@ -135,715 +257,570 @@ Health
 Health:Diet
 Health:Fitness
 General"
-
-
-(* ==== Read preferences ==== *)
-
---
--- Instantiate an object to store the preferences.
---
-set settings_model to make_settings_model(plist_path, default_file, default_editor)
-try
-	settings_model's read_settings(plist_keys)
-on error err_msg number err_num
-	--error "DEBUG: " & err_msg number err_num
-	set settings_model to do_first_run(settings_model)
-end try
-
---
--- Get the needed settings from the model
---
-tell settings_model
-	set log_file to get_item("logFile")
-	set text_editor to get_item("textEditor")
-end tell
-
-display dialog log_file & return & return & text_editor with title "DEBUG"
---return "[debug] BREAK"
-
---
--- Expand '~/' or '$HOME/' at the beginning of a posix file path.
---
-set log_file to expand_home_path(log_file)
-
---
--- Get a mac file path for file IO and editing
---
-set log_file_mac to POSIX file log_file
-
---
--- Create any directories needed in the web page log file path
---
-create_directory(first item of split_path_into_dir_and_file(log_file))
-
---return "[debug] BREAK"
-
-
-(*
-==================================================
-    Main
-==================================================
-*)
-
-(* ==== Get web page info ==== *)
-
---
--- Get URL and title from front browser window
---
-tell application "Safari"
-	activate
-	try
-		set this_url to URL of front document
-		set this_title to name of first tab of front window whose visible is true
-		--error "DEBUG: throw an error"
-	on error err_msg number err_num
-		--error "Can't get info from Safari: " & err_msg number err_num
-		set t to "Error: Can't get info from Safari"
-		set m to err_msg & " (" & err_num & ")"
-		display alert t message m buttons {"Cancel"} cancel button 1 as critical
-	end try
-end tell
--- Transliterate non-ASCII characters to ASCII
-set this_title to convert_to_ascii(this_title)
-
---return this_title -- :DEBUG:
-
-
-(* ==== Parse existing data (model-ish) ==== *)
-
---
--- Format the record separator between log entries
---
-set rule_char to "-"
-set rule_width to 80 -- total width
-set name_col_width to 7 -- name column width only
-set field_sep to " | "
-set rec_sep to "" & multiply_text(rule_char, name_col_width - 1) & Â
-	"+" & multiply_text(rule_char, rule_width - name_col_width)
-
---
--- Format date-time string as "YYYY-MM-DD HH:MM:SS"
---
-set {year:y, month:m, day:d, hours:hh, minutes:mm, seconds:ss} to current date
-set m to m as integer -- coerce month string
--- Pad numbers with leading zeros:
-set tmp_list to {}
-repeat with this_item in {m, d, hh, mm, ss}
-	set this_item to text 2 thru -1 of (100 + this_item as text)
-	set end of tmp_list to this_item
-end repeat
-set {m, d, hh, mm, ss} to tmp_list
--- Final string:
-set date_time to join_list({y, m, d}, "-") & " " & join_list({hh, mm, ss}, ":")
-
---
--- Add header to new or empty log file
---
-set should_init to false
-tell application "Finder"
-	if (not (exists log_file_mac)) or (io_obj's read_file(log_file_mac) is "") then
-		set should_init to true
-	end if
-end tell
-
-set head_sep to multiply_text("#", 80)
-if should_init then
-	set file_header to head_sep & "
+		property _log_header_sep : my multiply_text("#", 80)
+		
+		property _page_url : missing value --> string
+		property _page_title : missing value --> string
+		property _page_label : missing value --> string
+		property _page_note : missing value --> string
+		property _log_record : missing value --> string
+		property _should_create_file : false --> boolean
+		
+		property _root_categories : missing value --> array
+		property _all_categories : missing value --> array
+		
+		property _chosen_root_category : missing value --> string -- label view state
+		property _chosen_category : missing value --> string -- label view state
+		
+		(* == Setters == *)
+		
+		on set_page_url(this_value) --> void
+			set _page_url to this_value
+			settings_changed() -- notify observers
+		end set_page_url
+		
+		on set_page_title(this_value) --> void
+			my debug_log(1, my class & ".set_page_title(" & this_value & ")")
+			set _page_title to this_value
+			settings_changed() -- notify observers
+		end set_page_title
+		
+		on set_page_label(this_value) --> void
+			set _page_label to this_value
+			settings_changed() -- notify observers
+		end set_page_label
+		
+		on set_page_note(this_value) --> void
+			set _page_note to this_value
+			settings_changed() -- notify observers
+		end set_page_note
+		
+		on set_chosen_root_category(this_value) --> void
+			set _chosen_root_category to this_value
+			settings_changed() -- notify observers
+		end set_chosen_root_category
+		
+		on set_chosen_category(this_value) --> void
+			set _chosen_category to this_value
+			settings_changed() -- notify observers
+		end set_chosen_category
+		
+		(* == Getters == *)
+		
+		on get_page_url() --> string
+			return _page_url
+		end get_page_url
+		
+		on get_page_title() --> string
+			return _page_title
+		end get_page_title
+		
+		on get_page_label() --> string
+			return _page_label
+		end get_page_label
+		
+		on get_page_note() --> string
+			return _page_note
+		end get_page_note
+		
+		on get_all_categories() --> array
+			return _all_categories
+		end get_all_categories
+		
+		on get_root_categories() --> array
+			return _root_categories
+		end get_root_categories
+		
+		on get_sub_categories() --> array
+			local sub_categories, this_cat
+			set sub_categories to {}
+			repeat with this_cat in _all_categories
+				set this_cat to this_cat's contents -- dereference
+				if this_cat is (_chosen_root_category) Â
+					or this_cat starts with (_chosen_root_category & ":") then
+					set end of sub_categories to this_cat
+				end if
+			end repeat
+			return sub_categories
+		end get_sub_categories
+		
+		on get_chosen_root_category() --> string
+			return _chosen_root_category
+		end get_chosen_root_category
+		
+		on get_chosen_category() --> string
+			return _chosen_category
+		end get_chosen_category
+		
+		(* == Actions == *)
+		
+		on write_record() --> void
+			local log_file_posix, log_file_mac
+			
+			set log_file_posix to expand_home_path(_settings's get_log_file())
+			set log_file_mac to get_mac_path(log_file_posix)
+			
+			-- Write last selected category to preferences file (save state)
+			_settings's set_pref(_settings's get_last_category_key(), _page_label)
+			
+			_format_record()
+			
+			_validate_fields()
+			
+			-- Create any directories needed in the web page log file path
+			create_directory(first item of split_path_into_dir_and_file(log_file_posix))
+			
+			if _should_create_file then _create_log_file()
+			
+			_io's append_file(log_file_mac, _log_record)
+		end write_record
+		
+		on parse_log() --> void
+			local log_file_posix, log_file_mac
+			local all_category_txt, root_category_txt
+			local all_categories, root_categories, existing_categories
+			
+			set log_file_posix to expand_home_path(_settings's get_log_file())
+			set log_file_mac to get_mac_path(log_file_posix)
+			
+			tell application "Finder"
+				if (not (exists log_file_mac)) or (_io's read_file(log_file_mac) is "") then
+					set _should_create_file to true
+				end if
+			end tell
+			
+			if _should_create_file then
+				-- Use sample categories when creating a new file
+				set all_category_txt to _sample_categories
+			else
+				-- Read manually-entered (and/or previous sample)
+				-- categories from existing file header
+				set all_category_txt to text 2 thru -2 of (item 3 of split_text(_io's read_file(log_file_mac), _log_header_sep))
+				-- :TODO: Error handling
+			end if
+			
+			-- Parse any existing labels from the "Label" fields of the URLs file:
+			--
+			set s to "LANG=C sed -n 's/^Label | //p' " & quoted form of log_file_posix Â
+				& " | sort | uniq"
+			set existing_categories to do shell script s without altering line endings
+			
+			-- Sort those along with the manual/sample categories/labels:
+			--
+			set s to "echo \"" & all_category_txt & linefeed & existing_categories Â
+				& "\" | egrep -v '^$' | sort | uniq"
+			set all_category_txt to do shell script s without altering line endings
+			
+			-- Coerce the lines into a list:
+			--
+			set all_categories to paragraphs of all_category_txt
+			if all_categories's last item is "" then
+				set all_categories to all_categories's items 1 thru -2
+			end if
+			
+			-- Get root-level categories:
+			--
+			set s to "LANG=C echo \"" & all_category_txt Â
+				& "\" | sed -n 's/^\\([^:]\\{1,\\}\\).*/\\1/p' | uniq"
+			set root_category_txt to do shell script s without altering line endings
+			
+			-- Coerce the lines into a list:
+			--
+			set root_categories to paragraphs of root_category_txt
+			if root_categories's last item is "" then
+				set root_categories to root_categories's items 1 thru -2
+			end if
+			
+			set _all_categories to all_categories
+			set _root_categories to root_categories
+		end parse_log
+		
+		(* == Observer Pattern == *)
+		
+		on settings_changed() -- void
+			set_changed()
+			notify_observers()
+		end settings_changed
+		
+		(* == PRIVATE == *)
+		
+		on _initialize_category()
+			my debug_log(1, my class & "._initialize_category()")
+			set _page_label to _settings's get_last_category()
+			if _page_label is missing value or _page_label is "" then
+				set _chosen_category to ""
+			else
+				set _chosen_category to _page_label
+			end if
+			try
+				set _chosen_root_category to my split_text(_page_label, ":")'s item 1
+			on error
+				set _chosen_root_category to ""
+			end try
+		end _initialize_category
+		
+		on _validate_fields() --> void
+			if _page_url is missing value then
+				_error_missing("page URL")
+			else if _page_title is missing value then
+				_error_missing("page title")
+			else if _page_label is missing value or _page_label is "" then
+				_error_missing("page label (category)")
+			else if _log_record is missing value then
+				_error_missing("formatted page data")
+			end if
+		end _validate_fields
+		
+		on _error_missing(this_field) --> void
+			error my class & ": missing value for: " & this_field & " - can't append to log"
+		end _error_missing
+		
+		on _create_log_file() --> void
+			local log_file_posix, log_file_mac, file_header
+			
+			set log_file_posix to expand_home_path(_settings's get_log_file())
+			set log_file_mac to get_mac_path(log_file_posix)
+			
+			set file_header to _log_header_sep & "
 # urls.txt - Timestamped and categorized URL archive
 # ==================================================
 # Optionally list some categories/labels of URLs below that might not yet
 # be used. Any categories/lables listed here or in the web page records
 # will be presented as a list to select from when saving new URLs.
-" & head_sep & linefeed & default_categories & linefeed & head_sep & "
+" & _log_header_sep & linefeed & _sample_categories & linefeed & _log_header_sep & "
 # END: category/label list
-" & head_sep & linefeed
-	tell io_obj to write_file(log_file_mac, file_header)
-	set all_category_txt to default_categories
-else
-	-- Read categories from file
-	(*
-		:TODO: Error handling.
-	*)
-	set all_category_txt to text 2 thru -2 of (item 3 of split_text(io_obj's read_file(log_file_mac), head_sep))
-end if
-
---
--- Parse any existing labels from the "Label" fields of the URLs file:
---
-set s to "LANG=C sed -n 's/^Label | //p' " & quoted form of log_file & " | sort | uniq"
---return s
-set categories_used to do shell script s without altering line endings
-
---
--- Sort those along with the manually entered categories/labels:
---
-set s to "echo \"" & all_category_txt & linefeed & categories_used & "\" | egrep -v '^$' | sort | uniq"
-set all_category_txt to do shell script s without altering line endings
---return all_category_txt -- :DEBUG:
---
--- Coerce the lines into a list:
---
-set g_all_categories to paragraphs of all_category_txt
-if g_all_categories's last item is "" then set g_all_categories to g_all_categories's items 1 thru -2
---return g_all_categories -- :DEBUG:
-
---
--- Get top-level categories:
---
-set s to "LANG=C echo \"" & all_category_txt & "\" | sed -n 's/^\\([^:]\\{1,\\}\\).*/\\1/p' | uniq"
-set top_category_txt to do shell script s without altering line endings
---return top_category_txt -- :DEBUG:
---
--- Coerce the lines into a list:
---
-set g_top_categories to paragraphs of top_category_txt
-if g_top_categories's last item is "" then set g_top_categories to g_top_categories's items 1 thru -2
---return g_top_categories -- :DEBUG:
-
-
-(* ==== Main view(-ish) ==== *)
-
---
--- Prompt for title, category/subcategories and optional note for URL
---
-
--- The number of dialog prompts will vary depending on if a subcategory list is requested.
-set g_prompt_count to 1 -- increment with every dialog or list prompt, decrement if going back
-set g_prompt_total to 4 -- increment if sub/full lists are displayed, decrement if going back
-
---
--- Accept or modify page title
---
-set b to {"Manually Edit Log File", "Cancel", "Next..."}
-set t to "" & script_name & ": Title (" & g_prompt_count & "/" & g_prompt_total & ")"
-set m to "To log the URL for:" & return & return Â
-	& tab & "\"" & this_title & "\"" & return & return & Â
-	"first accept or edit the title."
-display dialog m default answer this_title with title t buttons b default button 3 cancel button 2 with icon note
-set {this_title, btn_pressed} to {text returned of result, button returned of result}
-set g_prompt_count to g_prompt_count + 1
-if btn_pressed is first item of b then
-	-- :TODO:2013.01.03: only opening file in GUI editor now, so need Mac path?
-	(*if should_use_shell then
-		set this_log_file to quoted form of log_file_posix
-	else
-		set this_log_file to log_file
-	end if
-	edit_log(this_log_file, text_editor, should_use_shell)*)
-	edit_log(log_file_mac, text_editor)
-	return "Script ended with '" & (first item of b as text) & "'"
-end if
-
---
--- Accept or modify URL
---
--- :TODO:
-
---
--- Select a category
---
-set chosen_category to choose_category(settings_model, g_top_categories, "top")
-if chosen_category is false then error number -128 -- User canceled
-
---
--- Get the info so far
---
-set cur_info to "TITLE:" & tab & tab & this_title & return & "URL:" & tab & tab & this_url
-
---
--- Modify selected category or enter a new category
---
-set t to "" & script_name & ": Category (" & g_prompt_count & "/" & g_prompt_total & ")"
-set m to cur_info & return & return & "Please provide a category and any optional subcategories (or edit your selected category) for the URL. Example: \"Development:AppleScript:Mail\""
-repeat --10 times -- limit loops as a precaution during development
-	display dialog m default answer chosen_category with title t buttons b default button 3 cancel button 2 with icon note
-	set {this_label, btn_pressed} to {text returned of result, button returned of result}
-	if this_label is not "" then
-		exit repeat
-	else
-		set t2 to "Category required"
-		set m2 to "Please supply a category for the URL."
-		display alert t2 message m2 as warning
-	end if
-end repeat
-set g_prompt_count to g_prompt_count + 1
-
---
--- Update the info
---
-set cur_info to cur_info & return & "CATEGORY:" & tab & this_label
-
---
--- Optionally add note
---
-if btn_pressed is last item of b then
-	set last item of b to "Append URL to Log File"
-	set t to "" & script_name & ": Note (" & g_prompt_count & "/" & g_prompt_total & ")"
-	set m to cur_info & return & return & "Optionally add a short note. Just leave the field blank if you don't want to add a note."
-	display dialog m default answer "" with title t buttons b default button 3 with icon note
-	set {this_note, btn_pressed} to {text returned of result, button returned of result}
-end if
-
-if btn_pressed is last item of b then
-	--
-	-- Append or edit the log file
-	--
-	set final_text to join_list({Â
-		"Date " & field_sep & date_time, Â
-		"Label" & field_sep & this_label, Â
-		"Title" & field_sep & this_title, Â
-		"URL  " & field_sep & this_url}, linefeed) & linefeed
-	if this_note is not "" then
-		set final_text to final_text & "Note " & field_sep & this_note & linefeed
-	end if
-	set final_text to final_text & rec_sep & linefeed
-	--return "[DEBUG]" & return & final_text
-	io_obj's append_file(log_file_mac, final_text)
-	
-	--
-	-- Save category label to use as default for next run
-	--
-	set last_main_label to split_text(this_label, ":")'s first item
-	--return {last_main_label, this_label} -- :DEBUG:
-	tell settings_model
-		if read_pref("lastMainCategory") is not last_main_label then
-			write_pref("lastMainCategory", last_main_label)
-		end if
-		if read_pref("lastFullCategory") is not this_label then
-			write_pref("lastFullCategory", this_label)
-		end if
-	end tell
-else
-	(*if should_use_shell then
-		set this_log_file to quoted form of log_file_posix
-	else
-		set this_log_file to log_file
-	end if
-	edit_log(this_log_file, text_editor, should_use_shell)*)
-	-- :TODO:2013.01.03: only opening file in GUI editor now, so need Mac path?
-	edit_log(log_file_mac, text_editor)
-end if
-
-
---display alert "Log Page" message "DEBUG: Script complete."
-
-
-(*
-==================================================
-    Subroutines
-==================================================
-*)
-
-(* ==== Main Functions ==== *)
-
------ Dialog Views
-
-on choose_category(settings_model, cur_list, cur_list_type)
-	--log "[debug] in choose_category(_list_, \"" & cur_list_type & "\")"
-	
-	if cur_list_type is not in p_list_types then
-		set t to "Error: Bad list type"
-		set m to "choose_category():  The supplied list type parameter, '" & cur_list_type & "', is not a valid list type from the 'p_list_types' property. Please report this bug to the developer."
-		-- This bug is probably the result of a typo in the recursive section below.
-		display alert t message m buttons {"Cancel"} cancel button 1 as critical
-	end if
-	
-	if cur_list_type is not "all" then copy cur_list to g_previous_categories
-	
-	--log "[debug] g_previous_categories: " & join_list(g_previous_categories, ", ")
-	
-	set_list_type(cur_list_type) -- set global current and previous list types
-	
-	--
-	-- Configure the non-category navigation selections for the category list dialogs
-	--
-	set extra_items to get_extra_items(cur_list_type)
-	set list_rule to extra_items's last item
-	
-	--
-	-- Customize list dialog properties
-	--
-	set t to "" & script_name & ": Category (" & g_prompt_count & "/" & g_prompt_total & ")"
-	if cur_list_type is "top" then
-		set m to "Please select a top-level category for the URL you want to log. Next you will be able to select subcategories unless you are creating a new category."
-	else if cur_list_type is in {"sub", "all"} then
-		set m to "Please select a category or subcategory for the URL you want to log. You will have a chance to edit your choice (to add a new category or subcategory)."
-	end if
-	set b to "Next..."
-	
-	--
-	-- Get last used category for default selections
-	--
-	try
-		set last_main_label to settings_model's read_pref("lastMainCategory")
-	on error
-		set last_main_label to ""
-	end try
-	try
-		set last_full_label to settings_model's read_pref("lastFullCategory")
-		if last_full_label is "" then error
-	on error
-		set last_full_label to last_main_label
-	end try
-	if cur_list_type is "top" then
-		set this_default_item to last_main_label
-	else
-		set this_default_item to last_full_label
-	end if
-	
-	--
-	-- Prompt the user for category and/or subcategory choices
-	--
-	repeat --10 times -- limit loops as a precaution during development
-		set chosen_category to choose from list extra_items & cur_list with title t with prompt m OK button name b default items this_default_item
-		if chosen_category as text is not list_rule then
-			exit repeat
-		else
-			display alert "Invalid selection" message "Please select a category or an action." as warning
-		end if
-	end repeat
-	if chosen_category is false then return false
-	
-	--
-	-- Call this handler recursively if another list was requested.
-	-- When specifying a 'cur_list_type' parameter to choose_category(), make
-	-- sure it is one of the allowed types from the 'p_list_types' property.
-	--
-	if cur_list_type is in {"top", "sub"} and chosen_category as text is extra_items's first item then
-		--log "[debug] incrementing both prompt count and total"
-		set g_prompt_count to g_prompt_count + 1
-		set g_prompt_total to g_prompt_total + 1
-		--log "[debug] recurse to choose_category(g_all_categories, \"all\")"
-		set chosen_category to choose_category(settings_model, g_all_categories, "all")
-	else if cur_list_type is "sub" and chosen_category as text is extra_items's second item then
-		--log "[debug] decrementing both prompt count and total"
-		set g_prompt_count to g_prompt_count - 1
-		set g_prompt_total to g_prompt_total - 1
-		--log "[debug] recurse to choose_category(g_top_categories, \"top\")"
-		set chosen_category to choose_category(settings_model, g_top_categories, "top")
-	else if cur_list_type is "all" and chosen_category as text is extra_items's first item then
-		--log "[debug] decrementing both prompt count and total"
-		set g_prompt_count to g_prompt_count - 1
-		set g_prompt_total to g_prompt_total - 1
-		if g_previous_list_type is "sub" then
-			--log "[debug] recurse to choose_category(g_previous_categories, \"sub\")"
-			set chosen_category to choose_category(settings_model, g_previous_categories, "sub")
-		else if g_previous_list_type is "top" then
-			--log "[debug] recurse to choose_category(g_top_categories, \"top\")"
-			set chosen_category to choose_category(settings_model, g_top_categories, "top")
-		end if
-	else if cur_list_type is "top" and chosen_category as text is extra_items's second item then
-		set g_prompt_count to g_prompt_count + 1
-		return ""
-	else if cur_list_type is "top" then
-		set sub_categories to get_subcategories(chosen_category)
-		if (count of sub_categories) is greater than 1 then
-			--log "[debug] incrementing both prompt count and total"
-			set g_prompt_count to g_prompt_count + 1
-			set g_prompt_total to g_prompt_total + 1
-			--log "[debug] recurse to choose_category(sub_categories, \"sub\")"
-			set chosen_category to choose_category(settings_model, sub_categories, "sub")
-		else
-			-- Advance to next dialog (category editing)
-			set g_prompt_count to g_prompt_count + 1
-		end if
-	else
-		-- Advance to next dialog (category editing)
-		--log "[debug] incrementing prompt count"
-		set g_prompt_count to g_prompt_count + 1
-	end if
-	
-	return chosen_category
-end choose_category
-
-on get_subcategories(chosen_category)
-	set sub_categories to {}
-	repeat with this_cat in g_all_categories
-		if (this_cat as text) is (chosen_category as text) Â
-			or (this_cat as text) starts with (chosen_category & ":") then
-			set end of sub_categories to this_cat as text
-		end if
-	end repeat
-	return sub_categories
-end get_subcategories
-
-on set_list_type(cur_type)
-	set g_previous_list_type to g_list_type
-	set g_list_type to cur_type
-end set_list_type
-
-on get_extra_items(list_type)
-	if list_type is "top" then
-		return {Â
-			u_bullet_ls & "Show full list with subcategoriesÉ", Â
-			u_bullet_ls & "Create a new category...", Â
-			multiply_text(u_dash, 20)}
-	else if list_type is "sub" then
-		return {Â
-			u_bullet_ls & "Show full list of categories...", Â
-			u_back_ls & "Go back to previous list...", Â
-			multiply_text(u_dash, 35)}
-	else if list_type is "all" then
-		return {Â
-			u_back_ls & "Go back to previous list...", Â
-			multiply_text(u_dash, 35)}
-	else
-		return false
-	end if
-end get_extra_items
-
------ External Views
-
-on edit_log(log_file, text_editor)
-	--on edit_log(log_file, text_editor, should_use_shell)
-	(*
-		TODO:MAYBE:
-		Have a configuration variable in the main script to specify which text
-		editor to use. Have another variable for configuring whether or not
-		it's a GUI application. Then this function would use 'open' to launch a
-		GUI app or script the Terminal to launch a command-line editor.
-		Optionally use 'do shell script' to launch a compatible GUI app from a
-		command line (so that the working directory can be changed to that of
-		the file first), but I don't know if that will really be necessary
-		since I have a Vim shortcut for quickly changing the working directory
-		if need be.
-	*)
-	(*if should_use_shell then
-		set s to text_editor & space & log_file & space & "> /dev/null 2>&1"
-		do shell script s
-		return
-	else*)
-	set t to script_name
-	--set m to ":TODO: edit_log() function: use non-shell-invoked editor."
-	set m to ":TODO:2013.01.03: only opening file in GUI editor now, so need Mac path?"
-	set b to {"Cancel"}
-	display alert t message m buttons b cancel button 1 as critical
-	return false
-	--end if
-end edit_log
-
-(* ==== Settings Functions ==== *)
-
-on do_first_run(settings_model)
-	local settings_model
-	set t to "Log Page > First Run"
-	set m to "This script will append the URL of the front Safari document to a text file along with the current date/time, the title of the web page and a user-definable category. The script also includes an option to open the file in your favorite text editor for editing. The default file and text editor are:" & return & return Â
-		& "	URLs File:	" & settings_model's get_default_file() & return & return Â
-		& "	Text Editor:	" & settings_model's get_default_editor() & return & return Â
-		& "You can continue using those defaults or change the settings now. You can also change the settings later by selecting the \"Preferences\" item from any list dialog. (You would have to manually move your old URLs file though if you wanted to keep appending to it.)"
-	-- :TODO: Offer to move the file when changing file location/name. (Not here.)
-	set b to {"Change settingsÉ", "Cancel", "Continue"}
-	display dialog m with title t buttons b default button 3 with icon note
-	set btn_pressed to button returned of result
-	
-	--settings_model's set_item("logFile", "DEBUG: logFile: do_first_run()") -- :DEBUG:
-	--settings_model's set_item("textEditor", "DEBUG: textEditor: do_first_run()") -- :DEBUG:
-	
-	-- Use defaults
-	settings_model's set_item("logFile", settings_model's get_default_file())
-	settings_model's set_item("textEditor", settings_model's get_default_editor())
-	
-	-- Change settings
-	if btn_pressed is b's first item then
-		set_preferences(settings_model, settings_model's get_default_file(), settings_model's get_default_editor())
-	end if
-	
-	-- Save settings
-	settings_model's write_settings()
-	
-	return settings_model
-end do_first_run
-
-on set_preferences(settings_model, default_file, default_editor)
-	(*
-		Triggered from:
-		  * do_first_run()
-		  * any list dialog from main script (when saving a URL)
-	*)
-	local settings_model, default_file, default_editor, settings_view
-	
-	--
-	-- Prompt user for preferences
-	--
-	set settings_view to make_settings_view(default_file, default_editor, settings_model's get_item("logFile"), settings_model's get_item("textEditor"))
-	settings_view's display()
-	
-	--
-	-- Write preferences file (if necessary)
-	--
-	if settings_view's get_file() is not settings_model's get_item("logFile") then
-		settings_model's set_item_and_write_pref("logFile", settings_view's get_file())
-	end if
-	
-	if settings_view's get_editor() is not settings_model's get_item("textEditor") then
-		settings_model's set_item_and_write_pref("textEditor", settings_view's get_editor())
-	end if
-	
-	return settings_model
-end set_preferences
-
-
-(* ==== Utility Functions ==== *)
-
-on convert_to_ascii(non_ascii_txt)
-	(*
-		Transliterate Unicode characters to ASCII, ignoring any that can't be
-		represented. Also compress white space since ignoring characters can
-		leave mulitple adjacent spaces.
-	
-		From 'man iconv_open':
+" & _log_header_sep & linefeed
+			
+			_io's write_file(log_file_mac, file_header)
+		end _create_log_file
 		
-			When the string "//TRANSLIT" is appended to _tocode_,
-			transliteration is activated. This means that when a character
-			cannot be represented in the target character set, it can be
-			approximated through one or several characters that look similar to
-			the original character.
-
-			When the string "//IGNORE" is appended to _tocode_, characters that
-			cannot be represented in the target character set will be silently
-			discarded.
-	*)
-	set s to "iconv -f UTF-8 -t US-ASCII//TRANSLIT//IGNORE <<<" & quoted form of non_ascii_txt & " | sed 's/   */ /g'"
-	do shell script s
-end convert_to_ascii
-
-on create_directory(posix_dir)
-	set this_dir to expand_home_path(posix_dir)
-	try
-		set s to "mkdir -pm700 " & quoted form of this_dir
-		do shell script s
-	on error err_msg number err_num
-		error "Can't create directory: " & err_msg number err_num
-		return "Fatal Error: Can't create directory"
-	end try
-end create_directory
-
-on split_path_into_dir_and_file(file_path)
-	set path_parts to split_text(file_path, "/")
-	set dir_path to join_list(items 1 thru -2 of path_parts, "/")
-	set file_name to path_parts's last item
-	return {dir_path, file_name}
-end split_path_into_dir_and_file
-
--- Could alternatively use 'do shell script "echo" & space & file_path'
--- but it might be slower because of the overhead of starting up a shell.
-on expand_home_path(file_path)
-	if file_path starts with "~/" then
-		set posix_home to get_posix_home()
-		set file_path to posix_home & characters 3 thru -1 of file_path as text
-	else if file_path starts with "$HOME/" then
-		set posix_home to get_posix_home()
-		set file_path to posix_home & characters 7 thru -1 of file_path as text
+		on _format_record() --> void
+			local field_sep, record_sep, final_text
+			local rule_char, rule_width, name_col_width
+			
+			set field_sep to " | "
+			
+			-- Format the record separator between log entries
+			set rule_char to "-"
+			set rule_width to 80 -- total width
+			set name_col_width to 7 -- name column width only
+			set record_sep to "" & multiply_text(rule_char, name_col_width - 1) & Â
+				"+" & multiply_text(rule_char, rule_width - name_col_width)
+			
+			set final_text to join_list({Â
+				"Date " & field_sep & _format_date(), Â
+				"Label" & field_sep & _page_label, Â
+				"Title" & field_sep & _page_title, Â
+				"URL  " & field_sep & _page_url}, linefeed) & linefeed
+			if _page_note is not missing value then
+				set final_text to final_text & "Note " & field_sep & _page_note & linefeed
+			end if
+			
+			set _log_record to final_text & record_sep & linefeed
+		end _format_record
+		
+		on _format_date() --> string  (YYYY-MM-DD HH:MM:SS)
+			set {year:y, month:m, day:d, hours:hh, minutes:mm, seconds:ss} to current date
+			set m to m as integer -- coerce month string
+			-- Pad numbers with leading zeros:
+			set tmp_list to {}
+			repeat with this_item in {m, d, hh, mm, ss}
+				set this_item to text 2 thru -1 of (100 + this_item as text)
+				set end of tmp_list to this_item
+			end repeat
+			set {m, d, hh, mm, ss} to tmp_list
+			-- Final string:
+			return join_list({y, m, d}, "-") & space & join_list({hh, mm, ss}, ":")
+		end _format_date
+	end script
+	
+	my debug_log(1, return & "--->  new " & this's class & "()" & return)
+	
+	if __NULL_IO__ then
+		set this's _io to make_null_io()
+	else
+		set this's _io to make_io()
 	end if
-	return file_path
-end expand_home_path
+	
+	this's _initialize_category()
+	
+	return this
+end make_page_log
 
-on get_posix_home()
-	return POSIX path of (path to home folder from user domain)
-end get_posix_home
+script WebBrowserFactory
+	property class : "WebBrowserFactory"
+	on make_browser()
+		-- Eventually will detect frontmost application and return a
+		-- browser object if it is a supported web browser, but for now
+		-- only Safari is supported.
+		return make_safari_browser()
+	end make_browser
+end script
 
-on multiply_text(str, n)
-	if n < 1 or str = "" then return ""
-	set lst to {}
-	repeat n times
-		set end of lst to str
-	end repeat
-	return lst as string
-end multiply_text
+on make_web_browser()
+	script
+		property class : "WebBrowser" -- abstract
+		property _page_url : missing value
+		property _page_title : missing value
+		
+		on fetch_page_info() --> void
+			error my class & ".fetch_page_info(): abstract method not overridden" number -1717
+		end fetch_page_info
+		
+		on get_url() --> string
+			return _page_url
+		end get_url
+		
+		on get_title() --> string
+			return _page_title
+		end get_title
+	end script
+end make_web_browser
 
-on split_text(txt, delim)
-	set old_tids to AppleScript's text item delimiters
-	try
-		set AppleScript's text item delimiters to (delim as string)
-		set lst to every text item of (txt as string)
-		set AppleScript's text item delimiters to old_tids
-		return lst
-	on error err_msg number err_num
-		set AppleScript's text item delimiters to old_tids
-		error "Can't split_text(): " & err_msg number err_num
-	end try
-end split_text
+on make_safari_browser()
+	script this
+		property class : "SafariBrowser"
+		property parent : make_web_browser() -- extends WebBrowser
+		
+		on fetch_page_info() --> void
+			tell application "Safari"
+				activate
+				try
+					set this_url to URL of front document
+					set this_title to name of first tab of front window whose visible is true
+				on error err_msg number err_num
+					_handle_error(err_msg, err_num)
+				end try
+			end tell
+			
+			try
+				set my _page_url to this_url
+				set my _page_title to convert_to_ascii(this_title) -- Transliterate non-ASCII
+			on error err_msg number err_num
+				_handle_error(err_msg, err_num)
+			end try
+		end fetch_page_info
+		
+		on _handle_error(err_msg, err_num)
+			set t to "Error: Can't get info from Safari"
+			set m to "[" & my class & "] " & err_msg & " (" & err_num & ")"
+			display alert t message m buttons {"Cancel"} cancel button 1 as critical
+		end _handle_error
+	end script
+	
+	my debug_log(1, "--->  new " & this's class & "()")
+	return this
+end make_safari_browser
 
-on join_list(lst, delim)
-	set old_tids to AppleScript's text item delimiters
-	try
-		set AppleScript's text item delimiters to (delim as string)
-		set txt to lst as string
-		set AppleScript's text item delimiters to old_tids
-		return txt
-	on error err_msg number err_num
-		set AppleScript's text item delimiters to old_tids
-		error "Can't join_list(): " & err_msg number err_num
-	end try
-end join_list
+-- -- -- Settings Models -- -- --
 
-(*
-==================================================
-    Script Objects (and Constructors)
-==================================================
-*)
-
-(* ==== Main Classes ==== *)
-
--- MODEL: Settings
-on make_settings_model(plist_path, default_file, default_editor)
+on make_settings()
 	(*
 		Dependencies:
-		  * AssociativeList class
-		  * split_path_into_dir_and_file() function (supplied by main script)
-		  * create_directory() function (supplied by main script)
+			* Observable (class)
+			* AssociativeList (class)
+			* Plist (class)
 	*)
-	script SettingsModel
-		property class : "SettingsModel"
-		property parent : make_associative_list()
+	script
+		property class : "Settings" -- model
+		property parent : make_observable() -- extends Observable
+		property _settings : make_associative_list() --> AssociativeList
+		property _default_settings : make_associative_list() --> AssociativeList
+		property _plist : missing value --> Plist (object)
 		
-		property _plist_path : missing value
-		property _default_file : missing value -- for restoring default
-		property _default_editor : missing value -- for restoring default
+		-- Define all preference keys here.
+		property _log_file_key : "logFile" -- required pref
+		property _text_editor_key : "textEditor" -- required pref
+		property _last_category_key : "lastCategory" -- optional state
 		
-		(* == PUBLIC == *)
+		property _optional_keys : {_last_category_key} --> array (saved state, etc.)
 		
-		on get_default_file()
-			return _default_file
-		end get_default_file
+		on init()
+			set plist_path to __PLIST_DIR__ & __BUNDLE_ID__ & ".plist"
+			set _plist to make_plist(plist_path, me)
+			
+			-- Initialize default values
+			_default_settings's set_item(_log_file_key, Â
+				POSIX path of (path to application support folder from user domain) Â
+				& __NAMESPACE__ & "/" & __SCRIPT_NAME__ & "/urls.txt")
+			_default_settings's set_item(_text_editor_key, "TextEdit")
+			
+			--_default_settings's set_item("boolPref", true) -- test other types
+		end init
 		
-		on get_default_editor()
-			return _default_editor
-		end get_default_editor
+		(* == Default Methods == *)
+		
+		on get_default_item(this_key) --> anything
+			_default_settings's get_item(this_key)
+		end get_default_item
+		
+		on get_default_log_file() --> string
+			_default_settings's get_item(_log_file_key)
+		end get_default_log_file
+		
+		on get_default_text_editor() --> integer
+			_default_settings's get_item(_text_editor_key)
+		end get_default_text_editor
+		
+		on get_default_keys() --> list
+			_default_settings's get_keys()
+		end get_default_keys
+		
+		on get_optional_keys() --> list
+			return _optional_keys
+		end get_optional_keys
+		
+		on get_log_file_key() --> string
+			return _log_file_key
+		end get_log_file_key
+		
+		on get_text_editor_key() --> string
+			return _text_editor_key
+		end get_text_editor_key
+		
+		on get_last_category_key() --> string
+			return _last_category_key
+		end get_last_category_key
+		
+		on get_log_file() --> string
+			_settings's get_item(_log_file_key)
+		end get_log_file
+		
+		on get_text_editor() --> integer
+			_settings's get_item(_text_editor_key)
+		end get_text_editor
+		
+		on get_last_category() --> string
+			try
+				_settings's get_item(_last_category_key)
+			on error
+				return missing value
+			end try
+		end get_last_category
+		
+		(* == Observer Pattern == *)
+		
+		on settings_changed() -- void
+			set_changed()
+			notify_observers()
+		end settings_changed
+		
+		(* == Associative List Methods (delegate) == *)
+		
+		on set_pref(this_key, this_value) --> void
+			--
+			-- Use this method to both set the associative list item and save
+			-- the preference to disk
+			--
+			_settings's set_item(this_key, this_value)
+			_plist's write_pref(this_key, this_value)
+			settings_changed() -- notify observers
+		end set_pref
+		
+		on set_item(this_key, this_value) --> void
+			--
+			-- Use this method to only set the associative list item without
+			-- saving the preference to disk
+			--
+			_settings's set_item(this_key, this_value)
+			settings_changed() -- notify observers
+		end set_item
+		
+		on get_item(this_key) --> anything
+			_settings's get_item(this_key)
+		end get_item
+		
+		on count_items() --> integer
+			_settings's count_items()
+		end count_items
+		
+		on delete_item(this_key) --> void
+			_settings's delete_item(this_key)
+			settings_changed()
+		end delete_item
+		
+		on get_keys() --> list
+			_settings's get_keys()
+		end get_keys
+		
+		on get_values() --> list
+			_settings's get_values()
+		end get_values
+		
+		on key_exists(this_key) --> boolean
+			_settings's key_exists(this_key)
+		end key_exists
+		
+		(* == Plist File Methods (delegate) == *)
+		
+		on read_settings(plist_keys) --> void (modifies associative list)
+			_plist's read_settings(plist_keys)
+		end read_settings
+		
+		on write_settings() --> void (writes to file)
+			_plist's write_settings()
+		end write_settings
+		
+		(*on set_and_write_pref(this_key, this_value) --> void (modifies ass. list, saves file)
+			_plist's set_and_write_pref(this_key, this_value)
+			settings_changed()
+		end set_and_write_pref*)
+		
+		on read_pref(pref_key) --> anything
+			_plist's read_pref(pref_key)
+		end read_pref
+		
+		on write_pref(pref_key, pref_value) --> void (writes to file)
+			_plist's write_pref(pref_key, pref_value)
+		end write_pref
+	end script
+end make_settings
+
+on make_plist(plist_path, settings_model)
+	(*
+		Dependencies:
+			* Settings (class)
+			* split_path_into_dir_and_file() function (supplied by main script)
+			* create_directory() function (supplied by main script)
+	*)
+	script
+		property class : "Plist"
+		property _plist_path : plist_path
+		property _model : settings_model --> Settings
 		
 		-- Get the values for each key in the given list
-		on read_settings(plist_keys) -- void; modifies associative list
-			log "[debug] read_settings()" -- MARK
+		on read_settings(plist_keys) --> void (modifies associative list)
+			my debug_log(1, "[debug] read_settings()")
 			try
 				repeat with this_key in plist_keys
 					set this_key to this_key's contents -- dereference implicit loop reference
 					set this_value to read_pref(this_key)
-					set_item(this_key, this_value)
+					_model's set_item(this_key, this_value)
 				end repeat
 			on error err_msg number err_num
 				error "Can't read_settings(): " & err_msg number err_num
 			end try
-			log "[debug] read_settings(): done"
+			my debug_log(1, "[debug] read_settings(): done")
 		end read_settings
 		
-		on write_settings() -- void; writes to file
+		on write_settings() --> void (writes to file)
 			try
-				repeat with this_key in get_keys()
+				repeat with this_key in _model's get_keys()
 					set this_key to this_key's contents -- dereference implicit loop reference
-					write_pref(this_key, get_item(this_key))
+					write_pref(this_key, _model's get_item(this_key))
 				end repeat
 			on error err_msg number err_num
 				error "Can't write_settings(): " & err_msg number err_num
 			end try
 		end write_settings
 		
-		on set_item_and_write_pref(this_key, this_value) -- void; modifies associative list, saves file
-			set_item(this_key, this_value) -- store value in object
+		(*on set_and_write_pref(this_key, this_value) --> void (modifies ass. list, saves file)
+			_model's set_item(this_key, this_value) -- store value in object
 			write_pref(this_key, this_value) -- write value to file
-		end set_item_and_write_pref
+		end set_and_write_pref*)
 		
-		on read_pref(pref_key) -- returns value of key
-			log "[debug] read_pref()"
+		on read_pref(pref_key) --> anything
+			my debug_log(1, "[debug] read_pref()")
 			local pref_key
 			try
 				tell application "System Events"
@@ -856,11 +833,17 @@ on make_settings_model(plist_path, default_file, default_editor)
 			end try
 		end read_pref
 		
-		on write_pref(pref_key, pref_value) -- void; writes to file
-			-- :XXX: This function only sets string types now. If need to set other
-			-- types, write a function to detect the type of the given value. (I've
-			-- already got one somewhere.)
-			log "[debug] write_pref()"
+		on write_pref(pref_key, pref_value) --> void (writes to file)
+			--
+			-- :XXX: This function only sets string types now. If need
+			-- to set other types, write a function to detect the type
+			-- of the given value. (I've already got one somewhere.)
+			-- UPDATE: It actually appears to be doing the right thing;
+			-- not sure why. It appears that the value type is being
+			-- detected and the "kind" automatically overridden. I only
+			-- tested strings, integers and booleans though.
+			--
+			my debug_log(1, "[debug] write_pref()")
 			local pref_key, pref_value, this_plistfile
 			try
 				tell application "System Events"
@@ -881,6 +864,7 @@ on make_settings_model(plist_path, default_file, default_editor)
 							my read_pref(pref_key)
 							set value of property list item pref_key to pref_value
 						on error
+							my debug_log(1, tab & "[debug] write_pref(): writing new item")
 							make new property list item at end of property list items with properties {kind:string, name:pref_key, value:pref_value}
 						end try
 					end tell
@@ -890,10 +874,8 @@ on make_settings_model(plist_path, default_file, default_editor)
 			end try
 		end write_pref
 		
-		(* == PRIVATE == *)
-		
-		on _new_plist() -- returns a 'property list file'
-			log "[debug] _new_plist()"
+		on _new_plist() -- returns a 'property list file' -- PRIVATE
+			my debug_log(1, "[debug] _new_plist()")
 			local parent_dictionary, this_plistfile
 			try
 				tell application "System Events"
@@ -910,270 +892,1656 @@ on make_settings_model(plist_path, default_file, default_editor)
 			end try
 		end _new_plist
 	end script
-	
-	-- initialize new object instance
-	set SettingsModel's _plist_path to plist_path
-	set SettingsModel's _default_file to default_file
-	set SettingsModel's _default_editor to default_editor
-	return SettingsModel
-end make_settings_model
+end make_plist
 
--- VIEW: Settings
-on make_settings_view(default_file, default_editor, cur_file, cur_editor)
-	(*
-		Dependencies:
-		  * multiply_text() function (supplied by main script)
-		  * split_text() function (supplied by main script)
-		  * join_list() function (supplied by main script)
-		  * split_path_into_dir_and_file() function (supplied by main script)
-	*)
-	script SettingsView
-		property class : "SettingsView"
+(* ==== Controller ==== *)
+
+-- -- -- Common Controllers -- -- --
+
+on make_navigation_controller()
+	script this
+		property class : "NavigationController"
+		property controller_stack : make_named_stack("ControllerStack") --> Stack
+		property controller_history : make_named_stack("ControllerHistory") --> Stack
 		
-		property _default_file : missing value -- for restoring default
-		property _default_editor : missing value -- for restoring default
-		property _cur_file : missing value
-		property _cur_editor : missing value
+		(* == Private Methods == *)
 		
-		property _did_display_2 : false
-		property _display_2_action : missing value -- 'file' or 'editor'
-		property _display_2_button : missing value
+		on _push_controller_with_history(controller_array) --> void -- PRIVATE
+			set {current_controller, next_controller} to controller_array
+			controller_history's push(current_controller) -- save this controller in history
+			controller_stack's push(next_controller) -- push next controller onto stack
+		end _push_controller_with_history
 		
-		(* == PUBLIC == *)
+		on _push_controller_without_history(controller_array) --> void -- PRIVATE
+			set {next_controller} to controller_array
+			controller_stack's push(next_controller) -- push next controller onto stack
+		end _push_controller_without_history
 		
-		on get_file()
-			return _cur_file
-		end get_file
+		(* == Convenience Methods == *)
 		
-		on get_editor()
-			return _cur_editor
-		end get_editor
+		on push_controller(controller_array) --> void
+			if controller_array's class is not list then
+				error my class & ".push_controller(): Invalid parameter." number -1704
+			end if
+			-- Simulate method overloading. Delegate to another
+			-- method depending on number of items in list.
+			if controller_array's length is 2 then
+				_push_controller_with_history(controller_array)
+			else if controller_array's length is 1 then
+				_push_controller_without_history(controller_array)
+			else
+				error my class & ".push_controller(): More than two items in list." number -1704
+			end if
+		end push_controller
 		
-		on display()
-			log "[debug] display()"
-			_display_1()
-			_show_final_settings()
-			log "[debug] display(): returning true"
+		on push_root_controller(next_controller) --> void
+			controller_history's reset() -- clear the history stack
+			controller_stack's reset() -- clear the controller stack
+			controller_stack's push(next_controller) -- push root controller onto stack
+		end push_root_controller
+		
+		on go_back() --> void
+			-- Pop the top controller off the history stack and push it
+			-- onto the pending controller stack.
+			controller_stack's push(controller_history's pop())
+		end go_back
+		
+		(* == Controller Stack Methods == *)
+		
+		on pop() --> controller object
+			controller_stack's pop()
+		end pop
+		
+		on peek() --> controller object
+			controller_stack's peek()
+		end peek
+		
+		on is_empty() --> boolean
+			controller_stack's is_empty()
+		end is_empty
+		
+		on to_string() --> string
+			controller_stack's to_string()
+		end to_string
+		
+		(* == History Stack Methods == *)
+		
+		on push_history(this_controller) --> void
+			controller_history's push(this_controller)
+		end push_history
+		
+		on pop_history() --> controller object
+			controller_history's pop()
+		end pop_history
+		
+		on peek_history() --> controller object
+			controller_history's peek()
+		end peek_history
+		
+		on history_is_empty() --> boolean
+			controller_history's is_empty()
+		end history_is_empty
+		
+		on history_to_string() --> string
+			controller_history's to_string()
+		end history_to_string
+	end script
+	
+	my debug_log(1, return & "--->  new " & this's class & "()")
+	return this
+end make_navigation_controller
+
+on make_base_controller()
+	script
+		property class : "BaseController"
+		property other_controllers : {} --> array
+		
+		on set_controllers(these_controllers) --> void
+			set my other_controllers to these_controllers
+		end set_controllers
+		
+		on to_string() --> string
+			return my class
+		end to_string
+	end script
+end make_base_controller
+
+-- -- -- Main App Controllers -- -- --
+
+on make_file_edit_controller(main_model)
+	script this
+		property class : "FileEditController"
+		property parent : make_base_controller() -- extends BaseController
+		property _model : main_model
+		
+		on run
+			my debug_log(1, return & "--->  running " & my class & "...")
+			launch_editor()
+			my debug_log(1, "--->  finished " & my class & return)
+			return false -- ends controller loop and exits script
+		end run
+		
+		on launch_editor() --> void
+			my debug_log(1, "[debug] TODO: open log file in text editor")
+			display dialog my class & ": TODO: open log file in text editor" with title "TODO"
+		end launch_editor
+	end script
+	
+	my debug_log(1, return & "--->  new " & this's class & "()")
+	return this
+end make_file_edit_controller
+
+on make_help_controller(navigation_controller, settings_model)
+	script this
+		property class : "HelpController"
+		property parent : make_base_controller() -- extends BaseController
+		property _nav_controller : navigation_controller
+		property _model : settings_model
+		property _view : missing value
+		
+		on run
+			my debug_log(1, return & "--->  running " & my class & "...")
+			if _view is missing value then set _view to make_help_view(me, _model)
+			_view's create_view()
+			my debug_log(1, "--->  finished " & my class & return)
 			return true
-		end display
+		end run
 		
-		(* == PRIVATE == *)
+		on change_settings() --> void
+			_nav_controller's push_controller({my other_controllers's item 1})
+		end change_settings
+	end script
+	
+	my debug_log(1, return & "--->  new " & this's class & "()")
+	return this
+end make_help_controller
+
+on make_title_controller(navigation_controller, main_model)
+	script this
+		property class : "TitleController"
+		property parent : make_base_controller() -- extends BaseController
+		property _nav_controller : navigation_controller
+		property _model : main_model
+		property _view : missing value
 		
-		-- Last preferences display
-		on _show_final_settings() -- PRIVATE
-			log "[debug] _show_final_settings()"
-			log "[debug] _did_display_2: '" & _did_display_2 & "'"
-			set t to script_name & " Updated Settings"
-			set m to "URLs File:" & tab & tab & _cur_file & return & return Â
-				& "Text Editor:" & tab & _cur_editor
-			display alert t message m
-			log "[debug] _show_final_settings(): returning true"
+		on run
+			my debug_log(1, return & "--->  running " & my class & "...")
+			if _view is missing value then set _view to make_title_view(me, _model)
+			_view's create_view()
+			my debug_log(1, "--->  finished " & my class & return)
 			return true
-		end _show_final_settings
+		end run
 		
-		-- Level 1: main (before any changes have been made)
-		on _display_1() -- PRIVATE
-			log "[debug] _display_1()"
-			log "[debug] _did_display_2: '" & _did_display_2 & "'"
-			set t to script_name & " > Settings"
-			set m to "Choose a URLs file and/or a text editor for editing the file. The current settings are:" & return & return Â
-				& "	URLs File:	" & _cur_file & return & return Â
-				& "	Text Editor:	" & _cur_editor & return & return
-			set b to {"Cancel", "Choose a text editorÉ", "Choose a URLs fileÉ"}
-			display dialog m with title t buttons b with icon note
-			set btn_pressed to button returned of result
+		on show_help() --> void
+			--
+			-- We want to return to the current controller after the
+			-- help controller is finished, so push this controller back
+			-- onto the stack first, then the help controller.
+			--
+			_nav_controller's push_controller({me})
+			_nav_controller's push_controller({my other_controllers's item 1})
+		end show_help
+		
+		on set_page_title(this_value) --> void
+			_model's set_page_title(this_value)
+			_nav_controller's push_controller({me, my other_controllers's item 2})
+		end set_page_title
+	end script
+	
+	my debug_log(1, return & "--->  new " & this's class & "()")
+	return this
+end make_title_controller
+
+on make_url_controller(navigation_controller, main_model)
+	script this
+		property class : "URLController"
+		property parent : make_base_controller() -- extends BaseController
+		property _nav_controller : navigation_controller
+		property _model : main_model
+		property _view : missing value
+		
+		on run
+			my debug_log(1, return & "--->  running " & my class & "...")
+			if _view is missing value then set _view to make_url_view(me, _model)
+			_view's create_view()
+			my debug_log(1, "--->  finished " & my class & return)
+			return true
+		end run
+		
+		on go_back() --> void
+			_nav_controller's go_back()
+		end go_back
+		
+		on set_page_url(this_value) --> void
+			_model's set_page_url(this_value)
+			_nav_controller's push_controller({me, my other_controllers's item 1})
+		end set_page_url
+	end script
+	
+	my debug_log(1, return & "--->  new " & this's class & "()")
+	return this
+end make_url_controller
+
+on make_label_controller(navigation_controller, main_model)
+	script this
+		property class : "LabelController"
+		property parent : make_base_controller() -- extends BaseController
+		property _nav_controller : navigation_controller
+		property _model : main_model
+		property _view : missing value
+		
+		on run
+			my debug_log(1, return & "--->  running " & my class & "...")
+			if _view is missing value then set _view to make_label_view(me, _model)
+			_view's create_view()
+			my debug_log(1, "--->  finished " & my class & return)
+			return true
+		end run
+		
+		on go_back() --> void
+			_nav_controller's go_back()
+		end go_back
+		
+		on set_chosen_root(this_value) --> void
+			_model's set_chosen_root_category(this_value)
+			_nav_controller's push_controller({me, my other_controllers's item 1})
+		end set_chosen_root
+		
+		on choose_from_all() --> void
+			_nav_controller's push_controller({me, my other_controllers's item 2})
+		end choose_from_all
+		
+		on edit_label() --> void
+			_nav_controller's push_controller({me, my other_controllers's item 3})
+		end edit_label
+		
+		on edit_file() --> void
+			_nav_controller's push_controller({me, my other_controllers's item 4})
+		end edit_file
+		
+		on change_settings() --> void
+			-- Return to the current controller after the preferences
+			-- controller is finished.
+			_nav_controller's push_controller({me})
+			_nav_controller's push_controller({my other_controllers's item 5})
+		end change_settings
+		
+		on show_help() --> void
+			-- Return to the current controller after the help
+			-- controller is finished.
+			_nav_controller's push_controller({me})
+			_nav_controller's push_controller({my other_controllers's item 6})
+		end show_help
+	end script
+	
+	my debug_log(1, return & "--->  new " & this's class & "()")
+	return this
+end make_label_controller
+
+on make_sub_label_controller(navigation_controller, main_model)
+	script this
+		property class : "SubLabelController"
+		property parent : make_base_controller() -- extends BaseController
+		property _nav_controller : navigation_controller
+		property _model : main_model
+		property _view : missing value
+		
+		on run
+			my debug_log(1, return & "--->  running " & my class & "...")
+			if _view is missing value then set _view to make_sub_label_view(me, _model)
+			_view's create_view()
+			my debug_log(1, "--->  finished " & my class & return)
+			return true
+		end run
+		
+		on go_back() --> void
+			_nav_controller's go_back()
+		end go_back
+		
+		on set_chosen_category(this_value) --> void
+			_model's set_chosen_category(this_value)
+			_nav_controller's push_controller({me, my other_controllers's item 1})
+		end set_chosen_category
+		
+		on choose_from_all() --> void
+			_nav_controller's push_controller({me, my other_controllers's item 2})
+		end choose_from_all
+		
+		on edit_file() --> void
+			_nav_controller's push_controller({me, my other_controllers's item 3})
+		end edit_file
+		
+		on change_settings() --> void
+			-- Return to the current controller after the preferences
+			-- controller is finished.
+			_nav_controller's push_controller({me})
+			_nav_controller's push_controller({my other_controllers's item 4})
+		end change_settings
+		
+		on show_help() --> void
+			-- Return to the current controller after the help
+			-- controller is finished.
+			_nav_controller's push_controller({me})
+			_nav_controller's push_controller({my other_controllers's item 5})
+		end show_help
+	end script
+	
+	my debug_log(1, return & "--->  new " & this's class & "()")
+	return this
+end make_sub_label_controller
+
+on make_all_label_controller(navigation_controller, main_model)
+	script this
+		property class : "AllLabelController"
+		property parent : make_base_controller() -- extends BaseController
+		property _nav_controller : navigation_controller
+		property _model : main_model
+		property _view : missing value
+		
+		on run
+			my debug_log(1, return & "--->  running " & my class & "...")
+			if _view is missing value then set _view to make_all_label_view(me, _model)
+			_view's create_view()
+			my debug_log(1, "--->  finished " & my class & return)
+			return true
+		end run
+		
+		on go_back() --> void
+			_nav_controller's go_back()
+		end go_back
+		
+		on set_chosen_category(this_value) --> void
+			_model's set_chosen_category(this_value)
+			_nav_controller's push_controller({me, my other_controllers's item 1})
+		end set_chosen_category
+		
+		on edit_file() --> void
+			_nav_controller's push_controller({me, my other_controllers's item 2})
+		end edit_file
+		
+		on change_settings() --> void
+			-- Return to the current controller after the preferences
+			-- controller is finished.
+			_nav_controller's push_controller({me})
+			_nav_controller's push_controller({my other_controllers's item 3})
+		end change_settings
+		
+		on show_help() --> void
+			-- Return to the current controller after the help
+			-- controller is finished.
+			_nav_controller's push_controller({me})
+			_nav_controller's push_controller({my other_controllers's item 4})
+		end show_help
+	end script
+	
+	my debug_log(1, return & "--->  new " & this's class & "()")
+	return this
+end make_all_label_controller
+
+on make_label_edit_controller(navigation_controller, main_model)
+	script this
+		property class : "LabelEditController"
+		property parent : make_base_controller() -- extends BaseController
+		property _nav_controller : navigation_controller
+		property _model : main_model
+		property _view : missing value
+		
+		on run
+			my debug_log(1, return & "--->  running " & my class & "...")
+			if _view is missing value then set _view to make_label_edit_view(me, _model)
+			_view's create_view()
+			my debug_log(1, "--->  finished " & my class & return)
+			return true
+		end run
+		
+		on go_back() --> void
+			_nav_controller's go_back()
+		end go_back
+		
+		on set_chosen_category(this_value) --> void
+			_model's set_page_label(this_value)
+			_model's set_chosen_category(this_value)
+			_nav_controller's push_controller({me, my other_controllers's item 1})
+		end set_chosen_category
+	end script
+	
+	my debug_log(1, return & "--->  new " & this's class & "()")
+	return this
+end make_label_edit_controller
+
+on make_note_controller(navigation_controller, main_model)
+	script this
+		property class : "NoteController"
+		property parent : make_base_controller() -- extends BaseController
+		property _nav_controller : navigation_controller
+		property _model : main_model
+		property _view : missing value
+		
+		on run
+			my debug_log(1, return & "--->  running " & my class & "...")
+			if _view is missing value then set _view to make_note_view(me, _model)
+			_view's create_view()
+			my debug_log(1, "--->  finished " & my class & return)
+			return true
+		end run
+		
+		on go_back() --> void
+			_nav_controller's go_back()
+		end go_back
+		
+		on set_page_note(this_value) --> void
+			if this_value is not missing value then _model's set_page_note(this_value)
+		end set_page_note
+	end script
+	
+	my debug_log(1, return & "--->  new " & this's class & "()")
+	return this
+end make_note_controller
+
+-- -- -- Settings Controllers -- -- --
+
+on make_settings_controller(settings_model)
+	script this
+		property class : "SettingsController"
+		property _model : settings_model
+		property _is_first_run : missing value --> boolean
+		property _has_run_this_session : false --> boolean
+		
+		-- Controllers instantiated during construction:
+		property nav_controller : make_navigation_controller()
+		property pick_editor_controller : missing value
+		property pick_file_controller : missing value
+		-- Controllers instantiated on first run:
+		property main_controller : missing value
+		
+		on run
+			my debug_log(1, return & "--->  running " & my class & "...")
 			
-			if btn_pressed is b's second item then
-				set _cur_editor to _choose_text_editor()
-				if _cur_editor is false then error number -128 -- User canceled
-				if not _did_display_2 then _prompt_for_file(b's last item)
-			else if btn_pressed is b's last item then
-				set _cur_file to _choose_urls_file()
-				if _cur_file is false then error number -128 -- User canceled
-				if not _did_display_2 then _prompt_for_editor(b's second item)
+			-- Read required keys
+			try
+				_model's read_settings(_model's get_default_keys())
+				set _is_first_run to false
+			on error err_msg number err_num
+				set _is_first_run to true
+			end try
+			
+			-- Read optional keys (such as saved state)
+			repeat with this_key in _model's get_optional_keys()
+				set this_key to this_key's contents -- dereference
+				my debug_log(2, my class & ": trying to read " & this_key & " pref")
+				try
+					set this_value to _model's read_pref(this_key)
+					my debug_log(2, my class & ": " & this_key & " = " & this_value)
+					_model's set_item(this_key, this_value)
+				end try
+			end repeat
+			
+			-- Run the settings user interface only if requested by
+			-- the user or if this is the first time running the script
+			if _has_run_this_session or _is_first_run then
+				_show_ui()
+			else
+				set _has_run_this_session to true
+				my debug_log(1, my class & ": skipping settings UI at startup")
 			end if
 			
-			log "[debug] _display_1(): returning true"
+			my debug_log(1, "--->  finished " & my class & return)
 			return true
-		end _display_1
+		end run
 		
-		-- Level 1: secondary (after a setting has been changed)
-		on _display_2(is_from_submenu) -- PRIVATE
-			log "[debug] _display_2()"
-			log "[debug] _did_display_2: '" & _did_display_2 & "'"
-			if _did_display_2 and not is_from_submenu then return true
-			
-			if _display_2_action is "file" then
-				set {m1, m2, m3, m4} to {"text editor", _cur_editor, "URLs file", _cur_file}
-			else if _display_2_action is "editor" then
-				set {m1, m2, m3, m4} to {"URLs file", _cur_file, "text editor", _cur_editor}
+		on _show_ui() --> void
+			if main_controller is missing value then
+				-- Create main settings view controller
+				set main_controller to make_settings_main_controller(nav_controller, _model)
+				-- Inject any controller dependencies
+				main_controller's set_controllers({pick_editor_controller, pick_file_controller})
 			end if
-			set m to "For the " & m1 & ", you chose:" & return & return Â
-				& tab & m2 & return & return Â
-				& "You can now either continue or also change the current " & m3 Â
-				& " which is:" & return & return & tab & m4
-			set t to script_name & " > Settings"
-			set b to {_display_2_button, "Cancel", "Continue"}
+			
+			if _is_first_run then
+				set root_controller to make_settings_first_controller(nav_controller, _model)
+				root_controller's set_controllers({main_controller})
+			else
+				set root_controller to main_controller
+			end if
+			
+			-- Load first controller
+			nav_controller's push_root_controller(root_controller)
+			
+			my debug_log(1, my class & "'s History Stack: " & nav_controller's history_to_string())
+			my debug_log(1, my class & "'s Controller Stack: " & nav_controller's to_string())
+			
+			repeat while not nav_controller's is_empty()
+				set this_controller to nav_controller's pop() -- Pop controller off top of stack
+				run this_controller -- Call its run() method
+				
+				my debug_log(1, my class & "'s History Stack: " & nav_controller's history_to_string())
+				my debug_log(1, my class & "'s Controller Stack: " & nav_controller's to_string())
+			end repeat
+			
+			if _is_first_run then -- clean-up after first run
+				set _is_first_run to false
+				set _has_run_this_session to true
+			end if
+		end _show_ui
+		
+		on _create_controllers() --> void -- PRIVATE
+			-- Controllers for the preference editing dialogs:
+			set pick_editor_controller to make_settings_editor_controller(nav_controller, _model)
+			set pick_file_controller to make_settings_file_controller(nav_controller, _model)
+		end _create_controllers
+		
+		on to_string() --> string
+			return my class
+		end to_string
+	end script
+	
+	my debug_log(1, return & "--->  new " & this's class & "()")
+	this's _create_controllers()
+	return this
+end make_settings_controller
+
+on make_settings_first_controller(navigation_controller, settings_model)
+	script this
+		property class : "SettingsFirstController"
+		property parent : make_base_controller() -- extends BaseController
+		property _nav_controller : navigation_controller
+		property _model : settings_model
+		property _view : missing value
+		
+		on run
+			my debug_log(1, return & "--->  running " & my class & "...")
+			if _view is missing value then set _view to make_settings_first_view(me, _model)
+			_view's create_view()
+			my debug_log(1, "--->  finished " & my class & return)
+			return true
+		end run
+		
+		on use_defaults() --> void
+			_set_missing_prefs()
+		end use_defaults
+		
+		on change_settings() --> void
+			_set_missing_prefs() -- the main view will need the defaults too
+			_nav_controller's push_controller({me, my other_controllers's item 1})
+		end change_settings
+		
+		on _set_missing_prefs() --> void -- PRIVATE
+			repeat with this_key in _model's get_default_keys()
+				set this_key to this_key's contents -- dereference implicit loop reference
+				try
+					_model's get_item(this_key)
+				on error
+					my debug_log(1, my class & ".set_missing_prefs(): setting missing pref")
+					_model's set_pref(this_key, _model's get_default_item(this_key))
+				end try
+			end repeat
+		end _set_missing_prefs
+	end script
+	
+	my debug_log(1, return & "--->  new " & this's class & "()")
+	return this
+end make_settings_first_controller
+
+on make_settings_main_controller(navigation_controller, settings_model)
+	script this
+		property class : "SettingsMainController"
+		property parent : make_base_controller() -- extends BaseController
+		property _nav_controller : navigation_controller
+		property _model : settings_model
+		property _view : missing value
+		
+		on run
+			my debug_log(1, return & "--->  running " & my class & "...")
+			if _view is missing value then set _view to make_settings_main_view(me, _model)
+			_view's create_view()
+			my debug_log(1, "--->  finished " & my class & return)
+			return true
+		end run
+		
+		on choose_editor() --> void
+			_nav_controller's push_controller({me, my other_controllers's item 1})
+		end choose_editor
+		
+		on choose_file() --> void
+			_nav_controller's push_controller({me, my other_controllers's item 2})
+		end choose_file
+	end script
+	
+	my debug_log(1, return & "--->  new " & this's class & "()")
+	return this
+end make_settings_main_controller
+
+on make_settings_editor_controller(navigation_controller, settings_model)
+	script this
+		property class : "SettingsEditorController"
+		property parent : make_base_controller() -- extends BaseController
+		property _nav_controller : navigation_controller
+		property _model : settings_model
+		property _view : missing value
+		
+		on run
+			my debug_log(1, return & "--->  running " & my class & "...")
+			if _view is missing value then
+				set _view to make_settings_editor_view(me, _model)
+			end if
+			_view's create_view()
+			my debug_log(1, "--->  finished " & my class & return)
+			return true
+		end run
+		
+		on go_back() --> void
+			_nav_controller's go_back()
+		end go_back
+		
+		on set_editor(_key, _val) --> void
+			_model's set_pref(_key, _val)
+			go_back()
+		end set_editor
+	end script
+	
+	my debug_log(1, return & "--->  new " & this's class & "()")
+	return this
+end make_settings_editor_controller
+
+on make_settings_file_controller(navigation_controller, settings_model)
+	script this
+		property class : "SettingsFileController"
+		property parent : make_base_controller() -- extends BaseController
+		property _nav_controller : navigation_controller
+		property _model : settings_model
+		property _view : missing value
+		
+		on run
+			my debug_log(1, return & "--->  running " & my class & "...")
+			if _view is missing value then
+				set _view to make_settings_file_view(me, _model)
+			end if
+			_view's create_view()
+			my debug_log(1, "--->  finished " & my class & return)
+			return true
+		end run
+		
+		on go_back() --> void
+			_nav_controller's go_back()
+		end go_back
+		
+		on set_log_file(_key, _val) --> void
+			_model's set_pref(_key, _val)
+			go_back()
+		end set_log_file
+	end script
+	
+	my debug_log(1, return & "--->  new " & this's class & "()")
+	return this
+end make_settings_file_controller
+
+(* ==== View ==== *)
+
+-- -- -- Common Views -- -- --
+
+on make_base_view()
+	script
+		property class : "BaseView"
+		
+		(* == Unicode Characters for Views == *)
+		
+		property u_dash : Çdata utxt2500È as Unicode text -- BOX DRAWINGS LIGHT HORIZONTAL
+		
+		property u_back : Çdata utxt276EÈ as Unicode text -- HEAVY LEFT-POINTING ANGLE QUOTATION MARK ORNAMENT
+		-- property u_back : Çdata utxt25C0È as Unicode text -- BLACK LEFT-POINTING TRIANGLE
+		--property u_back : Çdata utxt2B05È as Unicode text -- LEFTWARDS BLACK ARROW
+		
+		property u_bullet : Çdata utxt25CFÈ as Unicode text -- BLACK CIRCLE
+		--property u_bullet : "¥" -- standard bullet, but slightly smaller than Unicode black circle
+		--property u_bullet : Çdata utxt2043È as Unicode text -- HYPHEN BULLET
+		--property u_bullet : Çdata utxt25A0È as Unicode text -- BLACK SQUARE
+		--property u_bullet : Çdata utxt25B6È as Unicode text -- BLACK RIGHT-POINTING TRIANGLE
+		--property u_bullet : Çdata utxt27A1È as Unicode text -- BLACK RIGHTWARDS ARROW
+		
+		(* == View Components == *)
+		
+		property u_back_btn : "" & u_back & "  Back" -- for buttons
+		--property u_back_item : " " & u_back_btn -- for menu items
+		property u_bullet_item : " " & u_bullet & "  " -- for menu items
+		
+		(* == Methods == *)
+		
+		on create_view() --> void
+			error my class & ".create_view(): abstract method not overridden" number -1717
+		end create_view
+		
+		on handle_cancel_as_back(err_msg, err_num) --> void
+			if err_num is -128 then -- treat Cancel as "Back" button
+				my create_view()
+			else
+				error err_msg number err_num
+			end if
+		end handle_cancel_as_back
+	end script
+end make_base_view
+
+-- -- -- Main App Views -- -- --
+
+on make_help_view(navigation_controller, settings_model)
+	script this
+		property class : "HelpView"
+		property _controller : navigation_controller
+		property _model : settings_model
+		
+		property _log_file_val : missing value
+		property _text_editor_val : missing value
+		
+		property _title : __SCRIPT_NAME__ & " Help"
+		property _prompt : missing value
+		property _buttons : {"Preferences...", "Cancel", "OK"}
+		
+		on create_view() --> void
+			_set_prompt()
+			with timeout of (10 * 60) seconds
+				display alert _title message _prompt buttons _buttons cancel button 2 default button 3
+				set action_event to result's button returned
+				action_performed(action_event)
+			end timeout
+		end create_view
+		
+		on action_performed(action_event) --> void
+			if action_event is false then error number -128 -- User canceled
+			
+			set action_event to action_event as string
+			if action_event is _buttons's item 1 then _controller's change_settings()
+		end action_performed
+		
+		on update() --> void  (Observer Pattern)
+			set _log_file_val to _model's get_log_file()
+			set _text_editor_val to _model's get_text_editor()
+		end update
+		
+		on _set_prompt() --> void -- PRIVATE
+			set _prompt to "This script will append the URL of the front web browser document to a text file along with the current date/time, the title of the web page and a user-definable category. The script also includes an option to open the file in your favorite text editor for editing (although care should be taken to not alter the format of the file). The current file and text editor are:" & return & return Â
+				& tab & "URLs File:    " & _log_file_val & return & return Â
+				& tab & "Text Editor:  " & _text_editor_val & return & return Â
+				& "You can change those settings by clicking \"Preferences\"."
+		end _set_prompt
+	end script
+	
+	this's update()
+	this's _model's register_observer(this)
+	return this
+end make_help_view
+
+on make_title_view(navigation_controller, main_model)
+	script this
+		property class : "TitleView"
+		property _controller : navigation_controller
+		property _model : main_model
+		
+		property _page_title : missing value
+		
+		property _title : __SCRIPT_NAME__ & " > Title"
+		property _buttons : {"Help", "Cancel", "Next..."}
+		property _prompt : missing value
+		property _text_field : missing value
+		
+		on create_view() --> void
+			_set_prompt()
+			repeat
+				display dialog _prompt default answer _page_title with title _title buttons _buttons default button 3 --with icon note
+				copy result as list to {text_value, action_event}
+				if text_value is not "" or action_event is _buttons's item 1 then
+					exit repeat
+				else
+					display alert "Empty Text Field" message "A web page title is required." as warning
+				end if
+			end repeat
+			set _text_field to text_value
+			action_performed(action_event)
+		end create_view
+		
+		on action_performed(action_event) --> void
+			if action_event is false then error number -128 -- User canceled
+			
+			set action_event to action_event as string
+			if action_event is _buttons's item 1 then
+				_controller's show_help()
+			else if action_event is _buttons's item 3 then
+				_controller's set_page_title(_text_field)
+			end if
+		end action_performed
+		
+		on update() --> void  (Observer Pattern)
+			set _page_title to _model's get_page_title()
+		end update
+		
+		on _set_prompt() --> void -- PRIVATE
+			set _prompt to "To log the URL for:" & return & return Â
+				& tab & "\"" & _page_title & "\"" & return & return & Â
+				"first accept or edit the title."
+		end _set_prompt
+	end script
+	
+	this's update()
+	this's _model's register_observer(this)
+	return this
+end make_title_view
+
+on make_url_view(navigation_controller, main_model)
+	script this
+		property class : "URLView"
+		property parent : make_base_view() -- extends BaseView
+		property _controller : navigation_controller
+		property _model : main_model
+		
+		property _page_title : missing value
+		property _page_url : missing value
+		
+		property _title : __SCRIPT_NAME__ & " > URL"
+		property _buttons : {my u_back_btn, "Cancel", "Next..."}
+		property _prompt : missing value
+		property _text_field : missing value
+		
+		on create_view() --> void
+			_set_prompt()
+			repeat
+				display dialog _prompt default answer _page_url with title _title buttons _buttons default button 3 --with icon note
+				copy result as list to {text_value, action_event}
+				if text_value is not "" or action_event is _buttons's item 1 then
+					exit repeat
+				else
+					display alert "Empty Text Field" message "A URL is required." as warning
+				end if
+			end repeat
+			set _text_field to text_value
+			action_performed(action_event)
+		end create_view
+		
+		on action_performed(action_event) --> void
+			if action_event is false then error number -128 -- User canceled
+			
+			set action_event to action_event as string
+			if action_event is _buttons's item 1 then
+				_controller's go_back()
+			else if action_event is _buttons's item 3 then
+				_controller's set_page_url(_text_field)
+			end if
+		end action_performed
+		
+		on update() --> void  (Observer Pattern)
+			set _page_title to _model's get_page_title()
+			set _page_url to _model's get_page_url()
+		end update
+		
+		on _set_prompt() --> void -- PRIVATE
+			set _prompt to "TITLE:" & return & tab & _page_title & return & return & "Accept or edit the URL."
+		end _set_prompt
+	end script
+	
+	this's update()
+	this's _model's register_observer(this)
+	return this
+end make_url_view
+
+on make_label_view(navigation_controller, main_model)
+	script this
+		property class : "LabelView"
+		property parent : make_base_view() -- extends BaseView
+		property _controller : navigation_controller
+		property _model : main_model
+		
+		property _page_label : missing value --> string
+		
+		property _root_categories : missing value --> array
+		property _chosen_root : missing value --> string
+		
+		property _title : __SCRIPT_NAME__ & " > Category"
+		property _ok_btn : "Next..."
+		property _bullet : my u_bullet_item
+		property _menu_rule : multiply_text(my u_dash, 20)
+		property _prompt : "Please select a top-level category for the URL you want to log. Next you will be able to select subcategories."
+		property _action_items : {Â
+			_bullet & "Show full list with subcategories...", Â
+			_bullet & "Create a new category...", Â
+			_menu_rule, Â
+			_bullet & "Manually edit log file", Â
+			_bullet & "Preferences...", Â
+			_bullet & "Help", Â
+			_bullet & "Quit", Â
+			_menu_rule}
+		
+		on create_view() --> void
+			repeat -- until a horizontal rule is not selected
+				set action_event to choose from list _action_items & _root_categories with title _title with prompt _prompt cancel button name my u_back_btn OK button name _ok_btn default items _chosen_root
+				if action_event as string is not _action_items's last item then
+					exit repeat
+				else
+					display alert "Invalid selection" message "Please select a category or an action." as warning
+				end if
+			end repeat
+			action_performed(action_event)
+		end create_view
+		
+		on action_performed(action_event) --> void
+			if action_event is false then --error number -128 -- User canceled
+				_controller's go_back()
+				return
+			end if
+			set action_event to action_event as string
+			if action_event is _action_items's item 1 then
+				_controller's choose_from_all()
+			else if action_event is _action_items's item 2 then
+				_controller's edit_label()
+			else if action_event is _action_items's item 4 then
+				_controller's edit_file()
+			else if action_event is _action_items's item 5 then
+				_controller's change_settings()
+			else if action_event is _action_items's item 6 then
+				_controller's show_help()
+			else if action_event is _action_items's item 7 then
+				error number -128 -- User canceled
+			else -- go to subcategory view
+				_controller's set_chosen_root(action_event)
+			end if
+		end action_performed
+		
+		on update() --> void  (Observer Pattern)
+			set _page_label to _model's get_page_label()
+			set _chosen_root to _model's get_chosen_root_category()
+		end update
+	end script
+	
+	this's update()
+	this's _model's register_observer(this)
+	set this's _root_categories to this's _model's get_root_categories()
+	return this
+end make_label_view
+
+on make_sub_label_view(navigation_controller, main_model)
+	script this
+		property class : "SubLabelView"
+		property parent : make_base_view() -- extends BaseView
+		property _controller : navigation_controller
+		property _model : main_model
+		
+		property _page_label : missing value --> string
+		
+		property _chosen_category : missing value --> string
+		property _sub_categories : missing value --> array
+		
+		property _title : __SCRIPT_NAME__ & " > Category"
+		property _ok_btn : "Next..."
+		property _bullet : my u_bullet_item
+		property _menu_rule : multiply_text(my u_dash, 35)
+		property _prompt : "Please select a category or subcategory for the URL you want to log. You will have a chance to edit your choice (to add a new category or subcategory)."
+		property _action_items : {Â
+			_bullet & "Show full list with subcategories...", Â
+			_menu_rule, Â
+			_bullet & "Manually edit log file", Â
+			_bullet & "Preferences...", Â
+			_bullet & "Help", Â
+			_bullet & "Quit", Â
+			_menu_rule}
+		
+		on create_view() --> void
+			repeat -- until a horizontal rule is not selected
+				set action_event to choose from list _action_items & _sub_categories with title _title with prompt _prompt cancel button name my u_back_btn OK button name _ok_btn default items _chosen_category
+				if action_event as string is not _action_items's last item then
+					exit repeat
+				else
+					display alert "Invalid selection" message "Please select a category or an action." as warning
+				end if
+			end repeat
+			action_performed(action_event)
+		end create_view
+		
+		on action_performed(action_event) --> void
+			if action_event is false then --error number -128 -- User canceled
+				_controller's go_back()
+				return
+			end if
+			set action_event to action_event as string
+			if action_event is _action_items's item 1 then
+				_controller's choose_from_all()
+			else if action_event is _action_items's item 3 then
+				_controller's edit_file()
+			else if action_event is _action_items's item 4 then
+				_controller's change_settings()
+			else if action_event is _action_items's item 5 then
+				_controller's show_help()
+			else if action_event is _action_items's item 6 then
+				error number -128 -- User canceled
+			else -- go to category edit view
+				_controller's set_chosen_category(action_event)
+			end if
+		end action_performed
+		
+		on update() --> void  (Observer Pattern)
+			set _page_label to _model's get_page_label()
+			set _chosen_category to _model's get_chosen_category()
+			set _sub_categories to _model's get_sub_categories()
+		end update
+	end script
+	
+	this's update()
+	this's _model's register_observer(this)
+	return this
+end make_sub_label_view
+
+on make_all_label_view(navigation_controller, main_model)
+	script this
+		property class : "AllLabelView"
+		property parent : make_base_view() -- extends BaseView
+		property _controller : navigation_controller
+		property _model : main_model
+		
+		property _page_label : missing value --> string
+		
+		property _all_categories : missing value --> array
+		property _chosen_category : missing value --> string
+		
+		property _title : __SCRIPT_NAME__ & " > Category"
+		property _ok_btn : "Next..."
+		property _bullet : my u_bullet_item
+		property _menu_rule : multiply_text(my u_dash, 35)
+		property _prompt : "Please select a category or subcategory for the URL you want to log. You will have a chance to edit your choice (to add a new category or subcategory)."
+		property _action_items : {Â
+			_bullet & "Manually edit log file", Â
+			_bullet & "Preferences...", Â
+			_bullet & "Help", Â
+			_bullet & "Quit", Â
+			_menu_rule}
+		
+		on create_view() --> void
+			repeat -- until a horizontal rule is not selected
+				set action_event to choose from list _action_items & _all_categories with title _title with prompt _prompt cancel button name my u_back_btn OK button name _ok_btn default items _chosen_category
+				if action_event as string is not _action_items's last item then
+					exit repeat
+				else
+					display alert "Invalid selection" message "Please select a category or an action." as warning
+				end if
+			end repeat
+			action_performed(action_event)
+		end create_view
+		
+		on action_performed(action_event) --> void
+			if action_event is false then --error number -128 -- User canceled
+				_controller's go_back()
+				return
+			end if
+			set action_event to action_event as string
+			if action_event is _action_items's item 1 then
+				_controller's edit_file()
+			else if action_event is _action_items's item 2 then
+				_controller's change_settings()
+			else if action_event is _action_items's item 3 then
+				_controller's show_help()
+			else if action_event is _action_items's item 4 then
+				error number -128 -- User canceled
+			else -- go to category edit view
+				_controller's set_chosen_category(action_event)
+			end if
+		end action_performed
+		
+		on update() --> void  (Observer Pattern)
+			set _page_label to _model's get_page_label()
+			set _chosen_category to _model's get_chosen_category()
+		end update
+	end script
+	
+	this's update()
+	this's _model's register_observer(this)
+	set this's _all_categories to this's _model's get_all_categories()
+	return this
+end make_all_label_view
+
+on make_label_edit_view(navigation_controller, main_model)
+	script this
+		property class : "LabelEditView"
+		property parent : make_base_view() -- extends BaseView
+		property _controller : navigation_controller
+		property _model : main_model
+		
+		property _page_title : missing value --> string
+		property _page_url : missing value --> string
+		property _page_label : missing value --> string
+		
+		property _chosen_category : missing value --> string
+		
+		property _title : __SCRIPT_NAME__ & " > Category"
+		property _buttons : {my u_back_btn, "Cancel", "Next..."}
+		property _prompt : missing value
+		
+		on create_view() --> void
+			_set_prompt()
+			repeat
+				display dialog _prompt default answer _chosen_category with title _title buttons _buttons default button 3 --with icon note
+				copy result as list to {text_value, action_event}
+				if text_value is not "" or action_event is _buttons's item 1 then
+					exit repeat
+				else
+					display alert "Empty Text Field" message "A category is required." as warning
+				end if
+			end repeat
+			set _chosen_category to text_value
+			action_performed(action_event)
+		end create_view
+		
+		on action_performed(action_event) --> void
+			if action_event is false then error number -128 -- User canceled
+			
+			set action_event to action_event as string
+			if action_event is _buttons's item 1 then
+				_controller's go_back()
+			else if action_event is _buttons's item 3 then
+				_controller's set_chosen_category(_chosen_category)
+			end if
+		end action_performed
+		
+		on update() --> void  (Observer Pattern)
+			set _page_title to _model's get_page_title()
+			set _page_url to _model's get_page_url()
+			set _page_label to _model's get_page_label()
+			set _chosen_category to _model's get_chosen_category()
+		end update
+		
+		on _set_prompt() --> void -- PRIVATE
+			set _prompt to "TITLE:" & return & tab & _page_title & return & return Â
+				& "URL:" & return & tab & _page_url & return & return Â
+				& "Please provide a category and any optional subcategories (or edit your selected category) for the URL. Use a colon to separate subcategories. Example: \"Development:AppleScript:Mail\""
+		end _set_prompt
+	end script
+	
+	this's update()
+	this's _model's register_observer(this)
+	return this
+end make_label_edit_view
+
+on make_note_view(navigation_controller, main_model)
+	script this
+		property class : "NoteView"
+		property parent : make_base_view() -- extends BaseView
+		property _controller : navigation_controller
+		property _model : main_model
+		
+		property _page_title : missing value
+		property _page_url : missing value
+		property _page_label : missing value
+		
+		property _title : __SCRIPT_NAME__ & " > Note"
+		property _buttons : {my u_back_btn, "Cancel", "Save"}
+		property _prompt : missing value
+		property _text_field : missing value
+		
+		on create_view() --> void
+			_set_prompt()
+			display dialog _prompt default answer "" with title _title buttons _buttons default button 3 --with icon note
+			copy result as list to {text_value, action_event}
+			if text_value is not "" then set _text_field to text_value
+			action_performed(action_event)
+		end create_view
+		
+		on action_performed(action_event) --> void
+			if action_event is false then error number -128 -- User canceled
+			
+			set action_event to action_event as string
+			if action_event is _buttons's item 1 then
+				_controller's go_back()
+			else if action_event is _buttons's item 3 then
+				_controller's set_page_note(_text_field)
+			end if
+		end action_performed
+		
+		on update() --> void  (Observer Pattern)
+			set _page_title to _model's get_page_title()
+			set _page_url to _model's get_page_url()
+			set _page_label to _model's get_page_label()
+		end update
+		
+		on _set_prompt() --> void -- PRIVATE
+			set _prompt to "TITLE:" & return & tab & _page_title & return & return Â
+				& "URL:" & return & tab & _page_url & return & return Â
+				& "CATEGORY:" & return & tab & _page_label & return & return Â
+				& "Optionally add a short note. Just leave the field blank if you don't want to add a note."
+		end _set_prompt
+	end script
+	
+	this's update()
+	this's _model's register_observer(this)
+	return this
+end make_note_view
+
+-- -- -- Settings Views -- -- --
+
+on make_settings_first_view(settings_controller, settings_model)
+	script
+		property class : "SettingsFirstView"
+		property _controller : settings_controller
+		property _model : settings_model
+		
+		property _title : __SCRIPT_NAME__ & " > First Run"
+		property _prompt : missing value
+		property _buttons : {"Change settings...", "Cancel", "Use defaults"}
+		
+		on create_view() --> void
+			_set_prompt()
+			display dialog _prompt with title _title buttons _buttons default button 3 with icon note
+			set action_event to result's button returned
+			action_performed(action_event)
+		end create_view
+		
+		on action_performed(action_event) --> void
+			if action_event is false then error number -128 -- User canceled
+			
+			set action_event to action_event as string
+			if action_event is _buttons's item 1 then
+				_controller's change_settings()
+			else if action_event is _buttons's item 3 then
+				_controller's use_defaults()
+			end if
+		end action_performed
+		
+		on _set_prompt() --> void -- PRIVATE
+			set _prompt to "This script will append the URL of the front Safari document to a text file along with the current date/time, the title of the web page and a user-definable category. The script also includes an option to open the file in your favorite text editor for editing. The default file and text editor are:" & return & return Â
+				& "	URLs File:	" & _model's get_default_log_file() & return & return Â
+				& "	Text Editor:	" & _model's get_default_text_editor() & return & return Â
+				& "You can continue using those defaults or change the settings now. You can also change the settings later by selecting the \"Preferences\" item from any list dialog. (You would have to manually move your old URLs file though if you wanted to keep appending to it.)"
+		end _set_prompt
+	end script
+end make_settings_first_view
+
+on make_settings_main_view(settings_controller, settings_model)
+	script this
+		property class : "SettingsMainView"
+		property _controller : settings_controller
+		property _model : settings_model
+		
+		property _log_file_key : missing value
+		property _log_file_val : missing value
+		property _text_editor_key : missing value
+		property _text_editor_val : missing value
+		
+		property _title : __SCRIPT_NAME__ & " > Preferences"
+		property _prompt : missing value
+		property _buttons : {"Choose a text editor...", "Choose a URLs file...", "OK"}
+		
+		on create_view() --> void
+			_set_prompt()
+			display dialog _prompt with title _title buttons _buttons default button 3 with icon note
+			set action_event to result's button returned
+			action_performed(action_event)
+		end create_view
+		
+		on action_performed(action_event) --> void
+			if action_event is false then error number -128 -- User canceled
+			
+			set action_event to action_event as string
+			if action_event is _buttons's item 1 then
+				_controller's choose_editor()
+			else if action_event is _buttons's item 2 then
+				_controller's choose_file()
+			end if
+		end action_performed
+		
+		on update() --> void  (Observer Pattern)
+			set _log_file_key to _model's get_log_file_key()
+			set _log_file_val to _model's get_log_file()
+			set _text_editor_key to _model's get_text_editor_key()
+			set _text_editor_val to _model's get_text_editor()
+		end update
+		
+		on _set_prompt() --> void -- PRIVATE
+			set _prompt to "Choose a URLs file and/or a text editor for editing the file. The current settings are:" & return & return Â
+				& tab & "URLs File:" & tab & _log_file_val & return & return Â
+				& tab & "Text Editor:" & tab & _text_editor_val & return & return
+		end _set_prompt
+	end script
+	
+	this's update()
+	this's _model's register_observer(this)
+	return this
+end make_settings_main_view
+
+on make_settings_editor_view(settings_controller, settings_model)
+	script this
+		property class : "SettingsEditorView"
+		property parent : make_base_view() -- extends BaseView
+		property _controller : settings_controller
+		property _model : settings_model
+		
+		property _title : __SCRIPT_NAME__ & " > Preferences > Choose Editor"
+		property _prompt : "Choose a text editor application for editing the URLs file." & return & return
+		property _buttons : {my u_back_btn, "Use default editor...", "Choose another editor..."}
+		
+		property _text_editor_key : missing value
+		property _text_editor_val : missing value
+		
+		(* == Main View == *)
+		
+		on create_view() --> void
+			display dialog _prompt with title _title buttons _buttons default button 3 with icon note
+			set action_event to result's button returned
+			action_performed(action_event)
+		end create_view
+		
+		(* == Subviews == *)
+		
+		on choose_default() --> void
+			set t to _title & " > Default"
+			set m to "The default text editor app is:" & tab & _model's get_default_text_editor() & return & return & "Use this app?" & return & return
+			set b to {my u_back_btn, "Cancel", "Use default"}
 			display dialog m with title t buttons b default button 3 with icon note
 			set btn_pressed to button returned of result
-			set _did_display_2 to true
+			if btn_pressed is b's item 1 then
+				create_view() -- back to main view
+			else if btn_pressed is b's item 3 then
+				set _text_editor_val to _model's get_default_text_editor()
+				_controller's set_editor(_text_editor_key, _text_editor_val)
+			end if
+		end choose_default
+		
+		on choose_another() --> void
+			set t to _title & " > Choose Application"
+			set m to "Select an application to use for editing the URLs file. (Click \"Cancel\" to return to the previous dialog.)"
+			try
+				set _text_editor_val to name of (choose application with title t with prompt m)
+				_controller's set_editor(_text_editor_key, _text_editor_val)
+			on error err_msg number err_num
+				my handle_cancel_as_back(err_msg, err_num)
+			end try
+		end choose_another
+		
+		(* == Actions == *)
+		
+		on action_performed(action_event) --> void -- from main view
+			if action_event is false then error number -128 -- User canceled
 			
-			if btn_pressed is b's first item then
-				if _display_2_action is "file" then
-					set _cur_file to _choose_urls_file() -- recursion
-					if _cur_file is false then error number -128 -- User canceled
-				else if _display_2_action is "editor" then
-					set _cur_editor to _choose_text_editor() -- recursion
-					if _cur_editor is false then error number -128 -- User canceled
-				end if
+			set action_event to action_event as string
+			if action_event is _buttons's item 1 then
+				_controller's go_back()
+			else if action_event is _buttons's item 2 then
+				choose_default()
+			else if action_event is _buttons's item 3 then
+				choose_another()
 			end if
-			
-			log "[debug] _display_2(): returning true"
-			return true
-		end _display_2
+		end action_performed
 		
-		-- Level 1: secondary (configures _display_2())
-		on _prompt_for_file(display_2_button) -- PRIVATE
-			log "[debug] _prompt_for_file()"
-			log "[debug] _did_display_2: '" & _did_display_2 & "'"
-			if not _did_display_2 then
-				set _display_2_action to "file"
-				set _display_2_button to display_2_button
-				_display_2(false)
-			end if
-			log "[debug] _prompt_for_file(): returning true"
-			return true
-		end _prompt_for_file
+		on update() --> void  (Observer Pattern)
+			try
+				set _text_editor_key to _model's get_text_editor_key()
+				set _text_editor_val to _model's get_text_editor()
+			on error
+				set _text_editor_val to _model's get_default_text_editor()
+			end try
+		end update
+	end script
+	
+	this's update()
+	this's _model's register_observer(this)
+	return this
+end make_settings_editor_view
+
+on make_settings_file_view(settings_controller, settings_model)
+	script this
+		property class : "SettingsFileView"
+		property parent : make_base_view() -- extends BaseView
+		property _controller : settings_controller
+		property _model : settings_model
 		
-		-- Level 1: secondary (configures _display_2())
-		on _prompt_for_editor(display_2_button) -- PRIVATE
-			log "[debug] _prompt_for_editor()"
-			log "[debug] _did_display_2: '" & _did_display_2 & "'"
-			if not _did_display_2 then
-				set _display_2_action to "editor"
-				set _display_2_button to display_2_button
-				_display_2(false)
-			end if
-			log "[debug] _prompt_for_editor(): returning true"
-			return true
-		end _prompt_for_editor
+		property _title : __SCRIPT_NAME__ & " > Preferences > Choose File"
+		property _prompt : "Choose a file in which to save URLs:"
+		property _menu_rule : multiply_text(my u_dash, 19)
+		property _menu_items : {"Use default file...", Â
+			"Choose existing file...", Â
+			"Create new file...", Â
+			_menu_rule, Â
+			"Type in file path...		(Advanced)"}
 		
-		-- Level 2 (change a setting)
-		-- :TODO: Offer to move/rename the file when changing file location/name.
-		on _choose_urls_file() -- PRIVATE
-			log "[debug] _choose_urls_file()"
-			log "[debug] _did_display_2: '" & _did_display_2 & "'"
-			set t to script_name & " > Settings > Choose File"
-			set m to "Choose a file in which to save URLs:"
-			set list_rule to multiply_text(u_dash, 19)
-			set list_items to {Â
-				u_back_ls & "Back", Â
-				list_rule, Â
-				"Use default fileÉ", Â
-				"Choose an existing fileÉ", Â
-				"Choose a new fileÉ", Â
-				list_rule, Â
-				"Type in a file pathÉ		(Advanced)"}
+		property _log_file_key : missing value
+		property _log_file_val : missing value
+		
+		(* == Main View == *)
+		
+		on create_view() --> void
 			repeat -- until a horizontal rule is not selected
-				set list_choice to choose from list list_items with title t with prompt m
-				if list_choice as text is not list_rule then
+				set action_event to choose from list _menu_items with title _title with prompt _prompt cancel button name my u_back_btn
+				if action_event as string is not _menu_rule then
 					exit repeat
 				else
 					display alert "Invalid selection" message "Please select an action." as warning
 				end if
 			end repeat
-			if list_choice is false then error number -128 -- User canceled
-			
-			-- Level 3
-			if list_choice as text is list_items's first item then -- GO BACK
-				if _did_display_2 then
-					_display_2(true) -- recursion
-				else
-					_display_1() -- recursion
-				end if
-			else if list_choice as text is list_items's item 3 then -- DEFAULT FILE
-				set t to script_name & " > Settings > Choose File > Default"
-				set m to "The default URLs file is:" & return & return & tab & _default_file & return & return & "Use this file?" & return & return
-				set b to {"Choose a different fileÉ", "Cancel", "Use default"}
-				display dialog m with title t buttons b default button 3 with icon note
-				set btn_pressed to button returned of result
-				if btn_pressed is b's first item then
-					set _cur_file to _choose_urls_file() -- recursion
-				else if btn_pressed is b's last item then
-					set _cur_file to _default_file
-				end if
-			else if list_choice as text is list_items's item 4 then -- EXISTING FILE
-				set m to "Choose an existing URLs file."
-				set _cur_file to POSIX path of (choose file with prompt m default location path to desktop folder from user domain)
-			else if list_choice as text is list_items's item 5 then -- NEW FILE
-				set m to "Choose a file name and location for the URLs file. Optionally create a new folder for the file."
-				set file_name to item 2 of split_path_into_dir_and_file(_default_file)
-				set _cur_file to POSIX path of (choose file name with prompt m default name file_name default location path to desktop folder from user domain)
-			else if list_choice as text is list_items's last item then -- TYPE PATH
-				set t to script_name & " > Settings > Choose File > Enter Path"
-				set m to "Enter a full file path to use for saving the URLs." & return & return & "A '~' (tilde) can be used to indicate your home directory. Example:" & return & return & tab & "~/Desktop/urls.txt"
-				set b to {u_back_btn & "Back", "Cancel", "Continue"}
-				display dialog m with title t buttons b default answer _cur_file default button 3 with icon note
-				set {this_path, btn_pressed} to {text returned of result, button returned of result}
-				if btn_pressed is b's first item then
-					set _cur_file to _choose_urls_file() -- recursion
-				else if btn_pressed is b's last item then
-					set _cur_file to this_path
-				end if
-			end if
-			
-			log "[debug] _choose_urls_file(): returning '" & _cur_file & "'"
-			return _cur_file
-		end _choose_urls_file
+			action_performed(action_event)
+		end create_view
 		
-		-- Level 2 (change a setting)
-		on _choose_text_editor() -- PRIVATE
-			log "[debug] _choose_text_editor()"
-			log "[debug] _did_display_2: '" & _did_display_2 & "'"
-			set t to script_name & " > Settings > Choose Editor"
-			set m to "Choose a text editor application for editing the URLs file:"
-			set b to {u_back_btn & "Back", "Use default editorÉ", "Choose another editor..."}
+		(* == Subviews == *)
+		
+		on choose_default() --> void
+			set t to _title & " > Default"
+			set m to "The default URLs file is:" & return & return & tab & _model's get_default_log_file() & return & return & "Use this file?" & return & return
+			set b to {my u_back_btn, "Cancel", "Use default"}
 			display dialog m with title t buttons b default button 3 with icon note
 			set btn_pressed to button returned of result
-			
-			-- Level 3
-			if btn_pressed as text is b's first item then -- GO BACK
-				if _did_display_2 then
-					_display_2(true) -- recursion
+			if btn_pressed is b's item 1 then
+				create_view() -- back to main view
+			else if btn_pressed is b's item 3 then
+				set _log_file_val to _model's get_default_log_file()
+				_controller's set_log_file(_log_file_key, _log_file_val)
+			end if
+		end choose_default
+		
+		on choose_existing() --> void
+			set m to "Choose an existing URLs file. (Click \"Cancel\" to return to the previous dialog.)"
+			try
+				set _log_file_val to POSIX path of (choose file with prompt m default location path to desktop folder from user domain)
+				_controller's set_log_file(_log_file_key, _log_file_val)
+			on error err_msg number err_num
+				my handle_cancel_as_back(err_msg, err_num)
+			end try
+		end choose_existing
+		
+		on choose_new() --> void
+			set m to "Choose a file name and location for the URLs file. (Click \"Cancel\" to return to the previous dialog.)"
+			set file_name to item 2 of split_path_into_dir_and_file(_model's get_default_log_file())
+			try
+				set _log_file_val to POSIX path of (choose file name with prompt m default name file_name default location path to desktop folder from user domain)
+				_controller's set_log_file(_log_file_key, _log_file_val)
+			on error err_msg number err_num
+				my handle_cancel_as_back(err_msg, err_num)
+			end try
+		end choose_new
+		
+		on enter_path() --> void
+			set t to _title & " > Enter Path"
+			set m to "Enter a full file path to use for saving the URLs." & return & return & "A '~' (tilde) can be used to indicate your home directory. Example:" & return & return & tab & "~/Desktop/urls.txt"
+			set b to {my u_back_btn, "Cancel", "OK"}
+			display dialog m with title t default answer _log_file_val buttons b default button 3
+			copy result as list to {text_value, btn_pressed}
+			if btn_pressed is b's item 1 then
+				create_view() -- back to main view
+			else if btn_pressed is b's item 3 then
+				if text_value is "" then
+					display alert "Empty Field" message "Please enter a file path in the text field." as warning
+					enter_path() -- recursion
 				else
-					_display_1() -- recursion
+					set _log_file_val to text_value
+					_controller's set_log_file(_log_file_key, _log_file_val)
 				end if
-			else if btn_pressed as text is b's second item then -- DEFAULT EDITOR
-				set t to script_name & " > Settings > Choose Editor > Default"
-				set m to "The default text editor app is:" & tab & _default_editor & return & return & "Use this app?" & return & return
-				set b to {u_back_btn & "Back", "Cancel", "Use default"}
-				display dialog m with title t buttons b default button 3 with icon note
-				set btn_pressed to button returned of result
-				if btn_pressed is b's first item then
-					set _cur_editor to _choose_text_editor() -- recursion
-				else if btn_pressed is b's last item then
-					set _cur_editor to _default_editor
-				end if
-			else if btn_pressed as text is b's last item then -- ANOTHER EDITOR
-				set t to script_name & " > Settings > Choose Editor > Choose Application"
-				set m to "Select an application to use for editing the URLs file:"
-				set _cur_editor to name of (choose application with title t with prompt m)
+			end if
+		end enter_path
+		
+		(*on _debug_test(_msg) --> void -- PRIVATE
+			display dialog my class & ".debug_view(): would call " & _msg with title "DEBUG"
+			create_view() -- back to main view
+		end _debug_test*)
+		
+		(* == Actions == *)
+		
+		on action_performed(action_event) --> void -- from main view
+			if action_event is false then --error number -128 -- User canceled
+				_controller's go_back()
+				return
 			end if
 			
-			log "[debug] _choose_text_editor(): returning '" & _cur_editor & "'"
-			return _cur_editor
-		end _choose_text_editor
-	end script -- SettingsView
+			set action_event to action_event as string
+			if action_event is _menu_items's item 1 then
+				choose_default()
+			else if action_event is _menu_items's item 2 then
+				choose_existing()
+			else if action_event is _menu_items's item 3 then
+				choose_new()
+			else if action_event is _menu_items's item 5 then
+				enter_path()
+			end if
+		end action_performed
+		
+		on update() --> void  (Observer Pattern)
+			try
+				set _log_file_key to _model's get_log_file_key()
+				set _log_file_val to _model's get_log_file()
+			on error
+				set _log_file_val to _model's get_default_log_file()
+			end try
+		end update
+	end script
 	
-	-- initialize new object instance
-	set SettingsView's _default_file to default_file
-	set SettingsView's _default_editor to default_editor
-	set SettingsView's _cur_file to cur_file
-	set SettingsView's _cur_editor to cur_editor
-	return SettingsView
-end make_settings_view
+	this's update()
+	this's _model's register_observer(this)
+	return this
+end make_settings_file_view
 
-(* ==== Utility Objects ==== *)
+(* ==== Helper Classes ==== *)
+
+on make_observable()
+	script
+		property class : "Observable"
+		property _observers : {}
+		property _changed : false
+		
+		on set_changed()
+			set _changed to true
+		end set_changed
+		
+		on register_observer(o) -- void
+			my debug_log(1, "  [debug] register_observer(" & o's class & ")")
+			set end of my _observers to o
+		end register_observer
+		
+		(* Uncomment if needed. Most of the time, it won't be needed for scripts.
+		on remove_observer(o) -- void
+			my debug_log(1, "  [debug] remove_observer(" & o's class & ")")
+			set remaining_observers to {}
+			repeat with this_observer in _observers
+				set this_observer to this_observer's contents -- dereference
+				my debug_log(1, "  [debug] remove_observer(): comparing " & this_observer's class)
+				if this_observer is not o then
+					set end of remaining_observers to this_observer
+				else
+					my debug_log(1, "  [debug] remove_observer(): removing " & this_observer's class)
+				end if
+			end repeat
+			set _observers to remaining_observers
+		end remove_observer
+		*)
+		
+		on notify_observers() -- void -- (no argument = pull method; best practice)
+			my debug_log(1, "  [debug] notify_observers()")
+			if _changed then
+				my debug_log(1, "  [debug] notify_observers(): calling update()")
+				repeat with i from 1 to count of _observers
+					set this_observer to _observers's item i
+					this_observer's update()
+				end repeat
+				set _changed to false
+			end if
+			return
+		end notify_observers
+	end script
+end make_observable
+
+on make_stack()
+	script
+		property class : "Stack" -- Data Type -- LIFO (last in, first out)
+		property _stack : {}
+		
+		-- Push an item onto the top of the stack
+		on push(this_data) --> void
+			set _stack's beginning to this_data
+			return
+		end push
+		
+		-- Return the top item of the stack, removing it in the process
+		on pop() --> anything
+			if is_empty() then error my class & ": Can't pop(): stack is empty." number -1730
+			set top_item to _stack's item 1
+			set _stack to rest of _stack
+			return top_item
+		end pop
+		
+		-- Return the top item of the stack without removing it
+		on peek() --> anything
+			if is_empty() then error my class & ": Can't peek(): stack is empty." number -1730
+			return _stack's item 1
+		end peek
+		
+		-- Test if stack is empty
+		on is_empty() --> boolean
+			return _stack's length is 0
+		end is_empty
+		
+		-- Clear the stack
+		on reset() --> void
+			set _stack to {}
+		end reset
+		
+		-- Display the names of the classes in the stack (mostly for testing/debugging)
+		on to_string() --> string
+			if _stack's length = 0 then
+				return ""
+			else if _stack's length = 1 then
+				return _stack's item 1's class
+			end if
+			set stack_items to ""
+			repeat with i from 1 to _stack's length
+				set this_item to _stack's item i
+				if i = 1 then
+					set stack_items to this_item's class
+				else
+					set stack_items to stack_items & ", " & this_item's class
+				end if
+			end repeat
+			return stack_items
+		end to_string
+	end script
+end make_stack
+
+on make_named_stack(_name)
+	script this
+		property class : "Stack (Named)" -- Data Type
+		property parent : make_stack() -- extends Stack
+		property _name : missing value
+		
+		on push(this_data) --> void
+			continue push(this_data)
+			my debug_log(1, "[debug] pushing " & this_data's to_string() & " onto " & _name)
+			return
+		end push
+		
+		on pop() --> anything
+			set top_item to continue pop()
+			my debug_log(1, "[debug] popping " & top_item's to_string() & " off " & _name)
+			return top_item
+		end pop
+		
+		on set_name(_name) --> void
+			set its _name to _name
+		end set_name
+		
+		on identify() --> string
+			if _name is not missing value then return _name
+		end identify
+	end script
+	
+	set this's _name to _name
+	return this
+end make_named_stack
 
 on make_associative_list()
 	(*
@@ -1281,25 +2649,25 @@ on make_associative_list()
 end make_associative_list
 
 on make_null_io()
-	script NullIO
-		property class : "NullIO"
+	script
+		property class : "NullIO" -- Utility
 		property parent : make_io()
 		
 		on write_file(file_path, this_data)
-			-- do nothing
-			log "[debug] NullIO: write_file(): not writing to file"
+			my debug_log(1, "[debug] " & my class & ".write_file(): would write to file")
+			my debug_log(1, linefeed & this_data)
 		end write_file
 		
 		on append_file(file_path, this_data)
-			-- do nothing
-			log "[debug] NullIO: append_file(): not appending to file"
+			my debug_log(1, "[debug] " & my class & ".append_file(): would append to file")
+			my debug_log(1, linefeed & this_data)
 		end append_file
 	end script
 end make_null_io
 
 on make_io()
-	script IO
-		property class : "IO"
+	script
+		property class : "IO" -- Utility
 		
 		(* == PUBLIC == *)
 		
@@ -1351,3 +2719,110 @@ on make_io()
 		end _read_file
 	end script
 end make_io
+
+(* ==== Utility Functions (Global) ==== *)
+
+on convert_to_ascii(non_ascii_txt)
+	(*
+		Transliterate Unicode characters to ASCII, ignoring any that can't be
+		represented. Also compress white space since ignoring characters can
+		leave mulitple adjacent spaces.
+	
+		From 'man iconv_open':
+		
+			When the string "//TRANSLIT" is appended to _tocode_,
+			transliteration is activated. This means that when a character
+			cannot be represented in the target character set, it can be
+			approximated through one or several characters that look similar to
+			the original character.
+
+			When the string "//IGNORE" is appended to _tocode_, characters that
+			cannot be represented in the target character set will be silently
+			discarded.
+	*)
+	set s to "iconv -f UTF-8 -t US-ASCII//TRANSLIT//IGNORE <<<" & quoted form of non_ascii_txt & " | sed 's/   */ /g'"
+	do shell script s
+end convert_to_ascii
+
+on create_directory(posix_dir)
+	set this_dir to expand_home_path(posix_dir)
+	try
+		set s to "mkdir -pm700 " & quoted form of this_dir
+		do shell script s
+	on error err_msg number err_num
+		error "Can't create directory: " & err_msg number err_num
+		return "Fatal Error: Can't create directory"
+	end try
+end create_directory
+
+on split_path_into_dir_and_file(file_path)
+	set path_parts to split_text(file_path, "/")
+	set dir_path to join_list(items 1 thru -2 of path_parts, "/")
+	set file_name to path_parts's last item
+	return {dir_path, file_name}
+end split_path_into_dir_and_file
+
+on get_mac_path(posix_path)
+	-- Expand '~/' or '$HOME/' at the beginning of a posix file path.
+	set posix_file to expand_home_path(posix_path)
+	return POSIX file posix_file
+end get_mac_path
+
+-- Could alternatively use 'do shell script "echo" & space & file_path'
+-- but it might be slower because of the overhead of starting up a shell.
+on expand_home_path(file_path) --> string
+	local char_length
+	if file_path starts with "~/" then
+		set char_length to 3
+	else if file_path starts with "$HOME/" then
+		set char_length to 7
+	else
+		return file_path
+	end if
+	set posix_home to get_posix_home()
+	set file_path to posix_home & characters char_length thru -1 of file_path as text
+	return file_path
+end expand_home_path
+
+on get_posix_home()
+	return POSIX path of (path to home folder from user domain)
+end get_posix_home
+
+on multiply_text(str, n)
+	if n < 1 or str = "" then return ""
+	set lst to {}
+	repeat n times
+		set end of lst to str
+	end repeat
+	return lst as string
+end multiply_text
+
+on split_text(txt, delim)
+	set old_tids to AppleScript's text item delimiters
+	try
+		set AppleScript's text item delimiters to (delim as string)
+		set lst to every text item of (txt as string)
+		set AppleScript's text item delimiters to old_tids
+		return lst
+	on error err_msg number err_num
+		set AppleScript's text item delimiters to old_tids
+		error "Can't split_text(): " & err_msg number err_num
+	end try
+end split_text
+
+on join_list(lst, delim)
+	set old_tids to AppleScript's text item delimiters
+	try
+		set AppleScript's text item delimiters to (delim as string)
+		set txt to lst as string
+		set AppleScript's text item delimiters to old_tids
+		return txt
+	on error err_msg number err_num
+		set AppleScript's text item delimiters to old_tids
+		error "Can't join_list(): " & err_msg number err_num
+	end try
+end join_list
+
+on debug_log(_level, _msg)
+	if __DEBUG_LEVEL__ is greater than or equal to _level then log _msg
+end debug_log
