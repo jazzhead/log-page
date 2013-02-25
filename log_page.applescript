@@ -376,6 +376,8 @@ General"
 		end write_record
 		
 		on parse_log() --> void
+			my debug_log(2, my class & ".parse_log()...")
+			
 			local log_file_posix, log_file_mac
 			local all_category_txt, root_category_txt
 			local all_categories, root_categories, existing_categories
@@ -395,8 +397,11 @@ General"
 			else
 				-- Read manually-entered (and/or previous sample)
 				-- categories from existing file header
-				set all_category_txt to text 2 thru -2 of (item 3 of split_text(_io's read_file(log_file_mac), _log_header_sep))
-				-- :TODO: Error handling
+				try
+					set all_category_txt to text 2 thru -2 of (item 3 of split_text(_io's read_file(log_file_mac), _log_header_sep))
+				on error -- missing file header
+					set all_category_txt to _sample_categories
+				end try
 			end if
 			
 			-- Parse any existing labels from the "Label" fields of the URLs file:
@@ -433,6 +438,8 @@ General"
 			
 			set _all_categories to all_categories
 			set _root_categories to root_categories
+			
+			my debug_log(2, my class & ".parse_log() done")
 		end parse_log
 		
 		(* == Observer Pattern == *)
@@ -628,7 +635,7 @@ on make_settings()
 		property _default_settings : make_associative_list() --> AssociativeList
 		property _plist : missing value --> Plist (object)
 		
-		-- Define all preference keys here.
+		-- Define all preference keys here
 		property _log_file_key : "logFile" -- required pref
 		property _text_editor_key : "textEditor" -- required pref
 		property _last_category_key : "lastCategory" -- optional state
@@ -648,7 +655,7 @@ on make_settings()
 			--_default_settings's set_item("boolPref", true) -- test other types
 		end init
 		
-		(* == Default Methods == *)
+		(* == Preferences Methods == *)
 		
 		on get_default_item(this_key) --> anything
 			_default_settings's get_item(this_key)
@@ -678,10 +685,6 @@ on make_settings()
 			return _text_editor_key
 		end get_text_editor_key
 		
-		on get_last_category_key() --> string
-			return _last_category_key
-		end get_last_category_key
-		
 		on get_log_file() --> string
 			_settings's get_item(_log_file_key)
 		end get_log_file
@@ -689,6 +692,12 @@ on make_settings()
 		on get_text_editor() --> integer
 			_settings's get_item(_text_editor_key)
 		end get_text_editor
+		
+		(* == State Methods == *)
+		
+		on get_last_category_key() --> string
+			return _last_category_key
+		end get_last_category_key
 		
 		on get_last_category() --> string
 			try
