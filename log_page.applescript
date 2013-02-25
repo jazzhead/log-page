@@ -2,7 +2,7 @@
 	Log Page - Log categorized web page bookmarks to a text file
 
 	Version: @@VERSION@@
-	Date:    2013-02-24
+	Date:    2013-02-25
 	Author:  Steve Wheeler
 
 	Get the title, URL, current date and time, and a user-definable
@@ -83,9 +83,16 @@ on make_app_controller()
 			-- settings from disk or show a "first run" settings dialog
 			-- if there is no existing preferences file.
 			--
+			
+			-- Need the settings model first
 			set settings_model to make_settings()
 			settings_model's init()
-			set settings_controller to make_settings_controller(settings_model)
+			
+			-- Main model needs the settings model
+			set page_log to make_page_log(settings_model)
+			
+			-- Settings controller needs both models
+			set settings_controller to make_settings_controller(settings_model, page_log)
 			run settings_controller
 			
 			(* == Data Retrieval == *)
@@ -97,10 +104,12 @@ on make_app_controller()
 			browser_model's fetch_page_info()
 			
 			--
-			-- Create the main model
+			-- Load initial data into the main model
 			--
-			set page_log to make_page_log(settings_model)
 			tell page_log
+				-- Get last-used category read from preferences file
+				update_category_state()
+				
 				-- Store the web page info in the main model
 				--
 				set_page_url(browser_model's get_url())
@@ -116,6 +125,9 @@ on make_app_controller()
 				my debug_log(1, get_root_categories())
 				my debug_log(2, get_all_categories())
 			end tell
+			
+			-- Done with browser. Does this make any difference?
+			set browser_model to missing value
 			
 			(* == Controllers == *)
 			
@@ -438,21 +450,13 @@ General"
 			
 			set _all_categories to all_categories
 			set _root_categories to root_categories
+			settings_changed() -- notify observers
 			
 			my debug_log(2, my class & ".parse_log() done")
 		end parse_log
 		
-		(* == Observer Pattern == *)
-		
-		on settings_changed() -- void
-			set_changed()
-			notify_observers()
-		end settings_changed
-		
-		(* == PRIVATE == *)
-		
-		on _initialize_category()
-			my debug_log(1, my class & "._initialize_category()")
+		on update_category_state()
+			my debug_log(1, my class & ".update_category_state()")
 			set _page_label to _settings's get_last_category()
 			if _page_label is missing value or _page_label is "" then
 				set _chosen_category to ""
@@ -464,7 +468,16 @@ General"
 			on error
 				set _chosen_root_category to ""
 			end try
-		end _initialize_category
+		end update_category_state
+		
+		(* == Observer Pattern == *)
+		
+		on settings_changed() -- void
+			set_changed()
+			notify_observers()
+		end settings_changed
+		
+		(* == PRIVATE == *)
 		
 		on _validate_fields() --> void
 			if _page_url is missing value then
@@ -548,8 +561,6 @@ General"
 	else
 		set this's _io to make_io()
 	end if
-	
-	this's _initialize_category()
 	
 	return this
 end make_page_log
@@ -1349,10 +1360,11 @@ end make_note_controller
 
 -- -- -- Settings Controllers -- -- --
 
-on make_settings_controller(settings_model)
+on make_settings_controller(settings_model, app_model)
 	script this
 		property class : "SettingsController"
 		property _model : settings_model
+		property _app_model : app_model
 		property _is_first_run : missing value --> boolean
 		property _has_run_this_session : false --> boolean
 		
@@ -1436,7 +1448,7 @@ on make_settings_controller(settings_model)
 		on _create_controllers() --> void -- PRIVATE
 			-- Controllers for the preference editing dialogs:
 			set pick_editor_controller to make_settings_editor_controller(nav_controller, _model)
-			set pick_file_controller to make_settings_file_controller(nav_controller, _model)
+			set pick_file_controller to make_settings_file_controller(nav_controller, _model, _app_model)
 		end _create_controllers
 		
 		on to_string() --> string
@@ -1552,12 +1564,13 @@ on make_settings_editor_controller(navigation_controller, settings_model)
 	return this
 end make_settings_editor_controller
 
-on make_settings_file_controller(navigation_controller, settings_model)
+on make_settings_file_controller(navigation_controller, settings_model, app_model)
 	script this
 		property class : "SettingsFileController"
 		property parent : make_base_controller() -- extends BaseController
 		property _nav_controller : navigation_controller
 		property _model : settings_model
+		property _app_model : app_model
 		property _view : missing value
 		
 		on run
@@ -1576,6 +1589,8 @@ on make_settings_file_controller(navigation_controller, settings_model)
 		
 		on set_log_file(_key, _val) --> void
 			_model's set_pref(_key, _val)
+			_app_model's parse_log()
+			delay 1 -- script needs time to process before next dialog
 			go_back()
 		end set_log_file
 	end script
@@ -1854,12 +1869,12 @@ on make_label_view(navigation_controller, main_model)
 		on update() --> void  (Observer Pattern)
 			set _page_label to _model's get_page_label()
 			set _chosen_root to _model's get_chosen_root_category()
+			set _root_categories to _model's get_root_categories()
 		end update
 	end script
 	
 	this's update()
 	this's _model's register_observer(this)
-	set this's _root_categories to this's _model's get_root_categories()
 	return this
 end make_label_view
 
@@ -1992,12 +2007,12 @@ on make_all_label_view(navigation_controller, main_model)
 		on update() --> void  (Observer Pattern)
 			set _page_label to _model's get_page_label()
 			set _chosen_category to _model's get_chosen_category()
+			set _all_categories to _model's get_all_categories()
 		end update
 	end script
 	
 	this's update()
 	this's _model's register_observer(this)
-	set this's _all_categories to this's _model's get_all_categories()
 	return this
 end make_all_label_view
 
