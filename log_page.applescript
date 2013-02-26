@@ -85,7 +85,7 @@ on make_app_controller()
 			--
 			
 			-- Need the settings model first
-			set settings_model to make_settings()
+			set settings_model to make_page_log_settings()
 			settings_model's init()
 			
 			-- Main model needs the settings model
@@ -634,6 +634,9 @@ end make_safari_browser
 
 on make_settings()
 	(*
+		This class should be extended rather than modified to customize
+		it for a particular application.
+
 		Dependencies:
 			* Observable (class)
 			* AssociativeList (class)
@@ -646,24 +649,9 @@ on make_settings()
 		property _default_settings : make_associative_list() --> AssociativeList
 		property _plist : missing value --> Plist (object)
 		
-		-- Define all preference keys here
-		property _log_file_key : "logFile" -- required pref
-		property _text_editor_key : "textEditor" -- required pref
-		property _last_category_key : "lastCategory" -- optional state
-		
-		property _optional_keys : {_last_category_key} --> array (saved state, etc.)
-		
 		on init()
 			set plist_path to __PLIST_DIR__ & __BUNDLE_ID__ & ".plist"
 			set _plist to make_plist(plist_path, me)
-			
-			-- Initialize default values
-			_default_settings's set_item(_log_file_key, Â
-				POSIX path of (path to application support folder from user domain) Â
-				& __NAMESPACE__ & "/" & __SCRIPT_NAME__ & "/urls.txt")
-			_default_settings's set_item(_text_editor_key, "TextEdit")
-			
-			--_default_settings's set_item("boolPref", true) -- test other types
 		end init
 		
 		(* == Preferences Methods == *)
@@ -672,51 +660,9 @@ on make_settings()
 			_default_settings's get_item(this_key)
 		end get_default_item
 		
-		on get_default_log_file() --> string
-			_default_settings's get_item(_log_file_key)
-		end get_default_log_file
-		
-		on get_default_text_editor() --> integer
-			_default_settings's get_item(_text_editor_key)
-		end get_default_text_editor
-		
 		on get_default_keys() --> list
 			_default_settings's get_keys()
 		end get_default_keys
-		
-		on get_optional_keys() --> list
-			return _optional_keys
-		end get_optional_keys
-		
-		on get_log_file_key() --> string
-			return _log_file_key
-		end get_log_file_key
-		
-		on get_text_editor_key() --> string
-			return _text_editor_key
-		end get_text_editor_key
-		
-		on get_log_file() --> string
-			_settings's get_item(_log_file_key)
-		end get_log_file
-		
-		on get_text_editor() --> integer
-			_settings's get_item(_text_editor_key)
-		end get_text_editor
-		
-		(* == State Methods == *)
-		
-		on get_last_category_key() --> string
-			return _last_category_key
-		end get_last_category_key
-		
-		on get_last_category() --> string
-			try
-				_settings's get_item(_last_category_key)
-			on error
-				return missing value
-			end try
-		end get_last_category
 		
 		(* == Observer Pattern == *)
 		
@@ -732,7 +678,6 @@ on make_settings()
 			-- Use this method to both set the associative list item and save
 			-- the preference to disk
 			--
-			set this_value to _handle_log_file(this_key, this_value)
 			_settings's set_item(this_key, this_value)
 			_plist's write_pref(this_key, this_value)
 			settings_changed() -- notify observers
@@ -743,7 +688,6 @@ on make_settings()
 			-- Use this method to only set the associative list item without
 			-- saving the preference to disk
 			--
-			set this_value to _handle_log_file(this_key, this_value)
 			_settings's set_item(this_key, this_value)
 			settings_changed() -- notify observers
 		end set_item
@@ -795,6 +739,96 @@ on make_settings()
 		on write_pref(pref_key, pref_value) --> void (writes to file)
 			_plist's write_pref(pref_key, pref_value)
 		end write_pref
+	end script
+end make_settings
+
+on make_page_log_settings()
+	script
+		property class : "PageLogSettings" -- model
+		property parent : make_settings() -- extends Settings
+		
+		-- Define all preference keys here
+		property _log_file_key : "logFile" -- required pref
+		property _text_editor_key : "textEditor" -- required pref
+		property _last_category_key : "lastCategory" -- optional state
+		
+		property _optional_keys : {_last_category_key} --> array (saved state, etc.)
+		
+		on init()
+			continue init()
+			
+			-- Initialize default values
+			my _default_settings's set_item(_log_file_key, Â
+				POSIX path of (path to application support folder from user domain) Â
+				& __NAMESPACE__ & "/" & __SCRIPT_NAME__ & "/urls.txt")
+			my _default_settings's set_item(_text_editor_key, "TextEdit")
+			
+			--_default_settings's set_item("boolPref", true) -- test other types
+		end init
+		
+		(* == Preferences Methods == *)
+		
+		on get_default_log_file() --> string
+			my _default_settings's get_item(_log_file_key)
+		end get_default_log_file
+		
+		on get_default_text_editor() --> integer
+			my _default_settings's get_item(_text_editor_key)
+		end get_default_text_editor
+		
+		on get_optional_keys() --> list
+			return _optional_keys
+		end get_optional_keys
+		
+		on get_log_file_key() --> string
+			return _log_file_key
+		end get_log_file_key
+		
+		on get_text_editor_key() --> string
+			return _text_editor_key
+		end get_text_editor_key
+		
+		on get_log_file() --> string
+			my _settings's get_item(_log_file_key)
+		end get_log_file
+		
+		on get_text_editor() --> integer
+			my _settings's get_item(_text_editor_key)
+		end get_text_editor
+		
+		(* == State Methods == *)
+		
+		on get_last_category_key() --> string
+			return _last_category_key
+		end get_last_category_key
+		
+		on get_last_category() --> string
+			try
+				my _settings's get_item(_last_category_key)
+			on error
+				return missing value
+			end try
+		end get_last_category
+		
+		(* == Associative List Methods (delegate) == *)
+		
+		on set_pref(this_key, this_value) --> void
+			--
+			-- Use this method to both set the associative list item and save
+			-- the preference to disk
+			--
+			set this_value to _handle_log_file(this_key, this_value)
+			continue set_pref(this_key, this_value)
+		end set_pref
+		
+		on set_item(this_key, this_value) --> void
+			--
+			-- Use this method to only set the associative list item without
+			-- saving the preference to disk
+			--
+			set this_value to _handle_log_file(this_key, this_value)
+			continue set_pref(this_key, this_value)
+		end set_item
 		
 		(* == Utility Methods == *)
 		
@@ -805,7 +839,7 @@ on make_settings()
 			return this_value
 		end _handle_log_file
 	end script
-end make_settings
+end make_page_log_settings
 
 on make_plist(plist_path, settings_model)
 	(*
