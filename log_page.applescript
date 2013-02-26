@@ -732,6 +732,7 @@ on make_settings()
 			-- Use this method to both set the associative list item and save
 			-- the preference to disk
 			--
+			set this_value to _handle_log_file(this_key, this_value)
 			_settings's set_item(this_key, this_value)
 			_plist's write_pref(this_key, this_value)
 			settings_changed() -- notify observers
@@ -742,6 +743,7 @@ on make_settings()
 			-- Use this method to only set the associative list item without
 			-- saving the preference to disk
 			--
+			set this_value to _handle_log_file(this_key, this_value)
 			_settings's set_item(this_key, this_value)
 			settings_changed() -- notify observers
 		end set_item
@@ -793,6 +795,15 @@ on make_settings()
 		on write_pref(pref_key, pref_value) --> void (writes to file)
 			_plist's write_pref(pref_key, pref_value)
 		end write_pref
+		
+		(* == Utility Methods == *)
+		
+		on _handle_log_file(this_key, this_value) --> string -- PRIVATE
+			if this_key is _log_file_key then
+				set this_value to my shorten_home_path(this_value)
+			end if
+			return this_value
+		end _handle_log_file
 	end script
 end make_settings
 
@@ -2794,19 +2805,28 @@ end get_mac_path
 
 -- Could alternatively use 'do shell script "echo" & space & file_path'
 -- but it might be slower because of the overhead of starting up a shell.
-on expand_home_path(file_path) --> string
-	local char_length
-	if file_path starts with "~/" then
+on expand_home_path(posix_path) --> string
+	local posix_path, posix_home, char_length
+	if posix_path starts with "~/" then
 		set char_length to 3
-	else if file_path starts with "$HOME/" then
+	else if posix_path starts with "$HOME/" then
 		set char_length to 7
 	else
-		return file_path
+		return posix_path
 	end if
 	set posix_home to get_posix_home()
-	set file_path to posix_home & characters char_length thru -1 of file_path as text
-	return file_path
+	set posix_path to posix_home & characters char_length thru -1 of posix_path as text
+	return posix_path
 end expand_home_path
+
+on shorten_home_path(posix_path)
+	local posix_path, posix_home
+	set posix_home to get_posix_home()
+	if posix_path starts with posix_home then
+		set posix_path to "~" & characters (posix_home's length) thru -1 of posix_path as string
+	end if
+	return posix_path
+end shorten_home_path
 
 on get_posix_home()
 	return POSIX path of (path to home folder from user domain)
