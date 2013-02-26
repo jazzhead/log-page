@@ -137,12 +137,11 @@ on make_app_controller()
 			set nav_controller to make_navigation_controller()
 			
 			--
-			-- Create any other needed controllers, passing the model to
-			-- all (and the shared navigation controller to all view
-			-- controllers).
+			-- Create any other needed controllers, passing a model and
+			-- the shared navigation controller to all.
 			--
-			-- -- View Controllers
 			set help_controller to make_help_controller(nav_controller, settings_model)
+			set file_edit_controller to make_file_edit_controller(nav_controller, settings_model)
 			--
 			set title_controller to make_title_controller(nav_controller, page_log)
 			set url_controller to make_url_controller(nav_controller, page_log)
@@ -151,9 +150,6 @@ on make_app_controller()
 			set all_label_controller to make_all_label_controller(nav_controller, page_log)
 			set label_edit_controller to make_label_edit_controller(nav_controller, page_log)
 			set note_controller to make_note_controller(nav_controller, page_log)
-			--
-			-- -- Action Controllers
-			set file_edit_controller to make_file_edit_controller(page_log)
 			
 			--
 			-- Dependency Injection
@@ -637,6 +633,22 @@ on make_safari_browser()
 	return this
 end make_safari_browser
 
+script Editor
+	property class : "Editor"
+	
+	on open_file(this_editor, posix_file_path) --> void
+		my debug_log(1, my class & ".open_file()")
+		
+		set posix_file_path to expand_home_path(posix_file_path)
+		set mac_file_path to get_mac_path(posix_file_path)
+		
+		tell application this_editor
+			activate
+			open mac_file_path
+		end tell
+	end open_file
+end script
+
 -- -- -- Settings Models -- -- --
 
 on make_settings()
@@ -816,6 +828,12 @@ on make_page_log_settings()
 				return missing value
 			end try
 		end get_last_category
+		
+		on disable_file_edit_warning()
+			set msg to my class & ".disable_file_edit_warning(): TODO"
+			my debug_log(1, msg)
+			display dialog msg with title "TODO" buttons {"OK"} default button 1
+		end disable_file_edit_warning
 		
 		(* == Associative List Methods (delegate) == *)
 		
@@ -1080,23 +1098,39 @@ end make_base_controller
 
 -- -- -- Main App Controllers -- -- --
 
-on make_file_edit_controller(main_model)
+on make_file_edit_controller(navigation_controller, settings_model)
 	script this
 		property class : "FileEditController"
 		property parent : make_base_controller() -- extends BaseController
-		property _model : main_model
+		property _nav_controller : navigation_controller
+		property _model : settings_model
+		property _editor : Editor
+		property _view : missing value
 		
 		on run
 			my debug_log(1, return & "--->  running " & my class & "...")
-			launch_editor()
+			if _view is missing value then set _view to make_file_edit_view(me, _model)
+			set ret_val to _view's create_view() --> returns boolean
 			my debug_log(1, "--->  finished " & my class & return)
-			return false -- ends controller loop and exits script
+			return ret_val --> false ends controller loop and exits script
 		end run
 		
+		on go_back() --> void
+			_nav_controller's go_back()
+		end go_back
+		
 		on launch_editor() --> void
-			my debug_log(1, "[debug] TODO: open log file in text editor")
-			display dialog my class & ": TODO: open log file in text editor" with title "TODO"
+			my debug_log(1, my class & ".launch_editor()")
+			set this_editor to _model's get_text_editor()
+			set this_file to _model's get_log_file()
+			_editor's open_file(this_editor, this_file)
 		end launch_editor
+		
+		on disable_warning()
+			my debug_log(1, my class & ".disable_warning(): TODO")
+			_model's disable_file_edit_warning()
+			launch_editor()
+		end disable_warning
 	end script
 	
 	my debug_log(1, return & "--->  new " & this's class & "()")
@@ -1698,10 +1732,10 @@ end make_base_view
 
 -- -- -- Main App Views -- -- --
 
-on make_help_view(navigation_controller, settings_model)
+on make_help_view(view_controller, settings_model)
 	script this
 		property class : "HelpView"
-		property _controller : navigation_controller
+		property _controller : view_controller
 		property _model : settings_model
 		
 		property _log_file_val : missing value
@@ -1745,10 +1779,44 @@ on make_help_view(navigation_controller, settings_model)
 	return this
 end make_help_view
 
-on make_title_view(navigation_controller, main_model)
+on make_file_edit_view(view_controller, settings_model)
+	script
+		property class : "FileEditView"
+		property parent : make_base_view() -- extends BaseView
+		property _controller : view_controller
+		property _model : settings_model
+		
+		property _title : "Warning: " & __SCRIPT_NAME__ & " > Edit Log File"
+		property _buttons : {"Don't show this warning again", my u_back_btn, "Edit File"}
+		property _prompt : "If manually editing the log file, take care not to alter the format of the file which could result in file corruption and/or the script no longer being able to use the file." & return & return & "Specifically, don't alter the record separators, the file header (except for the sample categories/labels, which can be modified), the field names in the records, or the field delimiters in the records."
+		
+		on create_view() --> void
+			with timeout of (10 * 60) seconds
+				display alert _title message _prompt buttons _buttons default button 3 as warning
+				set action_event to result's button returned
+				action_performed(action_event) --> returns boolean
+			end timeout
+		end create_view
+		
+		on action_performed(action_event) --> void
+			set action_event to action_event as string
+			if action_event is _buttons's item 1 then
+				_controller's disable_warning()
+			else if action_event is _buttons's item 2 then
+				_controller's go_back()
+				return true --> continue controller loop
+			else if action_event is _buttons's item 3 then
+				_controller's launch_editor()
+			end if
+			return false --> stop controller loop
+		end action_performed
+	end script
+end make_file_edit_view
+
+on make_title_view(view_controller, main_model)
 	script this
 		property class : "TitleView"
-		property _controller : navigation_controller
+		property _controller : view_controller
 		property _model : main_model
 		
 		property _page_title : missing value
@@ -1800,11 +1868,11 @@ on make_title_view(navigation_controller, main_model)
 	return this
 end make_title_view
 
-on make_url_view(navigation_controller, main_model)
+on make_url_view(view_controller, main_model)
 	script this
 		property class : "URLView"
 		property parent : make_base_view() -- extends BaseView
-		property _controller : navigation_controller
+		property _controller : view_controller
 		property _model : main_model
 		
 		property _page_title : missing value
@@ -1856,11 +1924,11 @@ on make_url_view(navigation_controller, main_model)
 	return this
 end make_url_view
 
-on make_label_view(navigation_controller, main_model)
+on make_label_view(view_controller, main_model)
 	script this
 		property class : "LabelView"
 		property parent : make_base_view() -- extends BaseView
-		property _controller : navigation_controller
+		property _controller : view_controller
 		property _model : main_model
 		
 		property _page_label : missing value --> string
@@ -1931,11 +1999,11 @@ on make_label_view(navigation_controller, main_model)
 	return this
 end make_label_view
 
-on make_sub_label_view(navigation_controller, main_model)
+on make_sub_label_view(view_controller, main_model)
 	script this
 		property class : "SubLabelView"
 		property parent : make_base_view() -- extends BaseView
-		property _controller : navigation_controller
+		property _controller : view_controller
 		property _model : main_model
 		
 		property _page_label : missing value --> string
@@ -2003,11 +2071,11 @@ on make_sub_label_view(navigation_controller, main_model)
 	return this
 end make_sub_label_view
 
-on make_all_label_view(navigation_controller, main_model)
+on make_all_label_view(view_controller, main_model)
 	script this
 		property class : "AllLabelView"
 		property parent : make_base_view() -- extends BaseView
-		property _controller : navigation_controller
+		property _controller : view_controller
 		property _model : main_model
 		
 		property _page_label : missing value --> string
@@ -2071,11 +2139,11 @@ on make_all_label_view(navigation_controller, main_model)
 	return this
 end make_all_label_view
 
-on make_label_edit_view(navigation_controller, main_model)
+on make_label_edit_view(view_controller, main_model)
 	script this
 		property class : "LabelEditView"
 		property parent : make_base_view() -- extends BaseView
-		property _controller : navigation_controller
+		property _controller : view_controller
 		property _model : main_model
 		
 		property _page_title : missing value --> string
@@ -2133,11 +2201,11 @@ on make_label_edit_view(navigation_controller, main_model)
 	return this
 end make_label_edit_view
 
-on make_note_view(navigation_controller, main_model)
+on make_note_view(view_controller, main_model)
 	script this
 		property class : "NoteView"
 		property parent : make_base_view() -- extends BaseView
-		property _controller : navigation_controller
+		property _controller : view_controller
 		property _model : main_model
 		
 		property _page_title : missing value
