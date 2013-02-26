@@ -173,20 +173,20 @@ on make_app_controller()
 				sub_label_controller, Â
 				all_label_controller, Â
 				label_edit_controller, Â
-				file_edit_controller, Â
 				settings_controller, Â
-				help_controller})
+				help_controller, Â
+				file_edit_controller})
 			sub_label_controller's set_controllers({Â
 				label_edit_controller, Â
 				all_label_controller, Â
-				file_edit_controller, Â
 				settings_controller, Â
-				help_controller})
+				help_controller, Â
+				file_edit_controller})
 			all_label_controller's set_controllers({Â
 				label_edit_controller, Â
-				file_edit_controller, Â
 				settings_controller, Â
-				help_controller})
+				help_controller, Â
+				file_edit_controller})
 			label_edit_controller's set_controllers({note_controller})
 			
 			--
@@ -1220,23 +1220,23 @@ on make_label_controller(navigation_controller, main_model)
 			_nav_controller's push_controller({me, my other_controllers's item 3})
 		end edit_label
 		
-		on edit_file() --> void
-			_nav_controller's push_controller({me, my other_controllers's item 4})
-		end edit_file
-		
 		on change_settings() --> void
 			-- Return to the current controller after the preferences
 			-- controller is finished.
 			_nav_controller's push_controller({me})
-			_nav_controller's push_controller({my other_controllers's item 5})
+			_nav_controller's push_controller({my other_controllers's item 4})
 		end change_settings
 		
 		on show_help() --> void
 			-- Return to the current controller after the help
 			-- controller is finished.
 			_nav_controller's push_controller({me})
-			_nav_controller's push_controller({my other_controllers's item 6})
+			_nav_controller's push_controller({my other_controllers's item 5})
 		end show_help
+		
+		on edit_file() --> void
+			_nav_controller's push_controller({me, my other_controllers's item 6})
+		end edit_file
 	end script
 	
 	my debug_log(1, return & "--->  new " & this's class & "()")
@@ -1272,23 +1272,23 @@ on make_sub_label_controller(navigation_controller, main_model)
 			_nav_controller's push_controller({me, my other_controllers's item 2})
 		end choose_from_all
 		
-		on edit_file() --> void
-			_nav_controller's push_controller({me, my other_controllers's item 3})
-		end edit_file
-		
 		on change_settings() --> void
 			-- Return to the current controller after the preferences
 			-- controller is finished.
 			_nav_controller's push_controller({me})
-			_nav_controller's push_controller({my other_controllers's item 4})
+			_nav_controller's push_controller({my other_controllers's item 3})
 		end change_settings
 		
 		on show_help() --> void
 			-- Return to the current controller after the help
 			-- controller is finished.
 			_nav_controller's push_controller({me})
-			_nav_controller's push_controller({my other_controllers's item 5})
+			_nav_controller's push_controller({my other_controllers's item 4})
 		end show_help
+		
+		on edit_file() --> void
+			_nav_controller's push_controller({me, my other_controllers's item 5})
+		end edit_file
 	end script
 	
 	my debug_log(1, return & "--->  new " & this's class & "()")
@@ -1320,23 +1320,23 @@ on make_all_label_controller(navigation_controller, main_model)
 			_nav_controller's push_controller({me, my other_controllers's item 1})
 		end set_chosen_category
 		
-		on edit_file() --> void
-			_nav_controller's push_controller({me, my other_controllers's item 2})
-		end edit_file
-		
 		on change_settings() --> void
 			-- Return to the current controller after the preferences
 			-- controller is finished.
 			_nav_controller's push_controller({me})
-			_nav_controller's push_controller({my other_controllers's item 3})
+			_nav_controller's push_controller({my other_controllers's item 2})
 		end change_settings
 		
 		on show_help() --> void
 			-- Return to the current controller after the help
 			-- controller is finished.
 			_nav_controller's push_controller({me})
-			_nav_controller's push_controller({my other_controllers's item 4})
+			_nav_controller's push_controller({my other_controllers's item 3})
 		end show_help
+		
+		on edit_file() --> void
+			_nav_controller's push_controller({me, my other_controllers's item 4})
+		end edit_file
 	end script
 	
 	my debug_log(1, return & "--->  new " & this's class & "()")
@@ -1870,10 +1870,11 @@ on make_label_view(navigation_controller, main_model)
 			_bullet & "Show full list with subcategories...", Â
 			_bullet & "Create a new category...", Â
 			_menu_rule, Â
-			_bullet & "Manually edit log file", Â
 			_bullet & "Preferences...", Â
 			_bullet & "Help", Â
 			_bullet & "Quit", Â
+			_menu_rule, Â
+			_bullet & "Edit log file		(Advanced)", Â
 			_menu_rule}
 		
 		on create_view() --> void
@@ -1899,13 +1900,13 @@ on make_label_view(navigation_controller, main_model)
 			else if action_event is _action_items's item 2 then
 				_controller's edit_label()
 			else if action_event is _action_items's item 4 then
-				_controller's edit_file()
-			else if action_event is _action_items's item 5 then
 				_controller's change_settings()
-			else if action_event is _action_items's item 6 then
+			else if action_event is _action_items's item 5 then
 				_controller's show_help()
-			else if action_event is _action_items's item 7 then
+			else if action_event is _action_items's item 6 then
 				error number -128 -- User canceled
+			else if action_event is _action_items's item 8 then
+				_controller's edit_file()
 			else -- go to subcategory view
 				_controller's set_chosen_root(action_event)
 			end if
@@ -1943,10 +1944,11 @@ on make_sub_label_view(navigation_controller, main_model)
 		property _action_items : {Â
 			_bullet & "Show full list with subcategories...", Â
 			_menu_rule, Â
-			_bullet & "Manually edit log file", Â
 			_bullet & "Preferences...", Â
 			_bullet & "Help", Â
 			_bullet & "Quit", Â
+			_menu_rule, Â
+			_bullet & "Edit log file		(Advanced)", Â
 			_menu_rule}
 		
 		on create_view() --> void
@@ -1970,13 +1972,13 @@ on make_sub_label_view(navigation_controller, main_model)
 			if action_event is _action_items's item 1 then
 				_controller's choose_from_all()
 			else if action_event is _action_items's item 3 then
-				_controller's edit_file()
-			else if action_event is _action_items's item 4 then
 				_controller's change_settings()
-			else if action_event is _action_items's item 5 then
+			else if action_event is _action_items's item 4 then
 				_controller's show_help()
-			else if action_event is _action_items's item 6 then
+			else if action_event is _action_items's item 5 then
 				error number -128 -- User canceled
+			else if action_event is _action_items's item 7 then
+				_controller's edit_file()
 			else -- go to category edit view
 				_controller's set_chosen_category(action_event)
 			end if
@@ -2012,10 +2014,11 @@ on make_all_label_view(navigation_controller, main_model)
 		property _menu_rule : multiply_text(my u_dash, 35)
 		property _prompt : "Please select a category or subcategory for the URL you want to log. You will have a chance to edit your choice (to add a new category or subcategory)."
 		property _action_items : {Â
-			_bullet & "Manually edit log file", Â
 			_bullet & "Preferences...", Â
 			_bullet & "Help", Â
 			_bullet & "Quit", Â
+			_menu_rule, Â
+			_bullet & "Edit log file		(Advanced)", Â
 			_menu_rule}
 		
 		on create_view() --> void
@@ -2037,13 +2040,13 @@ on make_all_label_view(navigation_controller, main_model)
 			end if
 			set action_event to action_event as string
 			if action_event is _action_items's item 1 then
-				_controller's edit_file()
-			else if action_event is _action_items's item 2 then
 				_controller's change_settings()
-			else if action_event is _action_items's item 3 then
+			else if action_event is _action_items's item 2 then
 				_controller's show_help()
-			else if action_event is _action_items's item 4 then
+			else if action_event is _action_items's item 3 then
 				error number -128 -- User canceled
+			else if action_event is _action_items's item 5 then
+				_controller's edit_file()
 			else -- go to category edit view
 				_controller's set_chosen_category(action_event)
 			end if
