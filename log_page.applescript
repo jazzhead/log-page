@@ -2,7 +2,7 @@
 	Log Page - Log categorized web page bookmarks to a text file
 
 	Version: @@VERSION@@
-	Date:    2013-02-25
+	Date:    2013-02-26
 	Author:  Steve Wheeler
 
 	Get the title, URL, current date and time, and a user-definable
@@ -533,7 +533,7 @@ General"
 				"Title" & field_sep & _page_title, Â
 				"URL  " & field_sep & _page_url}, linefeed) & linefeed
 			if _page_note is not missing value then
-				set final_text to final_text & "Note " & field_sep & _page_note & linefeed
+				set final_text to final_text & _format_note(_page_note)
 			end if
 			
 			set _log_record to final_text & record_sep & linefeed
@@ -552,6 +552,13 @@ General"
 			-- Final string:
 			return join_list({y, m, d}, "-") & space & join_list({hh, mm, ss}, ":")
 		end _format_date
+		
+		on _format_note(this_text) --> string
+			-- Line wrap the Note field (and transliterate non-ASCII characters)
+			set s to "LANG=C echo " & quoted form of convert_to_ascii(this_text) Â
+				& "| fmt -w 72 | sed '1 s/^/Note  | /; 2,$ s/^/      | /'"
+			do shell script s without altering line endings
+		end _format_note
 	end script
 	
 	my debug_log(1, return & "--->  new " & this's class & "()" & return)
