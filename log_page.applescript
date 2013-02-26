@@ -769,9 +769,10 @@ on make_page_log_settings()
 		-- Define all preference keys here
 		property _log_file_key : "logFile" -- required pref
 		property _text_editor_key : "textEditor" -- required pref
+		property _warn_before_editing_key : "warnBeforeEditing" -- optional state
 		property _last_category_key : "lastCategory" -- optional state
 		
-		property _optional_keys : {_last_category_key} --> array (saved state, etc.)
+		property _optional_keys : {_last_category_key, _warn_before_editing_key} --> array
 		
 		on init()
 			continue init()
@@ -781,8 +782,6 @@ on make_page_log_settings()
 				POSIX path of (path to application support folder from user domain) Â
 				& __NAMESPACE__ & "/" & __SCRIPT_NAME__ & "/urls.txt")
 			my _default_settings's set_item(_text_editor_key, "TextEdit")
-			
-			--_default_settings's set_item("boolPref", true) -- test other types
 		end init
 		
 		(* == Preferences Methods == *)
@@ -807,6 +806,10 @@ on make_page_log_settings()
 			return _text_editor_key
 		end get_text_editor_key
 		
+		on get_warn_before_editing_key() --> string
+			return _warn_before_editing_key
+		end get_warn_before_editing_key
+		
 		on get_log_file() --> string
 			my _settings's get_item(_log_file_key)
 		end get_log_file
@@ -814,6 +817,16 @@ on make_page_log_settings()
 		on get_text_editor() --> integer
 			my _settings's get_item(_text_editor_key)
 		end get_text_editor
+		
+		on warn_before_editing() --> boolean
+			try
+				my _settings's get_item(_warn_before_editing_key)
+			on error err_msg number err_num -- set, write and return default
+				continue set_pref(_warn_before_editing_key, true) -- call super
+				--display alert "Error (" & err_num & ")" message err_msg as warning
+				return true -- the default value
+			end try
+		end warn_before_editing
 		
 		(* == State Methods == *)
 		
@@ -828,12 +841,6 @@ on make_page_log_settings()
 				return missing value
 			end try
 		end get_last_category
-		
-		on disable_file_edit_warning()
-			set msg to my class & ".disable_file_edit_warning(): TODO"
-			my debug_log(1, msg)
-			display dialog msg with title "TODO" buttons {"OK"} default button 1
-		end disable_file_edit_warning
 		
 		(* == Associative List Methods (delegate) == *)
 		
@@ -1109,8 +1116,13 @@ on make_file_edit_controller(navigation_controller, settings_model)
 		
 		on run
 			my debug_log(1, return & "--->  running " & my class & "...")
-			if _view is missing value then set _view to make_file_edit_view(me, _model)
-			set ret_val to _view's create_view() --> returns boolean
+			if _model's warn_before_editing() then
+				if _view is missing value then set _view to make_file_edit_view(me, _model)
+				set ret_val to _view's create_view() --> returns boolean
+			else
+				launch_editor()
+				set ret_val to false
+			end if
 			my debug_log(1, "--->  finished " & my class & return)
 			return ret_val --> false ends controller loop and exits script
 		end run
@@ -1128,7 +1140,7 @@ on make_file_edit_controller(navigation_controller, settings_model)
 		
 		on disable_warning()
 			my debug_log(1, my class & ".disable_warning(): TODO")
-			_model's disable_file_edit_warning()
+			_model's set_pref(_model's get_warn_before_editing_key(), false)
 			launch_editor()
 		end disable_warning
 	end script
