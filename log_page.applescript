@@ -852,7 +852,7 @@ on make_page_log_settings()
 			-- saving the preference to disk
 			--
 			set this_value to _handle_log_file(this_key, this_value)
-			continue set_pref(this_key, this_value)
+			continue set_item(this_key, this_value)
 		end set_item
 		
 		(* == Utility Methods == *)
