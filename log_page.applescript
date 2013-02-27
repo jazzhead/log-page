@@ -63,7 +63,7 @@ on run
 	run app_controller
 end run
 
-(******************** Main Controller ********************)
+(* ==== Main Controller ==== *)
 
 -- This is the main client controller that creates the models and creates
 -- and runs the other controllers.
@@ -233,8 +233,6 @@ on make_app_controller()
 	my debug_log(1, "--->  new " & this's class & "()")
 	return this
 end make_app_controller
-
-(******************** The Rest ********************)
 
 (* ==== Model ==== *)
 
@@ -789,7 +787,7 @@ on make_page_log_settings()
 			my _default_settings's get_item(_log_file_key)
 		end get_default_log_file
 		
-		on get_default_text_editor() --> integer
+		on get_default_text_editor() --> string
 			my _default_settings's get_item(_text_editor_key)
 		end get_default_text_editor
 		
@@ -813,7 +811,7 @@ on make_page_log_settings()
 			my _settings's get_item(_log_file_key)
 		end get_log_file
 		
-		on get_text_editor() --> integer
+		on get_text_editor() --> string
 			my _settings's get_item(_text_editor_key)
 		end get_text_editor
 		
@@ -1817,7 +1815,7 @@ on make_file_edit_view(view_controller, settings_model)
 		property _model : settings_model
 		
 		property _title : "Warning: " & __SCRIPT_NAME__ & " > Edit Log File"
-		property _buttons : {"Don't show this warning again", my u_back_btn, "Edit File"}
+		property _buttons : {"Don't Show This Warning Again", my u_back_btn, "Edit File"}
 		property _prompt : "If manually editing the log file, take care not to alter the format of the file which could result in file corruption and/or the script no longer being able to use the file." & return & return & "Specifically, don't alter the record separators, the file header (except for the sample categories/labels, which can be modified), the field names in the records, or the field delimiters in the records."
 		
 		on create_view() --> void
@@ -1977,14 +1975,14 @@ on make_label_view(view_controller, main_model)
 		property _menu_rule : multiply_text(my u_dash, 20)
 		property _prompt : "Please select a top-level category for the URL you want to log. Next you will be able to select subcategories."
 		property _action_items : {Â
-			_bullet & "Show full list with subcategories...", Â
-			_bullet & "Create a new category...", Â
+			_bullet & "Show Full List with Subcategories...", Â
+			_bullet & "Create a New Category...", Â
 			_menu_rule, Â
 			_bullet & "Preferences...", Â
 			_bullet & "Help", Â
 			_bullet & "Quit", Â
 			_menu_rule, Â
-			_bullet & "Edit log file		(Advanced)", Â
+			_bullet & "Edit Log File		(Advanced)", Â
 			_menu_rule}
 		
 		on create_view() --> void
@@ -2052,13 +2050,13 @@ on make_sub_label_view(view_controller, main_model)
 		property _menu_rule : multiply_text(my u_dash, 35)
 		property _prompt : "Please select a category or subcategory for the URL you want to log. You will have a chance to edit your choice (to add a new category or subcategory)."
 		property _action_items : {Â
-			_bullet & "Show full list with subcategories...", Â
+			_bullet & "Show Full List with Subcategories...", Â
 			_menu_rule, Â
 			_bullet & "Preferences...", Â
 			_bullet & "Help", Â
 			_bullet & "Quit", Â
 			_menu_rule, Â
-			_bullet & "Edit log file		(Advanced)", Â
+			_bullet & "Edit Log File		(Advanced)", Â
 			_menu_rule}
 		
 		on create_view() --> void
@@ -2128,7 +2126,7 @@ on make_all_label_view(view_controller, main_model)
 			_bullet & "Help", Â
 			_bullet & "Quit", Â
 			_menu_rule, Â
-			_bullet & "Edit log file		(Advanced)", Â
+			_bullet & "Edit Log File		(Advanced)", Â
 			_menu_rule}
 		
 		on create_view() --> void
@@ -2304,7 +2302,7 @@ on make_settings_first_view(settings_controller, settings_model)
 		
 		property _title : __SCRIPT_NAME__ & " > First Run"
 		property _prompt : missing value
-		property _buttons : {"Change settings...", "Cancel", "Use defaults"}
+		property _buttons : {"Change Settings...", "Cancel", "Use Defaults"}
 		
 		on create_view() --> void
 			_set_prompt()
@@ -2344,7 +2342,7 @@ on make_settings_main_view(settings_controller, settings_model)
 		
 		property _title : __SCRIPT_NAME__ & " > Preferences"
 		property _prompt : missing value
-		property _buttons : {"Choose a text editor...", "Choose a URLs file...", "OK"}
+		property _buttons : {"Choose a Text Editor...", "Choose a URLs File...", "OK"}
 		
 		on create_view() --> void
 			_set_prompt()
@@ -2390,7 +2388,7 @@ on make_settings_editor_view(settings_controller, settings_model)
 		
 		property _title : __SCRIPT_NAME__ & " > Preferences > Choose Editor"
 		property _prompt : "Choose a text editor application for editing the URLs file." & return & return
-		property _buttons : {my u_back_btn, "Use default editor...", "Choose another editor..."}
+		property _buttons : {my u_back_btn, "Use Default Editor...", "Choose Another Editor..."}
 		
 		property _text_editor : missing value
 		
@@ -2407,7 +2405,7 @@ on make_settings_editor_view(settings_controller, settings_model)
 		on choose_default() --> void
 			set t to _title & " > Default"
 			set m to "The default text editor app is:" & tab & _model's get_default_text_editor() & return & return & "Use this app?" & return & return
-			set b to {my u_back_btn, "Cancel", "Use default"}
+			set b to {my u_back_btn, "Cancel", "Use Default"}
 			display dialog m with title t buttons b default button 3 with icon note
 			set btn_pressed to button returned of result
 			if btn_pressed is b's item 1 then
@@ -2469,11 +2467,11 @@ on make_settings_file_view(settings_controller, settings_model)
 		property _prompt : "Choose a file in which to save URLs:"
 		property _menu_rule : multiply_text(my u_dash, 19)
 		property _menu_items_base : {Â
-			"Use default file...", Â
-			"Choose existing file...", Â
-			"Create new file...", Â
+			"Use Default File...", Â
+			"Choose Existing File...", Â
+			"Create New File...", Â
 			_menu_rule, Â
-			"Type in file path...		(Advanced)", Â
+			"Type in File Path...		(Advanced)", Â
 			_menu_rule, Â
 			"Quit"}
 		property _menu_items : missing value
@@ -2501,7 +2499,7 @@ on make_settings_file_view(settings_controller, settings_model)
 		on choose_default() --> void
 			set t to _title & " > Default"
 			set m to "The default URLs file is:" & return & return & tab & _model's get_default_log_file() & return & return & "Use this file?" & return & return
-			set b to {my u_back_btn, "Cancel", "Use default"}
+			set b to {my u_back_btn, "Cancel", "Use Default"}
 			display dialog m with title t buttons b default button 3 with icon note
 			set btn_pressed to button returned of result
 			if btn_pressed is b's item 1 then
@@ -2557,7 +2555,7 @@ on make_settings_file_view(settings_controller, settings_model)
 		on reset_warning() --> void
 			set t to __SCRIPT_NAME__ & " > Preferences > Reset Edit File Warning"
 			set m to "Care should be taken when manually editing the log file because altering the format of the data could result in file corruption and/or the script no longer being able to use the file." & return & return & "Resetting the warning here will cause a warning to be shown each time the file edit action is invoked."
-			set b to {my u_back_btn, "Cancel", "Reset warning"}
+			set b to {my u_back_btn, "Cancel", "Reset Warning"}
 			display dialog m with title t buttons b default button 3 with icon note
 			set btn_pressed to button returned of result
 			if btn_pressed is b's item 1 then
@@ -2605,7 +2603,7 @@ on make_settings_file_view(settings_controller, settings_model)
 				set _menu_items to _menu_items_base
 			else
 				set _menu_items to _menu_items_base Â
-					& {_menu_rule, "Reset file edit warning..."}
+					& {_menu_rule, "Reset File Edit Warning..."}
 			end if
 		end update_menu
 	end script
