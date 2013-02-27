@@ -131,7 +131,7 @@ on make_app_controller()
 			(* == Controllers == *)
 			
 			--
-			-- Create the shared navigation controller for view controllers
+			-- Create the shared navigation controller
 			--
 			set nav_controller to make_navigation_controller()
 			
@@ -196,7 +196,7 @@ on make_app_controller()
 			
 			--
 			-- This is the main UI/View loop. It will loop through the
-			-- controller stack until empty prompting the user for info.
+			-- controller stack until empty, prompting the user for info.
 			--
 			-- The controller stack can be modified by any controller so
 			-- the loop will run as long as controllers keep pushing
@@ -652,8 +652,8 @@ end script
 
 on make_settings()
 	(*
-		This class should be extended rather than modified to customize
-		it for a particular application.
+		This class should be subclassed rather than modified to
+		customize it for a particular application.
 
 		Dependencies:
 			* Observable (class)
@@ -777,10 +777,10 @@ on make_page_log_settings()
 			continue init()
 			
 			-- Initialize default values
+			my _default_settings's set_item(_text_editor_key, "TextEdit")
 			my _default_settings's set_item(_log_file_key, Â
 				POSIX path of (path to application support folder from user domain) Â
 				& __NAMESPACE__ & "/" & __SCRIPT_NAME__ & "/urls.txt")
-			my _default_settings's set_item(_text_editor_key, "TextEdit")
 		end init
 		
 		(* == Preferences Methods == *)
