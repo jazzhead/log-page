@@ -1651,8 +1651,8 @@ on make_settings_editor_controller(navigation_controller, settings_model)
 			_nav_controller's go_back()
 		end go_back
 		
-		on set_editor(_key, _val) --> void
-			_model's set_pref(_key, _val)
+		on set_editor(_val) --> void
+			_model's set_pref(_model's get_text_editor_key(), _val)
 			go_back()
 		end set_editor
 	end script
@@ -1684,8 +1684,8 @@ on make_settings_file_controller(navigation_controller, settings_model, app_mode
 			_nav_controller's go_back()
 		end go_back
 		
-		on set_log_file(_key, _val) --> void
-			_model's set_pref(_key, _val)
+		on set_log_file(_val) --> void
+			_model's set_pref(_model's get_log_file_key(), _val)
 			_app_model's parse_log()
 			delay 1 -- script needs time to process before next dialog
 			go_back()
@@ -1756,8 +1756,8 @@ on make_help_view(view_controller, settings_model)
 		property _controller : view_controller
 		property _model : settings_model
 		
-		property _log_file_val : missing value
-		property _text_editor_val : missing value
+		property _log_file : missing value
+		property _text_editor : missing value
 		
 		property _title : __SCRIPT_NAME__ & " Help"
 		property _prompt : missing value
@@ -1780,14 +1780,14 @@ on make_help_view(view_controller, settings_model)
 		end action_performed
 		
 		on update() --> void  (Observer Pattern)
-			set _log_file_val to _model's get_log_file()
-			set _text_editor_val to _model's get_text_editor()
+			set _log_file to _model's get_log_file()
+			set _text_editor to _model's get_text_editor()
 		end update
 		
 		on _set_prompt() --> void -- PRIVATE
 			set _prompt to "This script will append the URL of the front web browser document to a text file along with the current date/time, the title of the web page and a user-definable category. The script also includes an option to open the file in your favorite text editor for editing (although care should be taken to not alter the format of the file). The current file and text editor are:" & return & return Â
-				& tab & "URLs File:    " & _log_file_val & return & return Â
-				& tab & "Text Editor:  " & _text_editor_val & return & return Â
+				& tab & "URLs File:    " & _log_file & return & return Â
+				& tab & "Text Editor:  " & _text_editor & return & return Â
 				& "You can change those settings by clicking \"Preferences\"."
 		end _set_prompt
 	end script
@@ -2318,10 +2318,8 @@ on make_settings_main_view(settings_controller, settings_model)
 		property _controller : settings_controller
 		property _model : settings_model
 		
-		property _log_file_key : missing value
-		property _log_file_val : missing value
-		property _text_editor_key : missing value
-		property _text_editor_val : missing value
+		property _log_file : missing value
+		property _text_editor : missing value
 		
 		property _title : __SCRIPT_NAME__ & " > Preferences"
 		property _prompt : missing value
@@ -2346,16 +2344,14 @@ on make_settings_main_view(settings_controller, settings_model)
 		end action_performed
 		
 		on update() --> void  (Observer Pattern)
-			set _log_file_key to _model's get_log_file_key()
-			set _log_file_val to _model's get_log_file()
-			set _text_editor_key to _model's get_text_editor_key()
-			set _text_editor_val to _model's get_text_editor()
+			set _log_file to _model's get_log_file()
+			set _text_editor to _model's get_text_editor()
 		end update
 		
 		on _set_prompt() --> void -- PRIVATE
 			set _prompt to "Choose a URLs file and/or a text editor for editing the file. The current settings are:" & return & return Â
-				& tab & "URLs File:" & tab & _log_file_val & return & return Â
-				& tab & "Text Editor:" & tab & _text_editor_val & return & return
+				& tab & "URLs File:" & tab & _log_file & return & return Â
+				& tab & "Text Editor:" & tab & _text_editor & return & return
 		end _set_prompt
 	end script
 	
@@ -2375,8 +2371,7 @@ on make_settings_editor_view(settings_controller, settings_model)
 		property _prompt : "Choose a text editor application for editing the URLs file." & return & return
 		property _buttons : {my u_back_btn, "Use default editor...", "Choose another editor..."}
 		
-		property _text_editor_key : missing value
-		property _text_editor_val : missing value
+		property _text_editor : missing value
 		
 		(* == Main View == *)
 		
@@ -2397,8 +2392,8 @@ on make_settings_editor_view(settings_controller, settings_model)
 			if btn_pressed is b's item 1 then
 				create_view() -- back to main view
 			else if btn_pressed is b's item 3 then
-				set _text_editor_val to _model's get_default_text_editor()
-				_controller's set_editor(_text_editor_key, _text_editor_val)
+				set _text_editor to _model's get_default_text_editor()
+				_controller's set_editor(_text_editor)
 			end if
 		end choose_default
 		
@@ -2406,8 +2401,8 @@ on make_settings_editor_view(settings_controller, settings_model)
 			set t to _title & " > Choose Application"
 			set m to "Select an application to use for editing the URLs file. (Click \"Cancel\" to return to the previous dialog.)"
 			try
-				set _text_editor_val to name of (choose application with title t with prompt m)
-				_controller's set_editor(_text_editor_key, _text_editor_val)
+				set _text_editor to name of (choose application with title t with prompt m)
+				_controller's set_editor(_text_editor)
 			on error err_msg number err_num
 				my handle_cancel_as_back(err_msg, err_num)
 			end try
@@ -2430,10 +2425,9 @@ on make_settings_editor_view(settings_controller, settings_model)
 		
 		on update() --> void  (Observer Pattern)
 			try
-				set _text_editor_key to _model's get_text_editor_key()
-				set _text_editor_val to _model's get_text_editor()
+				set _text_editor to _model's get_text_editor()
 			on error
-				set _text_editor_val to _model's get_default_text_editor()
+				set _text_editor to _model's get_default_text_editor()
 			end try
 		end update
 	end script
@@ -2461,8 +2455,7 @@ on make_settings_file_view(settings_controller, settings_model)
 			"Type in file path...		(Advanced)"}
 		property _menu_items : missing value
 		
-		property _log_file_key : missing value
-		property _log_file_val : missing value
+		property _log_file : missing value
 		property _warn_before_editing : missing value
 		
 		(* == Main View == *)
@@ -2491,16 +2484,16 @@ on make_settings_file_view(settings_controller, settings_model)
 			if btn_pressed is b's item 1 then
 				create_view() -- back to main view
 			else if btn_pressed is b's item 3 then
-				set _log_file_val to _model's get_default_log_file()
-				_controller's set_log_file(_log_file_key, _log_file_val)
+				set _log_file to _model's get_default_log_file()
+				_controller's set_log_file(_log_file)
 			end if
 		end choose_default
 		
 		on choose_existing() --> void
 			set m to "Choose an existing URLs file. (Click \"Cancel\" to return to the previous dialog.)"
 			try
-				set _log_file_val to POSIX path of (choose file with prompt m default location path to desktop folder from user domain)
-				_controller's set_log_file(_log_file_key, _log_file_val)
+				set _log_file to POSIX path of (choose file with prompt m default location path to desktop folder from user domain)
+				_controller's set_log_file(_log_file)
 			on error err_msg number err_num
 				my handle_cancel_as_back(err_msg, err_num)
 			end try
@@ -2510,8 +2503,8 @@ on make_settings_file_view(settings_controller, settings_model)
 			set m to "Choose a file name and location for the URLs file. (Click \"Cancel\" to return to the previous dialog.)"
 			set file_name to item 2 of split_path_into_dir_and_file(_model's get_default_log_file())
 			try
-				set _log_file_val to POSIX path of (choose file name with prompt m default name file_name default location path to desktop folder from user domain)
-				_controller's set_log_file(_log_file_key, _log_file_val)
+				set _log_file to POSIX path of (choose file name with prompt m default name file_name default location path to desktop folder from user domain)
+				_controller's set_log_file(_log_file)
 			on error err_msg number err_num
 				my handle_cancel_as_back(err_msg, err_num)
 			end try
@@ -2521,7 +2514,7 @@ on make_settings_file_view(settings_controller, settings_model)
 			set t to _title & " > Enter Path"
 			set m to "Enter a full file path to use for saving the URLs." & return & return & "A '~' (tilde) can be used to indicate your home directory. Example:" & return & return & tab & "~/Desktop/urls.txt"
 			set b to {my u_back_btn, "Cancel", "OK"}
-			display dialog m with title t default answer _log_file_val buttons b default button 3
+			display dialog m with title t default answer _log_file buttons b default button 3
 			copy result as list to {text_value, btn_pressed}
 			if btn_pressed is b's item 1 then
 				create_view() -- back to main view
@@ -2530,8 +2523,8 @@ on make_settings_file_view(settings_controller, settings_model)
 					display alert "Empty Field" message "Please enter a file path in the text field." as warning
 					enter_path() -- recursion
 				else
-					set _log_file_val to text_value
-					_controller's set_log_file(_log_file_key, _log_file_val)
+					set _log_file to text_value
+					_controller's set_log_file(_log_file)
 				end if
 			end if
 		end enter_path
@@ -2573,10 +2566,9 @@ on make_settings_file_view(settings_controller, settings_model)
 		
 		on update() --> void  (Observer Pattern)
 			try
-				set _log_file_key to _model's get_log_file_key()
-				set _log_file_val to _model's get_log_file()
+				set _log_file to _model's get_log_file()
 			on error
-				set _log_file_val to _model's get_default_log_file()
+				set _log_file to _model's get_default_log_file()
 			end try
 			set _warn_before_editing to _model's warn_before_editing()
 		end update
