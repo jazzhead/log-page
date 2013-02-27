@@ -774,7 +774,7 @@ on make_page_log_settings()
 		on init()
 			continue init()
 			
-			-- Initialize default values
+			-- Initialize default values for required preferences
 			my _default_settings's set_item(_text_editor_key, "TextEdit")
 			my _default_settings's set_item(_log_file_key, Â
 				POSIX path of (path to application support folder from user domain) Â
@@ -2300,15 +2300,18 @@ on make_settings_first_view(settings_controller, settings_model)
 		property _controller : settings_controller
 		property _model : settings_model
 		
-		property _title : __SCRIPT_NAME__ & " > First Run"
+		property _title : __SCRIPT_NAME__ --& " (First Run)"
 		property _prompt : missing value
 		property _buttons : {"Change Settings...", "Cancel", "Use Defaults"}
 		
 		on create_view() --> void
 			_set_prompt()
-			display dialog _prompt with title _title buttons _buttons default button 3 with icon note
-			set action_event to result's button returned
-			action_performed(action_event)
+			with timeout of (10 * 60) seconds
+				--display dialog _prompt with title _title buttons _buttons default button 3 with icon note
+				display alert _title message _prompt buttons _buttons cancel button 2 default button 3
+				set action_event to result's button returned
+				action_performed(action_event)
+			end timeout
 		end create_view
 		
 		on action_performed(action_event) --> void
