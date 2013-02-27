@@ -2,7 +2,7 @@
 	Log Page - Log categorized web page bookmarks to a text file
 
 	Version: @@VERSION@@
-	Date:    2013-02-26
+	Date:    2013-02-27
 	Author:  Steve Wheeler
 
 	Get the title, URL, current date and time, and a user-definable
@@ -2473,7 +2473,9 @@ on make_settings_file_view(settings_controller, settings_model)
 			"Choose existing file...", Â
 			"Create new file...", Â
 			_menu_rule, Â
-			"Type in file path...		(Advanced)"}
+			"Type in file path...		(Advanced)", Â
+			_menu_rule, Â
+			"Quit"}
 		property _menu_items : missing value
 		
 		property _log_file : missing value
@@ -2553,7 +2555,7 @@ on make_settings_file_view(settings_controller, settings_model)
 		end enter_path
 		
 		on reset_warning() --> void
-			set t to __SCRIPT_NAME__ & " > Preferences > Reset File Edit Warning"
+			set t to __SCRIPT_NAME__ & " > Preferences > Reset Edit File Warning"
 			set m to "Care should be taken when manually editing the log file because altering the format of the data could result in file corruption and/or the script no longer being able to use the file." & return & return & "Resetting the warning here will cause a warning to be shown each time the file edit action is invoked."
 			set b to {my u_back_btn, "Cancel", "Reset warning"}
 			display dialog m with title t buttons b default button 3 with icon note
@@ -2583,6 +2585,8 @@ on make_settings_file_view(settings_controller, settings_model)
 			else if action_event is _menu_items's item 5 then
 				enter_path()
 			else if action_event is _menu_items's item 7 then
+				error number -128 -- User canceled
+			else if action_event is _menu_items's item 9 then
 				reset_warning()
 			end if
 		end action_performed
