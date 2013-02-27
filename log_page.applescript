@@ -58,7 +58,6 @@ property __NULL_IO__ : false -- boolean (if true, don't write to URL file)
 on run
 	-- Initialize any script properties here that should not be hardcoded
 	set __PLIST_DIR__ to POSIX path of (path to preferences from user domain)
-	--set __PLIST_DIR__ to "~/Desktop/Test Folder/Preferences/" -- :DEBUG:temp
 	
 	set app_controller to make_app_controller()
 	run app_controller
@@ -1138,8 +1137,8 @@ on make_file_edit_controller(navigation_controller, settings_model)
 			_editor's open_file(this_editor, this_file)
 		end launch_editor
 		
-		on disable_warning()
-			my debug_log(1, my class & ".disable_warning(): TODO")
+		on disable_warning() --> void
+			my debug_log(1, my class & ".disable_warning()")
 			_model's set_pref(_model's get_warn_before_editing_key(), false)
 			launch_editor()
 		end disable_warning
@@ -1691,6 +1690,13 @@ on make_settings_file_controller(navigation_controller, settings_model, app_mode
 			delay 1 -- script needs time to process before next dialog
 			go_back()
 		end set_log_file
+		
+		on reset_warning() --> void
+			my debug_log(1, my class & ".reset_warning()")
+			_model's set_pref(_model's get_warn_before_editing_key(), true)
+			delay 1 -- script needs time to process before next dialog
+			go_back()
+		end reset_warning
 	end script
 	
 	my debug_log(1, return & "--->  new " & this's class & "()")
@@ -2447,18 +2453,22 @@ on make_settings_file_view(settings_controller, settings_model)
 		property _title : __SCRIPT_NAME__ & " > Preferences > Choose File"
 		property _prompt : "Choose a file in which to save URLs:"
 		property _menu_rule : multiply_text(my u_dash, 19)
-		property _menu_items : {"Use default file...", Â
+		property _menu_items_base : {Â
+			"Use default file...", Â
 			"Choose existing file...", Â
 			"Create new file...", Â
 			_menu_rule, Â
 			"Type in file path...		(Advanced)"}
+		property _menu_items : missing value
 		
 		property _log_file_key : missing value
 		property _log_file_val : missing value
+		property _warn_before_editing : missing value
 		
 		(* == Main View == *)
 		
 		on create_view() --> void
+			update_menu()
 			repeat -- until a horizontal rule is not selected
 				set action_event to choose from list _menu_items with title _title with prompt _prompt cancel button name my u_back_btn
 				if action_event as string is not _menu_rule then
@@ -2526,10 +2536,18 @@ on make_settings_file_view(settings_controller, settings_model)
 			end if
 		end enter_path
 		
-		(*on _debug_test(_msg) --> void -- PRIVATE
-			display dialog my class & ".debug_view(): would call " & _msg with title "DEBUG"
-			create_view() -- back to main view
-		end _debug_test*)
+		on reset_warning() --> void
+			set t to __SCRIPT_NAME__ & " > Preferences > Reset File Edit Warning"
+			set m to "Care should be taken when manually editing the log file because altering the format of the data could result in file corruption and/or the script no longer being able to use the file." & return & return & "Resetting the warning here will cause a warning to be shown each time the file edit action is invoked."
+			set b to {my u_back_btn, "Cancel", "Reset warning"}
+			display dialog m with title t buttons b default button 3 with icon note
+			set btn_pressed to button returned of result
+			if btn_pressed is b's item 1 then
+				create_view() -- back to main view
+			else if btn_pressed is b's item 3 then
+				_controller's reset_warning()
+			end if
+		end reset_warning
 		
 		(* == Actions == *)
 		
@@ -2548,6 +2566,8 @@ on make_settings_file_view(settings_controller, settings_model)
 				choose_new()
 			else if action_event is _menu_items's item 5 then
 				enter_path()
+			else if action_event is _menu_items's item 7 then
+				reset_warning()
 			end if
 		end action_performed
 		
@@ -2558,7 +2578,17 @@ on make_settings_file_view(settings_controller, settings_model)
 			on error
 				set _log_file_val to _model's get_default_log_file()
 			end try
+			set _warn_before_editing to _model's warn_before_editing()
 		end update
+		
+		on update_menu() --> void
+			if _warn_before_editing then
+				set _menu_items to _menu_items_base
+			else
+				set _menu_items to _menu_items_base Â
+					& {_menu_rule, "Reset file edit warning..."}
+			end if
+		end update_menu
 	end script
 	
 	this's update()
