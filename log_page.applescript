@@ -52,7 +52,7 @@ property __BUNDLE_ID__ : "net.jazzhead.scpt.LogPage"
 property __PLIST_DIR__ : missing value
 
 -- Debug settings
-property __DEBUG_LEVEL__ : 2 -- integer (0 = no event logging)
+property __DEBUG_LEVEL__ : 0 -- integer (0 = no event logging)
 property __NULL_IO__ : false -- boolean (if true, don't write to URL file)
 
 on run
@@ -1732,6 +1732,18 @@ on make_base_view()
 		--property u_back_item : " " & u_back_btn -- for menu items
 		property u_bullet_item : " " & u_bullet & "  " -- for menu items
 		
+		-- Making buttons wider is the only way to widen text input
+		-- fields in AppleScript dialogs. It looks a little stupid, but
+		-- it makes the text input fields a little more functional.
+		--
+		property btn_pad : multiply_text(tab, 4)
+		property back_btn_pad : u_back_btn & btn_pad
+		property ok_btn_pad : "OK" & btn_pad
+		property next_btn_pad : "Next..." & btn_pad
+		property save_btn_pad : "Save" & btn_pad
+		property help_btn_pad : "Help" & btn_pad
+		property cancel_btn_pad : "Cancel" & btn_pad
+		
 		(* == Methods == *)
 		
 		on create_view() --> void
@@ -1834,13 +1846,14 @@ end make_file_edit_view
 on make_title_view(view_controller, main_model)
 	script this
 		property class : "TitleView"
+		property parent : make_base_view() -- extends BaseView
 		property _controller : view_controller
 		property _model : main_model
 		
 		property _page_title : missing value
 		
 		property _title : __SCRIPT_NAME__ & " > Title"
-		property _buttons : {"Help", "Cancel", "Next..."}
+		property _buttons : {my help_btn_pad, my cancel_btn_pad, my next_btn_pad}
 		property _prompt : missing value
 		property _text_field : missing value
 		
@@ -1865,6 +1878,8 @@ on make_title_view(view_controller, main_model)
 			set action_event to action_event as string
 			if action_event is _buttons's item 1 then
 				_controller's show_help()
+			else if action_event is _buttons's item 2 then
+				error number -128 -- User canceled
 			else if action_event is _buttons's item 3 then
 				_controller's set_page_title(_text_field)
 			end if
@@ -1897,7 +1912,7 @@ on make_url_view(view_controller, main_model)
 		property _page_url : missing value
 		
 		property _title : __SCRIPT_NAME__ & " > URL"
-		property _buttons : {my u_back_btn, "Cancel", "Next..."}
+		property _buttons : {my back_btn_pad, my cancel_btn_pad, my next_btn_pad}
 		property _prompt : missing value
 		property _text_field : missing value
 		
@@ -1922,6 +1937,8 @@ on make_url_view(view_controller, main_model)
 			set action_event to action_event as string
 			if action_event is _buttons's item 1 then
 				_controller's go_back()
+			else if action_event is _buttons's item 2 then
+				error number -128 -- User canceled
 			else if action_event is _buttons's item 3 then
 				_controller's set_page_url(_text_field)
 			end if
@@ -2171,7 +2188,7 @@ on make_label_edit_view(view_controller, main_model)
 		property _chosen_category : missing value --> string
 		
 		property _title : __SCRIPT_NAME__ & " > Category"
-		property _buttons : {my u_back_btn, "Cancel", "Next..."}
+		property _buttons : {my back_btn_pad, my cancel_btn_pad, my next_btn_pad}
 		property _prompt : missing value
 		
 		on create_view() --> void
@@ -2195,6 +2212,8 @@ on make_label_edit_view(view_controller, main_model)
 			set action_event to action_event as string
 			if action_event is _buttons's item 1 then
 				_controller's go_back()
+			else if action_event is _buttons's item 2 then
+				error number -128 -- User canceled
 			else if action_event is _buttons's item 3 then
 				_controller's set_chosen_category(_chosen_category)
 			end if
@@ -2231,7 +2250,7 @@ on make_note_view(view_controller, main_model)
 		property _page_label : missing value
 		
 		property _title : __SCRIPT_NAME__ & " > Note"
-		property _buttons : {my u_back_btn, "Cancel", "Save"}
+		property _buttons : {my back_btn_pad, my cancel_btn_pad, my save_btn_pad}
 		property _prompt : missing value
 		property _text_field : missing value
 		
@@ -2249,6 +2268,8 @@ on make_note_view(view_controller, main_model)
 			set action_event to action_event as string
 			if action_event is _buttons's item 1 then
 				_controller's go_back()
+			else if action_event is _buttons's item 2 then
+				error number -128 -- User canceled
 			else if action_event is _buttons's item 3 then
 				_controller's set_page_note(_text_field)
 			end if
@@ -2513,11 +2534,13 @@ on make_settings_file_view(settings_controller, settings_model)
 		on enter_path() --> void
 			set t to _title & " > Enter Path"
 			set m to "Enter a full file path to use for saving the URLs." & return & return & "A '~' (tilde) can be used to indicate your home directory. Example:" & return & return & tab & "~/Desktop/urls.txt"
-			set b to {my u_back_btn, "Cancel", "OK"}
+			set b to {my back_btn_pad, my cancel_btn_pad, my ok_btn_pad}
 			display dialog m with title t default answer _log_file buttons b default button 3
 			copy result as list to {text_value, btn_pressed}
 			if btn_pressed is b's item 1 then
 				create_view() -- back to main view
+			else if btn_pressed is b's item 2 then
+				error number -128 -- User canceled
 			else if btn_pressed is b's item 3 then
 				if text_value is "" then
 					display alert "Empty Field" message "Please enter a file path in the text field." as warning
