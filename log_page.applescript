@@ -2,7 +2,7 @@
 	Log Page - Log categorized web page bookmarks to a text file
 
 	Version: @@VERSION@@
-	Date:    2013-02-27
+	Date:    2013-02-28
 	Author:  Steve Wheeler
 
 	Get the title, URL, current date and time, and a user-definable
@@ -766,6 +766,8 @@ on make_page_log_settings()
 		-- Define all preference keys here
 		property _log_file_key : "logFile" -- required pref
 		property _text_editor_key : "textEditor" -- required pref
+		property _file_viewer_key : "fileViewer" -- required pref
+		--
 		property _warn_before_editing_key : "warnBeforeEditing" -- optional state
 		property _last_category_key : "lastCategory" -- optional state
 		
@@ -776,6 +778,7 @@ on make_page_log_settings()
 			
 			-- Initialize default values for required preferences
 			my _default_settings's set_item(_text_editor_key, "TextEdit")
+			my _default_settings's set_item(_file_viewer_key, "Safari")
 			my _default_settings's set_item(_log_file_key, Â
 				POSIX path of (path to application support folder from user domain) Â
 				& __NAMESPACE__ & "/" & __SCRIPT_NAME__ & "/urls.txt")
@@ -786,6 +789,10 @@ on make_page_log_settings()
 		on get_default_log_file() --> string
 			my _default_settings's get_item(_log_file_key)
 		end get_default_log_file
+		
+		on get_default_file_viewer() --> string
+			my _default_settings's get_item(_file_viewer_key)
+		end get_default_file_viewer
 		
 		on get_default_text_editor() --> string
 			my _default_settings's get_item(_text_editor_key)
@@ -799,6 +806,10 @@ on make_page_log_settings()
 			return _log_file_key
 		end get_log_file_key
 		
+		on get_file_viewer_key() --> string
+			return _file_viewer_key
+		end get_file_viewer_key
+		
 		on get_text_editor_key() --> string
 			return _text_editor_key
 		end get_text_editor_key
@@ -810,6 +821,10 @@ on make_page_log_settings()
 		on get_log_file() --> string
 			my _settings's get_item(_log_file_key)
 		end get_log_file
+		
+		on get_file_viewer() --> string
+			my _settings's get_item(_file_viewer_key)
+		end get_file_viewer
 		
 		on get_text_editor() --> string
 			my _settings's get_item(_text_editor_key)
@@ -1090,9 +1105,15 @@ on make_base_controller()
 		property class : "BaseController"
 		property other_controllers : {} --> array
 		
+		-- subclasses must define a '_nav_controller' property
+		
 		on set_controllers(these_controllers) --> void
 			set my other_controllers to these_controllers
 		end set_controllers
+		
+		on go_back() --> void
+			my _nav_controller's go_back()
+		end go_back
 		
 		on to_string() --> string
 			return my class
@@ -1123,10 +1144,6 @@ on make_file_edit_controller(navigation_controller, settings_model)
 			my debug_log(1, "--->  finished " & my class & return)
 			return ret_val --> false ends controller loop and exits script
 		end run
-		
-		on go_back() --> void
-			_nav_controller's go_back()
-		end go_back
 		
 		on launch_editor() --> void
 			my debug_log(1, my class & ".launch_editor()")
@@ -1223,10 +1240,6 @@ on make_url_controller(navigation_controller, main_model)
 			return true
 		end run
 		
-		on go_back() --> void
-			_nav_controller's go_back()
-		end go_back
-		
 		on set_page_url(this_value) --> void
 			_model's set_page_url(this_value)
 			_nav_controller's push_controller({me, my other_controllers's item 1})
@@ -1252,10 +1265,6 @@ on make_label_controller(navigation_controller, main_model)
 			my debug_log(1, "--->  finished " & my class & return)
 			return true
 		end run
-		
-		on go_back() --> void
-			_nav_controller's go_back()
-		end go_back
 		
 		on set_chosen_root(this_value) --> void
 			_model's set_chosen_root_category(this_value)
@@ -1309,10 +1318,6 @@ on make_sub_label_controller(navigation_controller, main_model)
 			return true
 		end run
 		
-		on go_back() --> void
-			_nav_controller's go_back()
-		end go_back
-		
 		on set_chosen_category(this_value) --> void
 			_model's set_chosen_category(this_value)
 			_nav_controller's push_controller({me, my other_controllers's item 1})
@@ -1361,10 +1366,6 @@ on make_all_label_controller(navigation_controller, main_model)
 			return true
 		end run
 		
-		on go_back() --> void
-			_nav_controller's go_back()
-		end go_back
-		
 		on set_chosen_category(this_value) --> void
 			_model's set_chosen_category(this_value)
 			_nav_controller's push_controller({me, my other_controllers's item 1})
@@ -1409,10 +1410,6 @@ on make_label_edit_controller(navigation_controller, main_model)
 			return true
 		end run
 		
-		on go_back() --> void
-			_nav_controller's go_back()
-		end go_back
-		
 		on set_chosen_category(this_value) --> void
 			_model's set_page_label(this_value)
 			_model's set_chosen_category(this_value)
@@ -1440,10 +1437,6 @@ on make_note_controller(navigation_controller, main_model)
 			return true
 		end run
 		
-		on go_back() --> void
-			_nav_controller's go_back()
-		end go_back
-		
 		on set_page_note(this_value) --> void
 			if this_value is not missing value then _model's set_page_note(this_value)
 		end set_page_note
@@ -1465,8 +1458,8 @@ on make_settings_controller(settings_model, app_model)
 		
 		-- Controllers instantiated during construction:
 		property nav_controller : make_navigation_controller()
-		property pick_editor_controller : missing value
-		property pick_file_controller : missing value
+		property app_settings_controller : missing value
+		property file_settings_controller : missing value
 		-- Controllers instantiated on first run:
 		property main_controller : missing value
 		
@@ -1510,7 +1503,7 @@ on make_settings_controller(settings_model, app_model)
 				-- Create main settings view controller
 				set main_controller to make_settings_main_controller(nav_controller, _model)
 				-- Inject any controller dependencies
-				main_controller's set_controllers({pick_editor_controller, pick_file_controller})
+				main_controller's set_controllers({app_settings_controller, file_settings_controller})
 			end if
 			
 			if _is_first_run then
@@ -1542,8 +1535,8 @@ on make_settings_controller(settings_model, app_model)
 		
 		on _create_controllers() --> void -- PRIVATE
 			-- Controllers for the preference editing dialogs:
-			set pick_editor_controller to make_settings_editor_controller(nav_controller, _model)
-			set pick_file_controller to make_settings_file_controller(nav_controller, _model, _app_model)
+			set app_settings_controller to make_settings_app_controller(nav_controller, _model)
+			set file_settings_controller to make_settings_file_controller(nav_controller, _model, _app_model)
 		end _create_controllers
 		
 		on to_string() --> string
@@ -1614,9 +1607,9 @@ on make_settings_main_controller(navigation_controller, settings_model)
 			return true
 		end run
 		
-		on choose_editor() --> void
+		on choose_app() --> void
 			_nav_controller's push_controller({me, my other_controllers's item 1})
-		end choose_editor
+		end choose_app
 		
 		on choose_file() --> void
 			_nav_controller's push_controller({me, my other_controllers's item 2})
@@ -1627,37 +1620,110 @@ on make_settings_main_controller(navigation_controller, settings_model)
 	return this
 end make_settings_main_controller
 
-on make_settings_editor_controller(navigation_controller, settings_model)
+on make_settings_app_controller(navigation_controller, settings_model)
 	script this
-		property class : "SettingsEditorController"
+		property class : "SettingsAppController"
 		property parent : make_base_controller() -- extends BaseController
 		property _nav_controller : navigation_controller
 		property _model : settings_model
 		property _view : missing value
+		property _editor_controller : missing value
+		property _viewer_controller : missing value
 		
 		on run
 			my debug_log(1, return & "--->  running " & my class & "...")
 			if _view is missing value then
-				set _view to make_settings_editor_view(me, _model)
+				set _view to make_settings_app_view(me, _model)
 			end if
 			_view's create_view()
 			my debug_log(1, "--->  finished " & my class & return)
 			return true
 		end run
 		
-		on go_back() --> void
-			_nav_controller's go_back()
-		end go_back
+		on choose_editor() --> void
+			if _editor_controller is missing value then -- lazy instantiation
+				set _editor_controller to make_settings_editor_controller(_nav_controller, _model)
+			end if
+			_nav_controller's push_controller({me, _editor_controller})
+		end choose_editor
 		
-		on set_editor(_val) --> void
-			_model's set_pref(_model's get_text_editor_key(), _val)
+		on choose_viewer() --> void
+			if _viewer_controller is missing value then -- lazy instantiation
+				set _viewer_controller to make_settings_viewer_controller(_nav_controller, _model)
+			end if
+			_nav_controller's push_controller({me, _viewer_controller})
+		end choose_viewer
+	end script
+	
+	my debug_log(1, return & "--->  new " & this's class & "()")
+	return this
+end make_settings_app_controller
+
+on make_settings_app_base_controller()
+	script this
+		property class : "SettingsAppBaseController" -- abstract
+		property parent : make_base_controller() -- extends BaseController
+		
+		on run
+			-- subclasses must instantiate a view first here, then call super
+			my _view's create_view()
+			my debug_log(1, "--->  finished " & my class & return)
+			return true
+		end run
+		
+		on set_app(_val) --> void
+			my _model's set_pref(my _app_key, _val)
 			go_back()
-		end set_editor
+		end set_app
+	end script
+	
+	my debug_log(1, return & "--->  new " & this's class & "()")
+	return this
+end make_settings_app_base_controller
+
+on make_settings_editor_controller(navigation_controller, settings_model)
+	script this
+		property class : "SettingsEditorController" -- concrete
+		property parent : make_settings_app_base_controller() -- extends SettingsAppBaseController
+		property _nav_controller : navigation_controller
+		property _model : settings_model
+		property _view : missing value
+		property _app_key : _model's get_text_editor_key()
+		
+		on run
+			my debug_log(1, return & "--->  running " & my class & "...")
+			if _view is missing value then
+				set _view to make_settings_editor_view(me, _model)
+			end if
+			continue run -- call superclass
+		end run
 	end script
 	
 	my debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_settings_editor_controller
+
+on make_settings_viewer_controller(navigation_controller, settings_model)
+	script this
+		property class : "SettingsViewerController" -- concrete
+		property parent : make_settings_app_base_controller() -- extends SettingsAppBaseController
+		property _nav_controller : navigation_controller
+		property _model : settings_model
+		property _view : missing value
+		property _app_key : _model's get_file_viewer_key()
+		
+		on run
+			my debug_log(1, return & "--->  running " & my class & "...")
+			if _view is missing value then
+				set _view to make_settings_viewer_view(me, _model)
+			end if
+			continue run -- call superclass
+		end run
+	end script
+	
+	my debug_log(1, return & "--->  new " & this's class & "()")
+	return this
+end make_settings_viewer_controller
 
 on make_settings_file_controller(navigation_controller, settings_model, app_model)
 	script this
@@ -1677,10 +1743,6 @@ on make_settings_file_controller(navigation_controller, settings_model, app_mode
 			my debug_log(1, "--->  finished " & my class & return)
 			return true
 		end run
-		
-		on go_back() --> void
-			_nav_controller's go_back()
-		end go_back
 		
 		on set_log_file(_val) --> void
 			_model's set_pref(_model's get_log_file_key(), _val)
@@ -1708,6 +1770,8 @@ end make_settings_file_controller
 on make_base_view()
 	script
 		property class : "BaseView"
+		
+		property _app_description : "This script will append the URL of the front web browser document to a text file along with the current date/time, the title of the web page and a user-definable category. The script can also open the file for viewing or editing in the apps of your choice (although care should be taken when editing to not alter the format of the file)."
 		
 		(* == Unicode Characters for Views == *)
 		
@@ -1763,10 +1827,12 @@ end make_base_view
 on make_help_view(view_controller, settings_model)
 	script this
 		property class : "HelpView"
+		property parent : make_base_view() -- extends BaseView
 		property _controller : view_controller
 		property _model : settings_model
 		
 		property _log_file : missing value
+		property _file_viewer : missing value
 		property _text_editor : missing value
 		
 		property _title : __SCRIPT_NAME__ & " Help"
@@ -1791,12 +1857,14 @@ on make_help_view(view_controller, settings_model)
 		
 		on update() --> void  (Observer Pattern)
 			set _log_file to _model's get_log_file()
+			set _file_viewer to _model's get_file_viewer()
 			set _text_editor to _model's get_text_editor()
 		end update
 		
 		on _set_prompt() --> void -- PRIVATE
-			set _prompt to "This script will append the URL of the front web browser document to a text file along with the current date/time, the title of the web page and a user-definable category. The script also includes an option to open the file in your favorite text editor for editing (although care should be taken to not alter the format of the file). The current file and text editor are:" & return & return Â
+			set _prompt to my _app_description & " The current settings are:" & return & return Â
 				& tab & "URLs File:    " & _log_file & return & return Â
+				& tab & "File Viewer:  " & _file_viewer & return & return Â
 				& tab & "Text Editor:  " & _text_editor & return & return Â
 				& "You can change those settings by clicking \"Preferences\"."
 		end _set_prompt
@@ -2297,6 +2365,7 @@ end make_note_view
 on make_settings_first_view(settings_controller, settings_model)
 	script
 		property class : "SettingsFirstView"
+		property parent : make_base_view() -- extends BaseView
 		property _controller : settings_controller
 		property _model : settings_model
 		
@@ -2326,8 +2395,9 @@ on make_settings_first_view(settings_controller, settings_model)
 		end action_performed
 		
 		on _set_prompt() --> void -- PRIVATE
-			set _prompt to "This script will append the URL of the front Safari document to a text file along with the current date/time, the title of the web page and a user-definable category. The script also includes an option to open the file in your favorite text editor for editing. The default file and text editor are:" & return & return Â
-				& "	URLs File:	" & _model's get_default_log_file() & return & return Â
+			set _prompt to my _app_description & " The defaults are:" & return & return Â
+				& "	URLs File:		" & _model's get_default_log_file() & return & return Â
+				& "	File Viewer:	" & _model's get_default_file_viewer() & return & return Â
 				& "	Text Editor:	" & _model's get_default_text_editor() & return & return Â
 				& "You can continue using those defaults or change the settings now. You can also change the settings later by selecting the \"Preferences\" item from any list dialog. (You would have to manually move your old URLs file though if you wanted to keep appending to it.)"
 		end _set_prompt
@@ -2337,15 +2407,17 @@ end make_settings_first_view
 on make_settings_main_view(settings_controller, settings_model)
 	script this
 		property class : "SettingsMainView"
+		property parent : make_base_view() -- extends BaseView
 		property _controller : settings_controller
 		property _model : settings_model
 		
 		property _log_file : missing value
+		property _file_viewer : missing value
 		property _text_editor : missing value
 		
 		property _title : __SCRIPT_NAME__ & " > Preferences"
 		property _prompt : missing value
-		property _buttons : {"Choose a Text Editor...", "Choose a URLs File...", "OK"}
+		property _buttons : {"Choose a File Editor/Viewer...", "Choose a URLs File...", "OK"}
 		
 		on create_view() --> void
 			_set_prompt()
@@ -2359,7 +2431,7 @@ on make_settings_main_view(settings_controller, settings_model)
 			
 			set action_event to action_event as string
 			if action_event is _buttons's item 1 then
-				_controller's choose_editor()
+				_controller's choose_app()
 			else if action_event is _buttons's item 2 then
 				_controller's choose_file()
 			end if
@@ -2367,12 +2439,14 @@ on make_settings_main_view(settings_controller, settings_model)
 		
 		on update() --> void  (Observer Pattern)
 			set _log_file to _model's get_log_file()
+			set _file_viewer to _model's get_file_viewer()
 			set _text_editor to _model's get_text_editor()
 		end update
 		
 		on _set_prompt() --> void -- PRIVATE
-			set _prompt to "Choose a URLs file and/or a text editor for editing the file. The current settings are:" & return & return Â
+			set _prompt to "Choose a different URLs file, file viewer or text editor. The current settings are:" & return & return Â
 				& tab & "URLs File:" & tab & _log_file & return & return Â
+				& tab & "File Viewer:" & tab & _file_viewer & return & return Â
 				& tab & "Text Editor:" & tab & _text_editor & return & return
 		end _set_prompt
 	end script
@@ -2382,23 +2456,116 @@ on make_settings_main_view(settings_controller, settings_model)
 	return this
 end make_settings_main_view
 
-on make_settings_editor_view(settings_controller, settings_model)
+on make_settings_app_view(settings_controller, settings_model)
 	script this
-		property class : "SettingsEditorView"
+		property class : "SettingsAppView"
 		property parent : make_base_view() -- extends BaseView
 		property _controller : settings_controller
 		property _model : settings_model
 		
-		property _title : __SCRIPT_NAME__ & " > Preferences > Choose Editor"
-		property _prompt : "Choose a text editor application for editing the URLs file." & return & return
-		property _buttons : {my u_back_btn, "Use Default Editor...", "Choose Another Editor..."}
+		property _title : __SCRIPT_NAME__ & " > Preferences > Choose Application"
+		property _prompt : missing value
+		property _buttons : {my u_back_btn, "Choose a Text Editor...", "Choose a File Viewer..."}
 		
 		property _text_editor : missing value
+		property _file_viewer : missing value
+		
+		on create_view() --> void
+			_set_prompt()
+			display dialog _prompt with title _title buttons _buttons with icon note
+			set action_event to result's button returned
+			action_performed(action_event)
+		end create_view
+		
+		on action_performed(action_event) --> void -- from main view
+			if action_event is false then error number -128 -- User canceled
+			
+			set action_event to action_event as string
+			if action_event is _buttons's item 1 then
+				_controller's go_back()
+			else if action_event is _buttons's item 2 then
+				_controller's choose_editor()
+			else if action_event is _buttons's item 3 then
+				_controller's choose_viewer()
+			end if
+		end action_performed
+		
+		on update() --> void  (Observer Pattern)
+			set _text_editor to _model's get_text_editor()
+			set _file_viewer to _model's get_file_viewer()
+		end update
+		
+		on _set_prompt() --> void -- PRIVATE
+			set _prompt to "Choose an application for editing or viewing the URLs file. The current settings are:" & return & return Â
+				& tab & "File Viewer:" & tab & _file_viewer & return & return Â
+				& tab & "Text Editor:" & tab & _text_editor & return & return
+		end _set_prompt
+	end script
+	
+	this's update()
+	this's _model's register_observer(this)
+	return this
+end make_settings_app_view
+
+on make_settings_editor_view(settings_controller, settings_model)
+	script this
+		property class : "SettingsEditorView" -- concrete app view
+		property parent : make_settings_app_base_view() -- extends SettingsAppBaseView
+		property _controller : settings_controller
+		property _model : settings_model
+		
+		property _title : __SCRIPT_NAME__ & " > Preferences > Choose App > Editor"
+		property _prompt : "Choose a text editor application for editing the URLs file." & return & return
+		property _buttons : {my u_back_btn, "Use Default Editor...", "Choose Another Editor..."}
+		property _app_type : "text editor"
+		property _app_usage : "editing"
+		
+		property _default_app : missing value
+		
+		on update() --> void  (Observer Pattern)
+			set _default_app to _model's get_default_text_editor()
+		end update
+	end script
+	
+	this's update()
+	this's _model's register_observer(this)
+	return this
+end make_settings_editor_view
+
+on make_settings_viewer_view(settings_controller, settings_model)
+	script this
+		property class : "SettingsViewerView" -- concrete app view
+		property parent : make_settings_app_base_view() -- extends SettingsAppBaseView
+		property _controller : settings_controller
+		property _model : settings_model
+		
+		property _title : __SCRIPT_NAME__ & " > Preferences > Choose App > Viewer"
+		property _prompt : "Choose an application for viewing the URLs file." & return & return
+		property _buttons : {my u_back_btn, "Use Default App...", "Choose Another App..."}
+		property _app_type : "file viewer"
+		property _app_usage : "viewing"
+		
+		property _default_app : missing value
+		
+		on update() --> void  (Observer Pattern)
+			set _default_app to _model's get_default_file_viewer()
+		end update
+	end script
+	
+	this's update()
+	this's _model's register_observer(this)
+	return this
+end make_settings_viewer_view
+
+on make_settings_app_base_view()
+	script
+		property class : "SettingsAppBaseView" -- abstract app view
+		property parent : make_base_view() -- extends BaseView
 		
 		(* == Main View == *)
 		
 		on create_view() --> void
-			display dialog _prompt with title _title buttons _buttons default button 3 with icon note
+			display dialog my _prompt with title my _title buttons my _buttons default button 3 with icon note
 			set action_event to result's button returned
 			action_performed(action_event)
 		end create_view
@@ -2406,25 +2573,26 @@ on make_settings_editor_view(settings_controller, settings_model)
 		(* == Subviews == *)
 		
 		on choose_default() --> void
-			set t to _title & " > Default"
-			set m to "The default text editor app is:" & tab & _model's get_default_text_editor() & return & return & "Use this app?" & return & return
+			local t, m
+			set t to my _title & " > Default"
+			set m to "The default " & my _app_type & " is:" & tab & my _default_app & return & return & "Use this app?" & return & return
 			set b to {my u_back_btn, "Cancel", "Use Default"}
 			display dialog m with title t buttons b default button 3 with icon note
 			set btn_pressed to button returned of result
 			if btn_pressed is b's item 1 then
 				create_view() -- back to main view
 			else if btn_pressed is b's item 3 then
-				set _text_editor to _model's get_default_text_editor()
-				_controller's set_editor(_text_editor)
+				my _controller's set_app(my _default_app)
 			end if
 		end choose_default
 		
 		on choose_another() --> void
-			set t to _title & " > Choose Application"
-			set m to "Select an application to use for editing the URLs file. (Click \"Cancel\" to return to the previous dialog.)"
+			local _app, t, m
+			set t to my _title & " > Choose Application"
+			set m to "Select an application to use for " & my _app_usage & " the URLs file. (Click \"Cancel\" to return to the previous dialog.)"
 			try
-				set _text_editor to name of (choose application with title t with prompt m)
-				_controller's set_editor(_text_editor)
+				set _app to name of (choose application with title t with prompt m)
+				my _controller's set_app(_app)
 			on error err_msg number err_num
 				my handle_cancel_as_back(err_msg, err_num)
 			end try
@@ -2436,28 +2604,20 @@ on make_settings_editor_view(settings_controller, settings_model)
 			if action_event is false then error number -128 -- User canceled
 			
 			set action_event to action_event as string
-			if action_event is _buttons's item 1 then
-				_controller's go_back()
-			else if action_event is _buttons's item 2 then
+			if action_event is my _buttons's item 1 then
+				my _controller's go_back()
+			else if action_event is my _buttons's item 2 then
 				choose_default()
-			else if action_event is _buttons's item 3 then
+			else if action_event is my _buttons's item 3 then
 				choose_another()
 			end if
 		end action_performed
 		
 		on update() --> void  (Observer Pattern)
-			try
-				set _text_editor to _model's get_text_editor()
-			on error
-				set _text_editor to _model's get_default_text_editor()
-			end try
+			error my class & ".update(): abstract method not overridden" number -1717
 		end update
 	end script
-	
-	this's update()
-	this's _model's register_observer(this)
-	return this
-end make_settings_editor_view
+end make_settings_app_base_view
 
 on make_settings_file_view(settings_controller, settings_model)
 	script this
