@@ -136,19 +136,29 @@ on make_app_controller()
 			set nav_controller to make_navigation_controller()
 			
 			--
-			-- Create any other needed controllers, passing a model and
-			-- the shared navigation controller to all.
+			-- Create shared category base view
+			--
+			set label_base_view to make_label_base_view(page_log)
+			
+			--
+			-- Create any other needed controllers, passing in whatever
+			-- shared models, controllers and/or views they need.
 			--
 			set help_controller to make_help_controller(nav_controller, settings_model)
-			set file_edit_controller to make_file_edit_controller(nav_controller, settings_model)
+			set file_editor_controller to make_file_editor_controller(nav_controller, settings_model)
+			set file_viewer_controller to make_file_viewer_controller(nav_controller, settings_model)
 			--
 			set title_controller to make_title_controller(nav_controller, page_log)
 			set url_controller to make_url_controller(nav_controller, page_log)
-			set label_controller to make_label_controller(nav_controller, page_log)
-			set sub_label_controller to make_sub_label_controller(nav_controller, page_log)
-			set all_label_controller to make_all_label_controller(nav_controller, page_log)
+			-- 
+			set label_controller to make_label_controller(nav_controller, page_log, label_base_view)
+			set sub_label_controller to make_sub_label_controller(nav_controller, page_log, label_base_view)
+			set all_label_controller to make_all_label_controller(nav_controller, page_log, label_base_view)
+			--
 			set label_edit_controller to make_label_edit_controller(nav_controller, page_log)
 			set note_controller to make_note_controller(nav_controller, page_log)
+			--
+			set label_help_controller to make_label_help_controller()
 			
 			--
 			-- Dependency Injection
@@ -168,20 +178,26 @@ on make_app_controller()
 				sub_label_controller, Â
 				all_label_controller, Â
 				label_edit_controller, Â
+				file_editor_controller, Â
+				file_viewer_controller, Â
 				settings_controller, Â
 				help_controller, Â
-				file_edit_controller})
+				label_help_controller})
 			sub_label_controller's set_controllers({Â
 				label_edit_controller, Â
 				all_label_controller, Â
+				file_editor_controller, Â
+				file_viewer_controller, Â
 				settings_controller, Â
 				help_controller, Â
-				file_edit_controller})
+				label_help_controller})
 			all_label_controller's set_controllers({Â
 				label_edit_controller, Â
+				file_editor_controller, Â
+				file_viewer_controller, Â
 				settings_controller, Â
 				help_controller, Â
-				file_edit_controller})
+				label_help_controller})
 			label_edit_controller's set_controllers({note_controller})
 			
 			--
@@ -213,7 +229,7 @@ on make_app_controller()
 				my debug_log(1, my class & "'s History Stack: " & nav_controller's history_to_string())
 				my debug_log(1, my class & "'s Controller Stack: " & nav_controller's to_string())
 				
-				if not ret_val then -- FileEditController will return false
+				if not ret_val then -- {FileEditor,FileViewer}Controller will return false
 					my debug_log(1, "--->  finished " & my class)
 					return -- don't do any post-processing
 				end if
@@ -630,16 +646,16 @@ on make_safari_browser()
 	return this
 end make_safari_browser
 
-script Editor
-	property class : "Editor"
+script FileApp
+	property class : "FileApp"
 	
-	on open_file(this_editor, posix_file_path) --> void
+	on open_file(this_app, posix_file_path) --> void
 		my debug_log(1, my class & ".open_file()")
 		
 		set posix_file_path to expand_home_path(posix_file_path)
 		set mac_file_path to get_mac_path(posix_file_path)
 		
-		tell application this_editor
+		tell application this_app
 			activate
 			open mac_file_path
 		end tell
@@ -1123,13 +1139,13 @@ end make_base_controller
 
 -- -- -- Main App Controllers -- -- --
 
-on make_file_edit_controller(navigation_controller, settings_model)
+on make_file_editor_controller(navigation_controller, settings_model)
 	script this
-		property class : "FileEditController"
+		property class : "FileEditorController"
 		property parent : make_base_controller() -- extends BaseController
 		property _nav_controller : navigation_controller
 		property _model : settings_model
-		property _editor : Editor
+		property _app : FileApp
 		property _view : missing value
 		
 		on run
@@ -1138,30 +1154,58 @@ on make_file_edit_controller(navigation_controller, settings_model)
 				if _view is missing value then set _view to make_file_edit_view(me, _model)
 				set ret_val to _view's create_view() --> returns boolean
 			else
-				launch_editor()
+				launch_app()
 				set ret_val to false
 			end if
 			my debug_log(1, "--->  finished " & my class & return)
 			return ret_val --> false ends controller loop and exits script
 		end run
 		
-		on launch_editor() --> void
-			my debug_log(1, my class & ".launch_editor()")
-			set this_editor to _model's get_text_editor()
+		on launch_app() --> void
+			my debug_log(1, my class & ".launch_app()")
+			set this_app to _model's get_text_editor()
 			set this_file to _model's get_log_file()
-			_editor's open_file(this_editor, this_file)
-		end launch_editor
+			_app's open_file(this_app, this_file)
+		end launch_app
 		
 		on disable_warning() --> void
 			my debug_log(1, my class & ".disable_warning()")
 			_model's set_pref(_model's get_warn_before_editing_key(), false)
-			launch_editor()
+			launch_app()
 		end disable_warning
 	end script
 	
 	my debug_log(1, return & "--->  new " & this's class & "()")
 	return this
-end make_file_edit_controller
+end make_file_editor_controller
+
+on make_file_viewer_controller(navigation_controller, settings_model)
+	script this
+		property class : "FileViewerController"
+		property parent : make_base_controller() -- extends BaseController
+		property _nav_controller : navigation_controller
+		property _model : settings_model
+		property _app : FileApp
+		property _view : missing value
+		
+		on run
+			my debug_log(1, return & "--->  running " & my class & "...")
+			launch_app()
+			my debug_log(1, "--->  finished " & my class & return)
+			return false --> false ends controller loop and exits script
+		end run
+		
+		on launch_app() --> void
+			my debug_log(1, my class & ".launch_app()")
+			set this_app to _model's get_file_viewer()
+			set this_file to _model's get_log_file()
+			_app's open_file(this_app, this_file)
+		end launch_app
+	end script
+	
+	my debug_log(1, return & "--->  new " & this's class & "()")
+	return this
+end make_file_viewer_controller
 
 on make_help_controller(navigation_controller, settings_model)
 	script this
@@ -1187,6 +1231,25 @@ on make_help_controller(navigation_controller, settings_model)
 	my debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_help_controller
+
+on make_label_help_controller()
+	script this
+		property class : "LabelHelpController"
+		property parent : make_base_controller() -- extends BaseController
+		property _view : missing value
+		
+		on run
+			my debug_log(1, return & "--->  running " & my class & "...")
+			if _view is missing value then set _view to make_label_help_view()
+			_view's create_view()
+			my debug_log(1, "--->  finished " & my class & return)
+			return true
+		end run
+	end script
+	
+	my debug_log(1, return & "--->  new " & this's class & "()")
+	return this
+end make_label_help_controller
 
 on make_title_controller(navigation_controller, main_model)
 	script this
@@ -1250,17 +1313,36 @@ on make_url_controller(navigation_controller, main_model)
 	return this
 end make_url_controller
 
-on make_label_controller(navigation_controller, main_model)
+on make_label_base_controller()
+	script this
+		property class : "LabelBaseController"
+		property parent : make_base_controller() -- extends BaseController
+		
+		on push_controller(i) --> void
+			my _nav_controller's push_controller({me, my other_controllers's item i})
+		end push_controller
+		
+		on push_controller_and_return(i) --> void
+			-- Return to current controller after next controller is
+			-- finished.
+			my _nav_controller's push_controller({me})
+			my _nav_controller's push_controller({my other_controllers's item i})
+		end push_controller_and_return
+	end script
+end make_label_base_controller
+
+on make_label_controller(navigation_controller, main_model, label_base_view)
 	script this
 		property class : "LabelController"
-		property parent : make_base_controller() -- extends BaseController
+		property parent : make_label_base_controller() -- extends BaseController
 		property _nav_controller : navigation_controller
 		property _model : main_model
 		property _view : missing value
+		property _label_base_view : label_base_view
 		
 		on run
 			my debug_log(1, return & "--->  running " & my class & "...")
-			if _view is missing value then set _view to make_label_view(me, _model)
+			if _view is missing value then set _view to make_label_view(me, _label_base_view)
 			_view's create_view()
 			my debug_log(1, "--->  finished " & my class & return)
 			return true
@@ -1268,51 +1350,54 @@ on make_label_controller(navigation_controller, main_model)
 		
 		on set_chosen_root(this_value) --> void
 			_model's set_chosen_root_category(this_value)
-			_nav_controller's push_controller({me, my other_controllers's item 1})
+			push_controller(1)
 		end set_chosen_root
 		
 		on choose_from_all() --> void
-			_nav_controller's push_controller({me, my other_controllers's item 2})
+			push_controller(2)
 		end choose_from_all
 		
 		on edit_label() --> void
-			_nav_controller's push_controller({me, my other_controllers's item 3})
+			push_controller(3)
 		end edit_label
 		
+		on edit_file() --> void
+			push_controller(4)
+		end edit_file
+		
+		on view_file() --> void
+			push_controller(5)
+		end view_file
+		
 		on change_settings() --> void
-			-- Return to the current controller after the preferences
-			-- controller is finished.
-			_nav_controller's push_controller({me})
-			_nav_controller's push_controller({my other_controllers's item 4})
+			push_controller_and_return(6)
 		end change_settings
 		
 		on show_help() --> void
-			-- Return to the current controller after the help
-			-- controller is finished.
-			_nav_controller's push_controller({me})
-			_nav_controller's push_controller({my other_controllers's item 5})
+			push_controller_and_return(7)
 		end show_help
 		
-		on edit_file() --> void
-			_nav_controller's push_controller({me, my other_controllers's item 6})
-		end edit_file
+		on show_category_help() --> void
+			push_controller_and_return(8)
+		end show_category_help
 	end script
 	
 	my debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_label_controller
 
-on make_sub_label_controller(navigation_controller, main_model)
+on make_sub_label_controller(navigation_controller, main_model, label_base_view)
 	script this
 		property class : "SubLabelController"
-		property parent : make_base_controller() -- extends BaseController
+		property parent : make_label_base_controller() -- extends BaseController
 		property _nav_controller : navigation_controller
 		property _model : main_model
 		property _view : missing value
+		property _label_base_view : label_base_view
 		
 		on run
 			my debug_log(1, return & "--->  running " & my class & "...")
-			if _view is missing value then set _view to make_sub_label_view(me, _model)
+			if _view is missing value then set _view to make_sub_label_view(me, _label_base_view)
 			_view's create_view()
 			my debug_log(1, "--->  finished " & my class & return)
 			return true
@@ -1320,47 +1405,50 @@ on make_sub_label_controller(navigation_controller, main_model)
 		
 		on set_chosen_category(this_value) --> void
 			_model's set_chosen_category(this_value)
-			_nav_controller's push_controller({me, my other_controllers's item 1})
+			push_controller(1)
 		end set_chosen_category
 		
 		on choose_from_all() --> void
-			_nav_controller's push_controller({me, my other_controllers's item 2})
+			push_controller(2)
 		end choose_from_all
 		
+		on edit_file() --> void
+			push_controller(3)
+		end edit_file
+		
+		on view_file() --> void
+			push_controller(4)
+		end view_file
+		
 		on change_settings() --> void
-			-- Return to the current controller after the preferences
-			-- controller is finished.
-			_nav_controller's push_controller({me})
-			_nav_controller's push_controller({my other_controllers's item 3})
+			push_controller_and_return(5)
 		end change_settings
 		
 		on show_help() --> void
-			-- Return to the current controller after the help
-			-- controller is finished.
-			_nav_controller's push_controller({me})
-			_nav_controller's push_controller({my other_controllers's item 4})
+			push_controller_and_return(6)
 		end show_help
 		
-		on edit_file() --> void
-			_nav_controller's push_controller({me, my other_controllers's item 5})
-		end edit_file
+		on show_category_help() --> void
+			push_controller_and_return(7)
+		end show_category_help
 	end script
 	
 	my debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_sub_label_controller
 
-on make_all_label_controller(navigation_controller, main_model)
+on make_all_label_controller(navigation_controller, main_model, label_base_view)
 	script this
 		property class : "AllLabelController"
-		property parent : make_base_controller() -- extends BaseController
+		property parent : make_label_base_controller() -- extends BaseController
 		property _nav_controller : navigation_controller
 		property _model : main_model
 		property _view : missing value
+		property _label_base_view : label_base_view
 		
 		on run
 			my debug_log(1, return & "--->  running " & my class & "...")
-			if _view is missing value then set _view to make_all_label_view(me, _model)
+			if _view is missing value then set _view to make_all_label_view(me, _label_base_view)
 			_view's create_view()
 			my debug_log(1, "--->  finished " & my class & return)
 			return true
@@ -1368,26 +1456,28 @@ on make_all_label_controller(navigation_controller, main_model)
 		
 		on set_chosen_category(this_value) --> void
 			_model's set_chosen_category(this_value)
-			_nav_controller's push_controller({me, my other_controllers's item 1})
+			push_controller(1)
 		end set_chosen_category
 		
+		on edit_file() --> void
+			push_controller(2)
+		end edit_file
+		
+		on view_file() --> void
+			push_controller(3)
+		end view_file
+		
 		on change_settings() --> void
-			-- Return to the current controller after the preferences
-			-- controller is finished.
-			_nav_controller's push_controller({me})
-			_nav_controller's push_controller({my other_controllers's item 2})
+			push_controller_and_return(4)
 		end change_settings
 		
 		on show_help() --> void
-			-- Return to the current controller after the help
-			-- controller is finished.
-			_nav_controller's push_controller({me})
-			_nav_controller's push_controller({my other_controllers's item 3})
+			push_controller_and_return(5)
 		end show_help
 		
-		on edit_file() --> void
-			_nav_controller's push_controller({me, my other_controllers's item 4})
-		end edit_file
+		on show_category_help() --> void
+			push_controller_and_return(6)
+		end show_category_help
 	end script
 	
 	my debug_log(1, return & "--->  new " & this's class & "()")
@@ -1875,6 +1965,25 @@ on make_help_view(view_controller, settings_model)
 	return this
 end make_help_view
 
+on make_label_help_view()
+	script
+		property class : "LabelHelpView"
+		
+		property _title : __SCRIPT_NAME__ & " Category Help"
+		property _buttons : {"Cancel", "OK"}
+		property _prompt : "Assign a category and/or subcategories to the logged URL by using a colon (:) to separate subcategories. Subcategories delimited in such a way represent a nested hierarchy. For example, a category (also called a label in the URLs file) of \"Development:AppleScript:Mail\" could be thought of as a nested list as in:" & return & return Â
+			& tab & "¥ Development" & return Â
+			& tab & tab & "¥ AppleScript" & return Â
+			& tab & tab & tab & "¥ Mail"
+		
+		on create_view() --> void
+			with timeout of (10 * 60) seconds
+				display alert _title message _prompt buttons _buttons cancel button 1 default button 2
+			end timeout
+		end create_view
+	end script
+end make_label_help_view
+
 on make_file_edit_view(view_controller, settings_model)
 	script
 		property class : "FileEditView"
@@ -1902,7 +2011,7 @@ on make_file_edit_view(view_controller, settings_model)
 				_controller's go_back()
 				return true --> continue controller loop
 			else if action_event is _buttons's item 3 then
-				_controller's launch_editor()
+				_controller's launch_app()
 			end if
 			return false --> stop controller loop
 		end action_performed
@@ -2021,212 +2130,66 @@ on make_url_view(view_controller, main_model)
 	return this
 end make_url_view
 
-on make_label_view(view_controller, main_model)
+on make_label_base_view(main_model)
 	script this
-		property class : "LabelView"
+		property class : "LabelBaseView"
 		property parent : make_base_view() -- extends BaseView
-		property _controller : view_controller
 		property _model : main_model
 		
 		property _page_label : missing value --> string
-		
-		property _root_categories : missing value --> array
 		property _chosen_root : missing value --> string
+		property _chosen_category : missing value --> string
+		property _root_categories : missing value --> array
+		property _sub_categories : missing value --> array
+		property _all_categories : missing value --> array
 		
 		property _title : __SCRIPT_NAME__ & " > Category"
 		property _ok_btn : "Next..."
 		property _bullet : my u_bullet_item
-		property _menu_rule : multiply_text(my u_dash, 20)
-		property _prompt : "Please select a top-level category for the URL you want to log. Next you will be able to select subcategories."
-		property _action_items : {Â
-			_bullet & "Show Full List with Subcategories...", Â
-			_bullet & "Create a New Category...", Â
-			_menu_rule, Â
-			_bullet & "Preferences...", Â
-			_bullet & "Help", Â
-			_bullet & "Quit", Â
-			_menu_rule, Â
-			_bullet & "Edit Log File		(Advanced)", Â
-			_menu_rule}
+		
+		(*
+			Subclasses must define properties for:
+				_menu_items
+				_default_item
+				_title
+				_prompt
+				_ok_btn
+		*)
 		
 		on create_view() --> void
-			repeat -- until a horizontal rule is not selected
-				set action_event to choose from list _action_items & _root_categories with title _title with prompt _prompt cancel button name my u_back_btn OK button name _ok_btn default items _chosen_root
-				if action_event as string is not _action_items's last item then
-					exit repeat
-				else
-					display alert "Invalid selection" message "Please select a category or an action." as warning
-				end if
-			end repeat
+			set action_event to choose from list my _menu_items with title _title with prompt my _prompt cancel button name my u_back_btn OK button name _ok_btn default items my _default_item
 			action_performed(action_event)
 		end create_view
 		
-		on action_performed(action_event) --> void
-			if action_event is false then --error number -128 -- User canceled
-				_controller's go_back()
-				return
-			end if
-			set action_event to action_event as string
-			if action_event is _action_items's item 1 then
-				_controller's choose_from_all()
-			else if action_event is _action_items's item 2 then
-				_controller's edit_label()
-			else if action_event is _action_items's item 4 then
-				_controller's change_settings()
-			else if action_event is _action_items's item 5 then
-				_controller's show_help()
-			else if action_event is _action_items's item 6 then
-				error number -128 -- User canceled
-			else if action_event is _action_items's item 8 then
-				_controller's edit_file()
-			else -- go to subcategory view
-				_controller's set_chosen_root(action_event)
-			end if
+		on action_performed() --> void
+			error my class & ".action_performed(): abstract method not overridden" number -1717
 		end action_performed
+		
+		on show_invalid() --> void
+			display alert "Invalid selection" message "Please select a category or an action." as warning
+		end show_invalid
+		
+		on get_base_menu_items(menu_rule) --> array
+			local menu_rule
+			return {Â
+				_bullet & "Edit Log File", Â
+				_bullet & "View Log File", Â
+				menu_rule, Â
+				_bullet & "Preferences...", Â
+				menu_rule, Â
+				_bullet & "Help", Â
+				_bullet & "Category Help", Â
+				menu_rule, Â
+				_bullet & "Quit " & __SCRIPT_NAME__, Â
+				menu_rule}
+		end get_base_menu_items
 		
 		on update() --> void  (Observer Pattern)
 			set _page_label to _model's get_page_label()
 			set _chosen_root to _model's get_chosen_root_category()
+			set _chosen_category to _model's get_chosen_category()
 			set _root_categories to _model's get_root_categories()
-		end update
-	end script
-	
-	this's update()
-	this's _model's register_observer(this)
-	return this
-end make_label_view
-
-on make_sub_label_view(view_controller, main_model)
-	script this
-		property class : "SubLabelView"
-		property parent : make_base_view() -- extends BaseView
-		property _controller : view_controller
-		property _model : main_model
-		
-		property _page_label : missing value --> string
-		
-		property _chosen_category : missing value --> string
-		property _sub_categories : missing value --> array
-		
-		property _title : __SCRIPT_NAME__ & " > Category"
-		property _ok_btn : "Next..."
-		property _bullet : my u_bullet_item
-		property _menu_rule : multiply_text(my u_dash, 35)
-		property _prompt : "Please select a category or subcategory for the URL you want to log. You will have a chance to edit your choice (to add a new category or subcategory)."
-		property _action_items : {Â
-			_bullet & "Show Full List with Subcategories...", Â
-			_menu_rule, Â
-			_bullet & "Preferences...", Â
-			_bullet & "Help", Â
-			_bullet & "Quit", Â
-			_menu_rule, Â
-			_bullet & "Edit Log File		(Advanced)", Â
-			_menu_rule}
-		
-		on create_view() --> void
-			repeat -- until a horizontal rule is not selected
-				set action_event to choose from list _action_items & _sub_categories with title _title with prompt _prompt cancel button name my u_back_btn OK button name _ok_btn default items _chosen_category
-				if action_event as string is not _action_items's last item then
-					exit repeat
-				else
-					display alert "Invalid selection" message "Please select a category or an action." as warning
-				end if
-			end repeat
-			action_performed(action_event)
-		end create_view
-		
-		on action_performed(action_event) --> void
-			if action_event is false then --error number -128 -- User canceled
-				_controller's go_back()
-				return
-			end if
-			set action_event to action_event as string
-			if action_event is _action_items's item 1 then
-				_controller's choose_from_all()
-			else if action_event is _action_items's item 3 then
-				_controller's change_settings()
-			else if action_event is _action_items's item 4 then
-				_controller's show_help()
-			else if action_event is _action_items's item 5 then
-				error number -128 -- User canceled
-			else if action_event is _action_items's item 7 then
-				_controller's edit_file()
-			else -- go to category edit view
-				_controller's set_chosen_category(action_event)
-			end if
-		end action_performed
-		
-		on update() --> void  (Observer Pattern)
-			set _page_label to _model's get_page_label()
-			set _chosen_category to _model's get_chosen_category()
 			set _sub_categories to _model's get_sub_categories()
-		end update
-	end script
-	
-	this's update()
-	this's _model's register_observer(this)
-	return this
-end make_sub_label_view
-
-on make_all_label_view(view_controller, main_model)
-	script this
-		property class : "AllLabelView"
-		property parent : make_base_view() -- extends BaseView
-		property _controller : view_controller
-		property _model : main_model
-		
-		property _page_label : missing value --> string
-		
-		property _all_categories : missing value --> array
-		property _chosen_category : missing value --> string
-		
-		property _title : __SCRIPT_NAME__ & " > Category"
-		property _ok_btn : "Next..."
-		property _bullet : my u_bullet_item
-		property _menu_rule : multiply_text(my u_dash, 35)
-		property _prompt : "Please select a category or subcategory for the URL you want to log. You will have a chance to edit your choice (to add a new category or subcategory)."
-		property _action_items : {Â
-			_bullet & "Preferences...", Â
-			_bullet & "Help", Â
-			_bullet & "Quit", Â
-			_menu_rule, Â
-			_bullet & "Edit Log File		(Advanced)", Â
-			_menu_rule}
-		
-		on create_view() --> void
-			repeat -- until a horizontal rule is not selected
-				set action_event to choose from list _action_items & _all_categories with title _title with prompt _prompt cancel button name my u_back_btn OK button name _ok_btn default items _chosen_category
-				if action_event as string is not _action_items's last item then
-					exit repeat
-				else
-					display alert "Invalid selection" message "Please select a category or an action." as warning
-				end if
-			end repeat
-			action_performed(action_event)
-		end create_view
-		
-		on action_performed(action_event) --> void
-			if action_event is false then --error number -128 -- User canceled
-				_controller's go_back()
-				return
-			end if
-			set action_event to action_event as string
-			if action_event is _action_items's item 1 then
-				_controller's change_settings()
-			else if action_event is _action_items's item 2 then
-				_controller's show_help()
-			else if action_event is _action_items's item 3 then
-				error number -128 -- User canceled
-			else if action_event is _action_items's item 5 then
-				_controller's edit_file()
-			else -- go to category edit view
-				_controller's set_chosen_category(action_event)
-			end if
-		end action_performed
-		
-		on update() --> void  (Observer Pattern)
-			set _page_label to _model's get_page_label()
-			set _chosen_category to _model's get_chosen_category()
 			set _all_categories to _model's get_all_categories()
 		end update
 	end script
@@ -2234,6 +2197,143 @@ on make_all_label_view(view_controller, main_model)
 	this's update()
 	this's _model's register_observer(this)
 	return this
+end make_label_base_view
+
+on make_label_view(view_controller, label_base_view)
+	script
+		property class : "LabelView"
+		--property parent : make_label_base_view() -- extends LabelBaseView
+		property parent : label_base_view -- extends LabelBaseView (instance)
+		property _controller : view_controller
+		
+		property _bullet : my u_bullet_item
+		property _menu_rule : multiply_text(my u_dash, 20)
+		property _prompt : "Please select a top-level category for the URL you want to log. Next you will be able to select subcategories."
+		
+		property _default_item : my _chosen_root
+		property _menu_items : {Â
+			_bullet & "Show Full List with Subcategories...", Â
+			_bullet & "Create a New Category...", Â
+			_menu_rule} & my get_base_menu_items(_menu_rule) & my _root_categories
+		
+		on action_performed(action_event) --> void
+			if action_event is false then --error number -128 -- User canceled
+				_controller's go_back()
+				return
+			end if
+			set action_event to action_event as string
+			if action_event is _menu_rule then
+				show_invalid()
+				create_view() -- try again
+			else if action_event is _menu_items's item 1 then
+				_controller's choose_from_all()
+			else if action_event is _menu_items's item 2 then
+				_controller's edit_label()
+			else if action_event is _menu_items's item 4 then
+				_controller's edit_file()
+			else if action_event is _menu_items's item 5 then
+				_controller's view_file()
+			else if action_event is _menu_items's item 7 then
+				_controller's change_settings()
+			else if action_event is _menu_items's item 9 then
+				_controller's show_help()
+			else if action_event is _menu_items's item 10 then
+				_controller's show_category_help()
+			else if action_event is _menu_items's item 12 then
+				error number -128 -- User canceled
+			else -- go to subcategory view
+				_controller's set_chosen_root(action_event)
+			end if
+		end action_performed
+	end script
+end make_label_view
+
+on make_sub_label_view(view_controller, label_base_view)
+	script
+		property class : "SubLabelView"
+		--property parent : make_label_base_view() -- extends LabelBaseView
+		property parent : label_base_view -- extends LabelBaseView (instance)
+		property _controller : view_controller
+		
+		property _bullet : my u_bullet_item
+		property _menu_rule : multiply_text(my u_dash, 35)
+		property _prompt : "Please select a category or subcategory for the URL you want to log. You will have a chance to edit your choice (to add a new category or subcategory)."
+		
+		property _default_item : my _chosen_category
+		property _menu_items : {Â
+			_bullet & "Show Full List with Subcategories...", Â
+			_menu_rule} & my get_base_menu_items(_menu_rule) & my _sub_categories
+		
+		on action_performed(action_event) --> void
+			if action_event is false then --error number -128 -- User canceled
+				_controller's go_back()
+				return
+			end if
+			set action_event to action_event as string
+			if action_event is _menu_rule then
+				show_invalid()
+				create_view() -- try again
+			else if action_event is _menu_items's item 1 then
+				_controller's choose_from_all()
+			else if action_event is _menu_items's item 3 then
+				_controller's edit_file()
+			else if action_event is _menu_items's item 4 then
+				_controller's view_file()
+			else if action_event is _menu_items's item 6 then
+				_controller's change_settings()
+			else if action_event is _menu_items's item 8 then
+				_controller's show_help()
+			else if action_event is _menu_items's item 9 then
+				_controller's show_category_help()
+			else if action_event is _menu_items's item 11 then
+				error number -128 -- User canceled
+			else -- go to category edit view
+				_controller's set_chosen_category(action_event)
+			end if
+		end action_performed
+	end script
+end make_sub_label_view
+
+on make_all_label_view(view_controller, label_base_view)
+	script
+		property class : "AllLabelView"
+		--property parent : make_label_base_view() -- extends LabelBaseView
+		property parent : label_base_view -- extends LabelBaseView (instance)
+		property _controller : view_controller
+		
+		property _bullet : my u_bullet_item
+		property _menu_rule : multiply_text(my u_dash, 35)
+		property _prompt : "Please select a category or subcategory for the URL you want to log. You will have a chance to edit your choice (to add a new category or subcategory)."
+		
+		property _default_item : my _chosen_category
+		property _menu_items : my get_base_menu_items(_menu_rule) & my _all_categories
+		
+		on action_performed(action_event) --> void
+			if action_event is false then --error number -128 -- User canceled
+				_controller's go_back()
+				return
+			end if
+			set action_event to action_event as string
+			if action_event is _menu_rule then
+				show_invalid()
+				create_view() -- try again
+			else if action_event is _menu_items's item 1 then
+				_controller's edit_file()
+			else if action_event is _menu_items's item 2 then
+				_controller's view_file()
+			else if action_event is _menu_items's item 4 then
+				_controller's change_settings()
+			else if action_event is _menu_items's item 6 then
+				_controller's show_help()
+			else if action_event is _menu_items's item 7 then
+				_controller's show_category_help()
+			else if action_event is _menu_items's item 9 then
+				error number -128 -- User canceled
+			else -- go to category edit view
+				_controller's set_chosen_category(action_event)
+			end if
+		end action_performed
+	end script
 end make_all_label_view
 
 on make_label_edit_view(view_controller, main_model)
@@ -2628,7 +2728,7 @@ on make_settings_file_view(settings_controller, settings_model)
 			_menu_rule, Â
 			"Type in File Path...		(Advanced)", Â
 			_menu_rule, Â
-			"Quit"}
+			"Quit " & __SCRIPT_NAME__}
 		property _menu_items : missing value
 		
 		property _log_file : missing value
