@@ -2,7 +2,7 @@
 	Log Page - Log categorized web page bookmarks to a text file
 
 	Version: @@VERSION@@
-	Date:    2013-03-01
+	Date:    2013-03-02
 	Author:  Steve Wheeler
 
 	Get the title, URL, current date and time, and a user-definable
@@ -406,6 +406,8 @@ General"
 			set log_file_posix to expand_home_path(_settings's get_log_file())
 			set log_file_mac to get_mac_path(log_file_posix)
 			
+			my debug_log(2, my class & ".parse_log(): file = " & log_file_posix)
+			
 			tell application "Finder"
 				if (not (exists log_file_mac)) or (_io's read_file(log_file_mac) is "") then
 					set _should_create_file to true
@@ -423,10 +425,10 @@ General"
 					if header_items's length is 5 then
 						set all_category_txt to text 2 thru -2 of header_items's item 3
 					else
-						error -- bad or missing file header
+						error
 					end if
-				on error -- use default categories
-					set all_category_txt to _sample_categories
+				on error -- file header is bad or missing, or user deleted samples
+					set all_category_txt to missing value
 				end try
 			end if
 			
@@ -438,8 +440,10 @@ General"
 			
 			-- Sort those along with the manual/sample categories/labels:
 			--
-			set s to "echo \"" & all_category_txt & linefeed & existing_categories Â
-				& "\" | egrep -v '^$' | sort | uniq"
+			if all_category_txt is not missing value then
+				set existing_categories to all_category_txt & linefeed & existing_categories
+			end if
+			set s to "echo \"" & existing_categories & "\" | egrep -v '^$' | sort | uniq"
 			set all_category_txt to do shell script s without altering line endings
 			
 			-- Coerce the lines into a list:
