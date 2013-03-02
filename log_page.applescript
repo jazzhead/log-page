@@ -586,6 +586,7 @@ script WebBrowserFactory
 	property supported_browsers : "Safari, Google Chrome, Firefox"
 	
 	on make_browser() --> WebBrowser
+		my debug_log(1, "--->  " & my class & ".make_browser()...")
 		set cur_app to get_front_app_name()
 		if cur_app is "Safari" then
 			return make_safari_browser()
@@ -2135,7 +2136,7 @@ on make_title_view(view_controller, main_model)
 		on create_view() --> void
 			_set_prompt()
 			repeat
-				display dialog _prompt default answer _page_title with title _title buttons _buttons default button 3 --with icon note
+				display dialog _prompt default answer _page_title with title _title buttons _buttons default button 3
 				copy result as list to {text_value, action_event}
 				if text_value is not "" or action_event is _buttons's item 1 then
 					exit repeat
@@ -2192,7 +2193,7 @@ on make_url_view(view_controller, main_model)
 		on create_view() --> void
 			_set_prompt()
 			repeat
-				display dialog _prompt default answer _page_url with title _title buttons _buttons default button 3 --with icon note
+				display dialog _prompt default answer _page_url with title _title buttons _buttons default button 3
 				copy result as list to {text_value, action_event}
 				if text_value is not "" or action_event is _buttons's item 1 then
 					exit repeat
@@ -2456,8 +2457,9 @@ on make_label_edit_view(view_controller, main_model)
 		on create_view() --> void
 			_set_prompt()
 			repeat
-				display dialog _prompt default answer _chosen_category with title _title buttons _buttons default button 3 --with icon note
+				display dialog _prompt default answer _chosen_category with title _title buttons _buttons default button 3
 				copy result as list to {text_value, action_event}
+				set text_value to _chop_trailing_colons(text_value)
 				if text_value is not "" or action_event is _buttons's item 1 then
 					exit repeat
 				else
@@ -2478,6 +2480,17 @@ on make_label_edit_view(view_controller, main_model)
 				_controller's set_chosen_category(_chosen_category)
 			end if
 		end action_performed
+		
+		on _chop_trailing_colons(text_value) --> string -- PRIVATE
+			try
+				repeat until text_value does not end with ":"
+					set text_value to characters 1 thru -2 of text_value as string
+				end repeat
+			on error -- the only remaining character is a colon
+				return "" -- let the empty field test catch it
+			end try
+			return text_value
+		end _chop_trailing_colons
 		
 		on update() --> void  (Observer Pattern)
 			set _page_title to _model's get_page_title()
@@ -2516,7 +2529,7 @@ on make_note_view(view_controller, main_model)
 		
 		on create_view() --> void
 			_set_prompt()
-			display dialog _prompt default answer "" with title _title buttons _buttons default button 3 --with icon note
+			display dialog _prompt default answer "" with title _title buttons _buttons default button 3
 			copy result as list to {text_value, action_event}
 			if text_value is not "" then set _text_field to text_value
 			action_performed(action_event)
