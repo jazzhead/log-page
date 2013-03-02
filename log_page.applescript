@@ -2346,10 +2346,11 @@ on make_label_view(view_controller, label_base_view)
 		property _menu_rule : multiply_text(my u_dash, 20)
 		property _prompt : "Please select a top-level category for the URL you want to log. Next you will be able to select subcategories."
 		
-		property _default_item : my _chosen_root
+		property _default_item : missing value
 		property _menu_items : missing value
 		
 		on create_view() --> void
+			set _default_item to my _chosen_root
 			set_menu()
 			continue create_view()
 		end create_view
@@ -2404,10 +2405,11 @@ on make_sub_label_view(view_controller, label_base_view)
 		property _menu_rule : multiply_text(my u_dash, 35)
 		property _prompt : "Please select a category or subcategory for the URL you want to log. You will have a chance to edit your choice (to add a new category or subcategory)."
 		
-		property _default_item : my _chosen_category
+		property _default_item : missing value
 		property _menu_items : missing value
 		
 		on create_view() --> void
+			set _default_item to my _chosen_category
 			set_menu()
 			continue create_view()
 		end create_view
@@ -2459,10 +2461,11 @@ on make_all_label_view(view_controller, label_base_view)
 		property _menu_rule : multiply_text(my u_dash, 35)
 		property _prompt : "Please select a category or subcategory for the URL you want to log. You will have a chance to edit your choice (to add a new category or subcategory)."
 		
-		property _default_item : my _chosen_category
+		property _default_item : missing value
 		property _menu_items : missing value
 		
 		on create_view() --> void
+			set _default_item to my _chosen_category
 			set_menu()
 			continue create_view()
 		end create_view
