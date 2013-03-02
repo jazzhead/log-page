@@ -36,7 +36,8 @@ PROG     :=  $(BUILD)/$(TARGET)
 
 prefix    = $(HOME)
 # Installation directory
-bindir   := $(prefix)/Library/Scripts/Applications/Safari
+#bindir   := $(prefix)/Library/Scripts/Applications/Safari
+bindir   := $(prefix)/Library/Scripts/Web\ Browsers
 
 INSTALL      = install
 INSTDIR     := $(bindir)

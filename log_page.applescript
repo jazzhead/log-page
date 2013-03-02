@@ -2,7 +2,7 @@
 	Log Page - Log categorized web page bookmarks to a text file
 
 	Version: @@VERSION@@
-	Date:    2013-02-28
+	Date:    2013-03-01
 	Author:  Steve Wheeler
 
 	Get the title, URL, current date and time, and a user-definable
@@ -583,12 +583,31 @@ end make_page_log
 
 script WebBrowserFactory
 	property class : "WebBrowserFactory"
-	on make_browser()
-		-- Eventually will detect frontmost application and return a
-		-- browser object if it is a supported web browser, but for now
-		-- only Safari is supported.
-		return make_safari_browser()
+	property supported_browsers : "Safari, Google Chrome, Firefox"
+	
+	on make_browser() --> WebBrowser
+		set cur_app to get_front_app_name()
+		if cur_app is "Safari" then
+			return make_safari_browser()
+		else if cur_app is "Google Chrome" then
+			return make_chrome_browser()
+		else if cur_app is "Firefox" then
+			return make_firefox_browser()
+		else
+			_handle_unsupported(cur_app)
+		end if
 	end make_browser
+	
+	on _handle_unsupported(cur_app) --> void -- PRIVATE
+		set err_msg to "The application " & cur_app & " is not a supported web browser. Currently supported browsers are:" & return & return & tab & supported_browsers
+		set err_num to -2700
+		set t to "Error: Unsupported Application (" & err_num & ")"
+		set m to err_msg
+		if __DEBUG_LEVEL__ > 0 then set m to "[" & my class & "]" & return & m
+		display alert t message m buttons {"Cancel"} cancel button 1 as critical
+		--display alert t message m buttons {"OK"} default button 1 as critical
+		--error err_msg number err_num
+	end _handle_unsupported
 end script
 
 on make_web_browser()
@@ -608,12 +627,29 @@ on make_web_browser()
 		on get_title() --> string
 			return _page_title
 		end get_title
+		
+		on set_values(this_url, this_title) --> void
+			try
+				set _page_url to this_url
+				set _page_title to convert_to_ascii(this_title) -- Transliterate non-ASCII
+			on error err_msg number err_num
+				handle_error(err_msg, err_num)
+			end try
+		end set_values
+		
+		on handle_error(err_msg, err_num) --> void
+			set t to "Error: Can't get info from web browser"
+			set m to "[" & my class & "] " & err_msg & " (" & err_num & ")"
+			display alert t message m buttons {"Cancel"} cancel button 1 as critical
+			--display alert t message m buttons {"OK"} default button 1 as critical
+			--error err_msg number err_num
+		end handle_error
 	end script
 end make_web_browser
 
 on make_safari_browser()
 	script this
-		property class : "SafariBrowser"
+		property class : "SafariBrowser" -- concrete class
 		property parent : make_web_browser() -- extends WebBrowser
 		
 		on fetch_page_info() --> void
@@ -623,28 +659,92 @@ on make_safari_browser()
 					set this_url to URL of front document
 					set this_title to name of first tab of front window whose visible is true
 				on error err_msg number err_num
-					_handle_error(err_msg, err_num)
+					my handle_error(err_msg, err_num)
 				end try
 			end tell
-			
-			try
-				set my _page_url to this_url
-				set my _page_title to convert_to_ascii(this_title) -- Transliterate non-ASCII
-			on error err_msg number err_num
-				_handle_error(err_msg, err_num)
-			end try
+			set_values(this_url, this_title)
 		end fetch_page_info
-		
-		on _handle_error(err_msg, err_num)
-			set t to "Error: Can't get info from Safari"
-			set m to "[" & my class & "] " & err_msg & " (" & err_num & ")"
-			display alert t message m buttons {"Cancel"} cancel button 1 as critical
-		end _handle_error
 	end script
 	
 	my debug_log(1, "--->  new " & this's class & "()")
 	return this
 end make_safari_browser
+
+on make_chrome_browser()
+	script this
+		property class : "ChromeBrowser" -- concrete class
+		property parent : make_web_browser() -- extends WebBrowser
+		
+		on fetch_page_info() --> void
+			set this_app to "Google Chrome"
+			using terms from application "Google Chrome" -- in case it's not installed
+				tell application this_app
+					activate
+					try
+						set this_url to URL of (active tab of window 1)
+						set this_title to title of (active tab of window 1)
+					on error err_msg number err_num
+						my handle_error(err_msg, err_num)
+					end try
+				end tell
+			end using terms from
+			set_values(this_url, this_title)
+		end fetch_page_info
+	end script
+	
+	my debug_log(1, "--->  new " & this's class & "()")
+	return this
+end make_chrome_browser
+
+on make_firefox_browser()
+	script this
+		property class : "FirefoxBrowser" -- concrete class
+		property parent : make_web_browser() -- extends WebBrowser
+		
+		on fetch_page_info() --> void
+			gui_scripting_status()
+			
+			set this_app to "Firefox"
+			using terms from application "Firefox" -- in case it's not installed
+				tell application this_app
+					activate
+					try
+						set this_title to name of front window
+					on error err_msg number err_num
+						my handle_error(err_msg, err_num)
+					end try
+				end tell
+			end using terms from
+			
+			try
+				set old_clipboard to the clipboard
+			end try
+			
+			tell application "System Events"
+				try
+					keystroke "l" using {command down} -- select the URL field
+					keystroke "c" using {command down} -- copy to clipboard
+					keystroke tab -- tab focus away
+					keystroke tab
+				on error err_msg number err_num
+					my handle_error(err_msg, err_num)
+				end try
+			end tell
+			
+			delay 1
+			set this_url to the clipboard
+			
+			try
+				set the clipboard to old_clipboard
+			end try
+			
+			set_values(this_url, this_title)
+		end fetch_page_info
+	end script
+	
+	my debug_log(1, "--->  new " & this's class & "()")
+	return this
+end make_firefox_browser
 
 script FileApp
 	property class : "FileApp"
@@ -3180,6 +3280,41 @@ on make_io()
 end make_io
 
 (* ==== Utility Functions (Global) ==== *)
+
+on gui_scripting_status()
+	-- check to see if assistive devices is enabled
+	tell application "System Events"
+		set ui_enabled to UI elements enabled
+	end tell
+	if ui_enabled is false then
+		tell application "System Preferences"
+			activate
+			set current pane to pane id "com.apple.preference.universalaccess"
+			display dialog "This script utilizes the built-in Graphic User Interface Scripting architecture of Mac OS X which is currently disabled." & return & return & "You can activate GUI Scripting by selecting the checkbox \"Enable access for assistive devices\" in the Accessibility preference pane." with icon 1 buttons {"Cancel"} default button 1
+		end tell
+	end if
+end gui_scripting_status
+
+on get_front_app_name()
+	tell application "System Events"
+		if __DEBUG_LEVEL__ is 0 then
+			set current_app to name of first process where it is frontmost
+		else
+			-- We're most likely running in AppleScript Editor so hide
+			-- the front app, get the name of the next app, then return
+			-- the original app to the front.
+			-- Source:  http://macscripter.net/viewtopic.php?id=35442
+			set frontmost_process to first process where it is frontmost
+			set visible of frontmost_process to false
+			repeat while (frontmost_process is frontmost)
+				delay 0.2
+			end repeat
+			set current_app to name of first process where it is frontmost
+			set frontmost of frontmost_process to true
+		end if
+	end tell
+	return current_app
+end get_front_app_name
 
 on convert_to_ascii(non_ascii_txt)
 	(*
