@@ -493,6 +493,7 @@ General"
 		on settings_changed() -- void
 			set_changed()
 			notify_observers()
+			if __DEBUG_LEVEL__ > 0 then identify_observers()
 		end settings_changed
 		
 		(* == PRIVATE == *)
@@ -1078,7 +1079,7 @@ on make_plist(plist_path, settings_model)
 			-- detected and the "kind" automatically overridden. I only
 			-- tested strings, integers and booleans though.
 			--
-			my debug_log(1, "[debug] write_pref()")
+			my debug_log(1, "[debug] write_pref(" & pref_key & ", " & pref_value & ")")
 			local pref_key, pref_value, this_plistfile
 			try
 				tell application "System Events"
@@ -2321,10 +2322,12 @@ on make_label_view(view_controller, label_base_view)
 		property _prompt : "Please select a top-level category for the URL you want to log. Next you will be able to select subcategories."
 		
 		property _default_item : my _chosen_root
-		property _menu_items : {Â
-			_bullet & "Show Full List with Subcategories...", Â
-			_bullet & "Create a New Category...", Â
-			_menu_rule} & my get_base_menu_items(_menu_rule) & my _root_categories
+		property _menu_items : missing value
+		
+		on create_view() --> void
+			set_menu()
+			continue create_view()
+		end create_view
 		
 		on action_performed(action_event) --> void
 			if action_event is false then --error number -128 -- User canceled
@@ -2355,6 +2358,13 @@ on make_label_view(view_controller, label_base_view)
 				_controller's set_chosen_root(action_event)
 			end if
 		end action_performed
+		
+		on set_menu() --> void
+			set _menu_items to {Â
+				_bullet & "Show Full List with Subcategories...", Â
+				_bullet & "Create a New Category...", Â
+				_menu_rule} & my get_base_menu_items(_menu_rule) & my _root_categories
+		end set_menu
 	end script
 end make_label_view
 
@@ -2370,9 +2380,12 @@ on make_sub_label_view(view_controller, label_base_view)
 		property _prompt : "Please select a category or subcategory for the URL you want to log. You will have a chance to edit your choice (to add a new category or subcategory)."
 		
 		property _default_item : my _chosen_category
-		property _menu_items : {Â
-			_bullet & "Show Full List with Subcategories...", Â
-			_menu_rule} & my get_base_menu_items(_menu_rule) & my _sub_categories
+		property _menu_items : missing value
+		
+		on create_view() --> void
+			set_menu()
+			continue create_view()
+		end create_view
 		
 		on action_performed(action_event) --> void
 			if action_event is false then --error number -128 -- User canceled
@@ -2401,6 +2414,12 @@ on make_sub_label_view(view_controller, label_base_view)
 				_controller's set_chosen_category(action_event)
 			end if
 		end action_performed
+		
+		on set_menu() --> void
+			set _menu_items to {Â
+				_bullet & "Show Full List with Subcategories...", Â
+				_menu_rule} & my get_base_menu_items(_menu_rule) & my _sub_categories
+		end set_menu
 	end script
 end make_sub_label_view
 
@@ -2416,7 +2435,12 @@ on make_all_label_view(view_controller, label_base_view)
 		property _prompt : "Please select a category or subcategory for the URL you want to log. You will have a chance to edit your choice (to add a new category or subcategory)."
 		
 		property _default_item : my _chosen_category
-		property _menu_items : my get_base_menu_items(_menu_rule) & my _all_categories
+		property _menu_items : missing value
+		
+		on create_view() --> void
+			set_menu()
+			continue create_view()
+		end create_view
 		
 		on action_performed(action_event) --> void
 			if action_event is false then --error number -128 -- User canceled
@@ -2443,6 +2467,10 @@ on make_all_label_view(view_controller, label_base_view)
 				_controller's set_chosen_category(action_event)
 			end if
 		end action_performed
+		
+		on set_menu() --> void
+			set _menu_items to my get_base_menu_items(_menu_rule) & my _all_categories
+		end set_menu
 	end script
 end make_all_label_view
 
@@ -3025,7 +3053,7 @@ on make_observable()
 		on notify_observers() -- void -- (no argument = pull method; best practice)
 			my debug_log(1, "  [debug] notify_observers()")
 			if _changed then
-				my debug_log(1, "  [debug] notify_observers(): calling update()")
+				my debug_log(1, "  [debug] " & my class & ".notify_observers(): calling update()")
 				repeat with i from 1 to count of _observers
 					set this_observer to _observers's item i
 					this_observer's update()
@@ -3034,6 +3062,27 @@ on make_observable()
 			end if
 			return
 		end notify_observers
+		
+		-- Display the class names of the observers (for testing/debugging)
+		on identify_observers() --> void
+			my debug_log(1, "  [debug] " & my class & ".identify_observers() [" & _observers's length & "]...")
+			if _observers's length = 0 then
+				my debug_log(1, "  [debug] " & my class & ".identify_observers(): no observers")
+				return ""
+			else if _observers's length = 1 then
+				return _observers's item 1's class
+			end if
+			set observers_items to ""
+			repeat with i from 1 to _observers's length
+				set this_item to _observers's item i
+				if i = 1 then
+					set observers_items to this_item's class
+				else
+					set observers_items to observers_items & ", " & this_item's class
+				end if
+			end repeat
+			my debug_log(2, "    [debug] " & observers_items)
+		end identify_observers
 	end script
 end make_observable
 
