@@ -399,7 +399,7 @@ General"
 		on parse_log() --> void
 			my debug_log(2, my class & ".parse_log()...")
 			
-			local log_file_posix, log_file_mac
+			local log_file_posix, log_file_mac, header_items
 			local all_category_txt, root_category_txt
 			local all_categories, root_categories, existing_categories
 			
@@ -419,8 +419,13 @@ General"
 				-- Read manually-entered (and/or previous sample)
 				-- categories from existing file header
 				try
-					set all_category_txt to text 2 thru -2 of (item 3 of split_text(_io's read_file(log_file_mac), _log_header_sep))
-				on error -- missing file header
+					set header_items to split_text(_io's read_file(log_file_mac), _log_header_sep)
+					if header_items's length is 5 then
+						set all_category_txt to text 2 thru -2 of header_items's item 3
+					else
+						error -- bad or missing file header
+					end if
+				on error -- use default categories
 					set all_category_txt to _sample_categories
 				end try
 			end if
