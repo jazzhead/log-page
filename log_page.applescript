@@ -2375,7 +2375,7 @@ on make_label_view(view_controller, label_base_view)
 		property _controller : view_controller
 		
 		property _bullet : my u_bullet_item
-		property _menu_rule : multiply_text(my u_dash, 20)
+		property _menu_rule : multiply_text(my u_dash, 18)
 		property _prompt : "Please select a top-level category for the URL you want to log. Next you will be able to select subcategories."
 		
 		property _default_item : missing value
@@ -2419,8 +2419,8 @@ on make_label_view(view_controller, label_base_view)
 		
 		on set_menu() --> void
 			set _menu_items to {Â
-				_bullet & "Show Full List with Subcategories...", Â
-				_bullet & "Create a New Category...", Â
+				_bullet & "Show All Categories...", Â
+				_bullet & "New Category...", Â
 				_menu_rule} & my get_base_menu_items(_menu_rule) & my _root_categories
 		end set_menu
 	end script
@@ -2476,7 +2476,7 @@ on make_sub_label_view(view_controller, label_base_view)
 		
 		on set_menu() --> void
 			set _menu_items to {Â
-				_bullet & "Show Full List with Subcategories...", Â
+				_bullet & "Show All Categories...", Â
 				_menu_rule} & my get_base_menu_items(_menu_rule) & my _sub_categories
 		end set_menu
 	end script
