@@ -357,7 +357,7 @@ General"
 			set sub_categories to {}
 			repeat with this_cat in _all_categories
 				set this_cat to this_cat's contents -- dereference
-				if this_cat is (_chosen_root_category) Â
+				if this_cat is _chosen_root_category Â
 					or this_cat starts with (_chosen_root_category & ":") then
 					set end of sub_categories to this_cat
 				end if
@@ -449,9 +449,13 @@ General"
 			-- Coerce the lines into a list:
 			--
 			set all_categories to paragraphs of all_category_txt
-			if all_categories's last item is "" then
-				set all_categories to all_categories's items 1 thru -2
-			end if
+			try -- omit trailing blank lines
+				repeat until all_categories's last item is not ""
+					set all_categories to all_categories's items 1 thru -2
+				end repeat
+			on error -- no categories found
+				set all_categories to {}
+			end try
 			
 			-- Get root-level categories:
 			--
@@ -462,9 +466,13 @@ General"
 			-- Coerce the lines into a list:
 			--
 			set root_categories to paragraphs of root_category_txt
-			if root_categories's last item is "" then
-				set root_categories to root_categories's items 1 thru -2
-			end if
+			try -- omit trailing blank lines
+				repeat until root_categories's last item is not ""
+					set root_categories to root_categories's items 1 thru -2
+				end repeat
+			on error -- no categories found
+				set root_categories to {}
+			end try
 			
 			set _all_categories to all_categories
 			set _root_categories to root_categories
@@ -1453,11 +1461,19 @@ on make_label_controller(navigation_controller, main_model, label_base_view)
 		
 		on run
 			my debug_log(1, return & "--->  running " & my class & "...")
-			if _view is missing value then set _view to make_label_view(me, _label_base_view)
-			_view's create_view()
+			if _model's get_root_categories()'s length < 2 then
+				_skip_to_edit_label()
+			else
+				if _view is missing value then set _view to make_label_view(me, _label_base_view)
+				_view's create_view()
+			end if
 			my debug_log(1, "--->  finished " & my class & return)
 			return true
 		end run
+		
+		on _skip_to_edit_label() --> void -- PRIVATE
+			_nav_controller's push_controller({my other_controllers's item 3})
+		end _skip_to_edit_label
 		
 		on set_chosen_root(this_value) --> void
 			_model's set_chosen_root_category(this_value)
@@ -1508,11 +1524,20 @@ on make_sub_label_controller(navigation_controller, main_model, label_base_view)
 		
 		on run
 			my debug_log(1, return & "--->  running " & my class & "...")
-			if _view is missing value then set _view to make_sub_label_view(me, _label_base_view)
-			_view's create_view()
+			if _model's get_sub_categories()'s length < 2 then
+				_model's set_chosen_category(_model's get_chosen_root_category())
+				_skip_to_edit_label()
+			else
+				if _view is missing value then set _view to make_sub_label_view(me, _label_base_view)
+				_view's create_view()
+			end if
 			my debug_log(1, "--->  finished " & my class & return)
 			return true
 		end run
+		
+		on _skip_to_edit_label() --> void -- PRIVATE
+			_nav_controller's push_controller({my other_controllers's item 1})
+		end _skip_to_edit_label
 		
 		on set_chosen_category(this_value) --> void
 			_model's set_chosen_category(this_value)
