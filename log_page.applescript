@@ -1461,7 +1461,8 @@ on make_label_controller(navigation_controller, main_model, label_base_view)
 		
 		on run
 			my debug_log(1, return & "--->  running " & my class & "...")
-			if _model's get_root_categories()'s length < 2 then
+			if _model's get_root_categories()'s length < 2 Â
+				and _model's get_sub_categories()'s length < 2 then
 				_skip_to_edit_label()
 			else
 				if _view is missing value then set _view to make_label_view(me, _label_base_view)
@@ -1536,7 +1537,16 @@ on make_sub_label_controller(navigation_controller, main_model, label_base_view)
 		end run
 		
 		on _skip_to_edit_label() --> void -- PRIVATE
-			_nav_controller's push_controller({my other_controllers's item 1})
+			tell _nav_controller
+				-- This dialog always follows the root category dialog,
+				-- so remove that last controller from the navigation
+				-- history.
+				pop_history()
+				
+				-- Now go to the next controller w/o adding this
+				-- controller to the history.
+				push_controller({my other_controllers's item 1})
+			end tell
 		end _skip_to_edit_label
 		
 		on set_chosen_category(this_value) --> void
@@ -1584,11 +1594,33 @@ on make_all_label_controller(navigation_controller, main_model, label_base_view)
 		
 		on run
 			my debug_log(1, return & "--->  running " & my class & "...")
-			if _view is missing value then set _view to make_all_label_view(me, _label_base_view)
-			_view's create_view()
+			if _model's get_all_categories()'s length < 2 then
+				_skip_to_edit_label()
+			else
+				if _view is missing value then set _view to make_all_label_view(me, _label_base_view)
+				_view's create_view()
+			end if
 			my debug_log(1, "--->  finished " & my class & return)
 			return true
 		end run
+		
+		on _skip_to_edit_label() --> void -- PRIVATE
+			tell _nav_controller
+				-- This dialog always follows at least one other list
+				-- dialog, so remove the last controller from the
+				-- navigation history.
+				pop_history()
+				
+				-- If the previous list dialog was a subcategory list,
+				-- then there is still a root category controller that
+				-- needs to be removed from the history.
+				if peek_history()'s class is "LabelController" then pop_history()
+				
+				-- Okay, now go to the next controller w/o adding this
+				-- controller to the history.
+				push_controller({my other_controllers's item 1})
+			end tell
+		end _skip_to_edit_label
 		
 		on set_chosen_category(this_value) --> void
 			_model's set_chosen_category(this_value)
