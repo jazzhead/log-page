@@ -53,12 +53,12 @@ INSTDIRMODE  = -m 0700
 all: $(PROG)
 
 install: all
-	@echo "--->  Installing $(TARGET) into $(INSTDIR)..."
+	@echo "--->  Installing '$(TARGET)' into '$(INSTDIR)'..."
 	@$(INSTALL) -dv $(INSTDIRMODE) $(INSTDIR) && \
 	$(INSTALL) $(INSTOPTS) $(INSTMODE) $(PROG) $(INSTDIR)
 
 uninstall:
-	@echo "--->  Uninstalling $(TARGET) from $(INSTDIR)..."
+	@echo "--->  Uninstalling '$(TARGET)' from '$(INSTDIR)'..."
 	@if [ -f $(INSTDIR)/$(TARGET).old ]; then                 \
 		echo "--->  Restoring previous version...";           \
 		mv -vi $(INSTDIR)/$(TARGET).old $(INSTDIR)/$(TARGET); \
@@ -70,20 +70,31 @@ uninstall:
 
 clean:
 	@srm -vsr $(BUILD)/*
-	@echo "--->  Deleted all files from $(BUILD) directory"
+	@echo "--->  Deleted all files from '$(BUILD)' directory"
 
 # ----------------------------------------------------------------------------
 
+
+define strip-debug
+	LANG=C sed -e '/^[[:space:]]*\(my \)\{0,1\}debug_log(/d' "$1"
+endef
+
+define insert-version
+	$(call strip-debug,"$1") | LANG=C sed -e 's/@@VERSION@@/$(VERSION)/g'
+endef
+
+
 $(PROG): $(SOURCE)
 	@[ -d $(BUILD) ] || {                            \
-		echo "--->  Creating directory $(BUILD)..."; \
+		echo "--->  Creating directory '$(BUILD)'..."; \
 		mkdir -pvm0700 $(BUILD);                     \
 	}
 	@if [ 0 = $$(grep -cm1 '@@VERSION@@' $<) ]; then                        \
-		echo "--->  Compiling $@ from $<...";                               \
-		$(OSACOMPILE) "$@" $<;                                              \
+		echo "--->  Stripping debug lines and compiling '$@' from '$<'..."; \
+		$(call strip-debug,"$<") | $(OSACOMPILE) "$@";                      \
 	else                                                                    \
-		echo "--->  Inserting VERSION number and compiling $@ from $<...";  \
-		LANG=C sed -e 's/@@VERSION@@/$(VERSION)/g' $< | $(OSACOMPILE) "$@"; \
+		echo "--->  Stripping debug statements, inserting VERSION number";  \
+		echo "--->  and compiling '$@' from '$<'...";                       \
+		$(call insert-version,"$<") | $(OSACOMPILE) "$@";                   \
 	fi
 
