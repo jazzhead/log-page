@@ -120,9 +120,6 @@ on make_app_controller()
 				-- Parse the categories from the log file
 				--
 				parse_log()
-				
-				my debug_log(1, get_root_categories())
-				my debug_log(2, get_all_categories())
 			end tell
 			
 			-- Done with browser. Does this make any difference?
@@ -477,6 +474,9 @@ General"
 			set _all_categories to all_categories
 			set _root_categories to root_categories
 			settings_changed() -- notify observers
+			
+			my debug_log(1, get_root_categories())
+			my debug_log(2, get_all_categories())
 			
 			my debug_log(2, my class & ".parse_log() done")
 		end parse_log
@@ -1540,8 +1540,8 @@ on make_sub_label_controller(navigation_controller, main_model, label_base_view)
 			tell _nav_controller
 				-- This dialog always follows the root category dialog,
 				-- so remove that last controller from the navigation
-				-- history.
-				pop_history()
+				-- history if it also has less than two items.
+				if _model's get_root_categories()'s length < 2 then pop_history()
 				
 				-- Now go to the next controller w/o adding this
 				-- controller to the history.
