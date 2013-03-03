@@ -529,13 +529,50 @@ General"
 			set log_file_mac to get_mac_path(log_file_posix)
 			
 			set file_header to _log_header_sep & "
-# urls.txt - Timestamped and categorized URL archive
+# urls.txt - Timestamped and categorized URL archive               vim:ft=conf:
 # ==================================================
-# Optionally list some categories/labels of URLs below that might not yet
-# be used. Any categories/lables listed here or in the web page records
-# will be presented as a list to select from when saving new URLs.
+#
+# For use with \"Log Page\" (AppleScript)
+#
+# When editing this file, take care not to alter the format. The field
+# names, field widths, field delimiters and record delimiters should not
+# be altered or the script will not be able to parse the data. Each URL
+# record consists of a date, label (category), title, URL and optional
+# note:
+#
+#     ------+----------------------------------------------------------
+#     Date  | 2013-02-28 20:14:38
+#     Label | Example Category:Subcategory:Another Subcategory
+#     Title | Example Web Page Record
+#     URL   | http://example.com
+#     Note  | An optional note
+#     ------+----------------------------------------------------------
+#
+# The \"Label\" field is for categories and subcategories assigned to a
+# URL. A colon (:) is used to separate subcategories. Subcategories
+# delimited in such a way represent a nested hierarchy. For example, a
+# category of \"Development:AppleScript:Mail\" could be thought of as a
+# nested list as in:
+#
+#     - Development
+#         - AppleScript
+#             - Mail
+#
+# Optionally list some sample categories/labels below that might not yet
+# be used in any web page records. Any sample categories/labels listed
+# below will be presented along with categories/labels parsed from the
+# web page records as a list to select from when saving new URLs.
+#
+# The two sections that are surrounded by '#' characters (this one, and
+# the one that follows the sample category list) should not be deleted.
+#
+# BEGIN: sample category/label list (after the '#' delimiter on the next line)
 " & _log_header_sep & linefeed & _sample_categories & linefeed & _log_header_sep & "
-# END: category/label list
+# END: sample category/label list
+#
+# Do not remove this section.
+#
+# BEGIN: Web page records (after the '#' delimiter on the next line)
 " & _log_header_sep & linefeed
 			
 			_io's write_file(log_file_mac, file_header)
