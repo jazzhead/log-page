@@ -2,7 +2,7 @@
 	Log Page - Log categorized web page bookmarks to a text file
 
 	Version: @@VERSION@@
-	Date:    2013-03-02
+	Date:    2013-03-03
 	Author:  Steve Wheeler
 
 	Get the title, URL, current date and time, and a user-definable
@@ -760,22 +760,22 @@ on make_firefox_browser()
 		on fetch_page_info() --> void
 			gui_scripting_status()
 			
-			set this_app to "Firefox"
-			using terms from application "Firefox" -- in case it's not installed
-				tell application this_app
-					activate
-					try
-						set this_title to name of front window
-					on error err_msg number err_num
-						my handle_error(err_msg, err_num)
-					end try
-				end tell
-			end using terms from
+			set this_app to "Firefox" -- so it won't be required to run/compile
+			tell application this_app
+				activate
+				try
+					set this_title to name of front window -- Standard Suite
+				on error err_msg number err_num
+					my handle_error(err_msg, err_num)
+				end try
+			end tell
 			
 			try
 				set old_clipboard to the clipboard
 			end try
 			
+			-- Firefox has very limited AppleScript support, so GUI
+			-- scripting is required.
 			tell application "System Events"
 				try
 					keystroke "l" using {command down} -- select the URL field
