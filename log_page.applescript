@@ -638,14 +638,14 @@ end make_page_log
 
 script WebBrowserFactory
 	property class : "WebBrowserFactory"
-	property supported_browsers : "Safari, Google Chrome, Firefox"
+	property supported_browsers : "Safari, Chrome, Firefox"
 	
 	on make_browser() --> WebBrowser
 		my debug_log(1, "--->  " & my class & ".make_browser()...")
 		set cur_app to get_front_app_name()
 		if cur_app is "Safari" then
 			return make_safari_browser()
-		else if cur_app is "Google Chrome" then
+		else if cur_app is "Chrome" then
 			return make_chrome_browser()
 		else if cur_app is "Firefox" then
 			return make_firefox_browser()
@@ -732,8 +732,8 @@ on make_chrome_browser()
 		property parent : make_web_browser() -- extends WebBrowser
 		
 		on fetch_page_info() --> void
-			set this_app to "Google Chrome"
-			using terms from application "Google Chrome" -- in case it's not installed
+			set this_app to "Chrome" -- so it won't be required to run/compile
+			using terms from application "Google Chrome" -- for compilation
 				tell application this_app
 					activate
 					try
@@ -3466,7 +3466,7 @@ end gui_scripting_status
 on get_front_app_name()
 	tell application "System Events"
 		if __DEBUG_LEVEL__ is 0 then
-			set current_app to name of first process where it is frontmost
+			set current_app to short name of first process where it is frontmost
 		else
 			-- We're most likely running in AppleScript Editor so hide
 			-- the front app, get the name of the next app, then return
@@ -3477,7 +3477,7 @@ on get_front_app_name()
 			repeat while (frontmost_process is frontmost)
 				delay 0.2
 			end repeat
-			set current_app to name of first process where it is frontmost
+			set current_app to short name of first process where it is frontmost
 			set frontmost of frontmost_process to true
 		end if
 	end tell
