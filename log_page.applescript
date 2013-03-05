@@ -255,8 +255,8 @@ on make_page_log(settings_model)
 	script this
 		property class : "PageLog" -- the main model
 		property parent : make_observable() -- extends Observable
-		property _settings : settings_model
-		property _io : missing value
+		property _settings : settings_model --> Settings
+		property _io : missing value --> IO
 		
 		-- Sample categories (labels) if the URL file is new. After
 		-- sample categories have been written to file, any of them
@@ -276,6 +276,7 @@ Health:Diet
 Health:Fitness
 General"
 		property _log_header_sep : my multiply_text("#", 80)
+		property _log_record_sep : missing value --> string
 		
 		property _page_url : missing value --> string
 		property _page_title : missing value --> string
@@ -283,7 +284,6 @@ General"
 		property _page_note : missing value --> string
 		property _log_record : missing value --> string
 		property _should_create_file : false --> boolean
-		property _last_line : missing value --> string
 		
 		property _root_categories : missing value --> array
 		property _all_categories : missing value --> array
@@ -411,7 +411,7 @@ General"
 				if (not (exists log_file_mac)) then set _should_create_file to true
 			end tell
 			
-			-- Is file empty?
+			-- If file exists, is it empty?
 			if not _should_create_file then
 				try
 					if (get eof file log_file_mac) is 0 then set _should_create_file to true
@@ -419,11 +419,6 @@ General"
 					set _should_create_file to true
 				end try
 			end if
-			
-			-- Scan last 5 lines of file to find last non-blank line.
-			-- (If it's a record delimiter, we won't need to include an
-			-- upper delimiter when writing a new record.)
-			set _last_line to _get_last_line(5, log_file_mac)
 			
 			if _should_create_file then
 				-- Use sample categories when creating a new file
@@ -520,24 +515,6 @@ General"
 		
 		(* == PRIVATE == *)
 		
-		on _get_last_line(tail_number, mac_path) --> string
-			(*
-				Get last non-blank line from file
-				
-				@param tail_number (integer) How many lines from end of file to check
-				@param mac_path (string) Mac file path
-			*)
-			local mac_path, file_tail, tail_num
-			try
-				set file_tail to reverse of (paragraphs -(tail_number) thru -1 of (read mac_path))
-				repeat with i from 1 to (file_tail's length)
-					log file_tail's item i
-					if file_tail's item i is not "" then return file_tail's item i
-				end repeat
-			end try
-			return ""
-		end _get_last_line
-		
 		on _validate_fields() --> void
 			if _page_url is missing value then
 				_error_missing("page URL")
@@ -603,31 +580,26 @@ General"
 # END: sample category/label list
 #
 # BEGIN: Web page records (after the '#' delimiter on the next line)
-" & _log_header_sep & linefeed
+" & _log_header_sep & linefeed & _log_record_sep & linefeed
 			
-			_io's write_file(log_file_mac, file_header)
+			_io's append_file(log_file_mac, file_header)
 		end _create_log_file
 		
-		on _format_record() --> void
-			local field_sep, record_sep, final_text
-			local rule_char, rule_width, name_col_width
-			
-			set field_sep to " | "
-			
+		on _set_record_delimiter() --> string
 			-- Format the record separator between log entries
+			local rule_char, rule_width, name_col_width
 			set rule_char to "-"
 			set rule_width to 80 -- total width
 			set name_col_width to 7 -- name column width only
-			set record_sep to "" & multiply_text(rule_char, name_col_width - 1) & Â
-				"+" & multiply_text(rule_char, rule_width - name_col_width)
+			return "" & my multiply_text(rule_char, name_col_width - 1) & Â
+				"+" & my multiply_text(rule_char, rule_width - name_col_width)
+		end _set_record_delimiter
+		
+		on _format_record() --> void
+			local field_sep, final_text
 			
-			if _last_line is record_sep then
-				set final_text to ""
-			else
-				set final_text to record_sep & linefeed
-			end if
-			
-			set final_text to final_text & join_list({Â
+			set field_sep to " | "
+			set final_text to join_list({Â
 				"Date " & field_sep & _format_date(), Â
 				"Label" & field_sep & _page_label, Â
 				"Title" & field_sep & _page_title, Â
@@ -636,7 +608,7 @@ General"
 				set final_text to final_text & _format_note(_page_note)
 			end if
 			
-			set _log_record to final_text & record_sep & linefeed
+			set _log_record to final_text & _log_record_sep & linefeed
 		end _format_record
 		
 		on _format_date() --> string  (YYYY-MM-DD HH:MM:SS)
@@ -668,6 +640,8 @@ General"
 	else
 		set this's _io to make_io()
 	end if
+	
+	set this's _log_record_sep to this's _set_record_delimiter()
 	
 	return this
 end make_page_log
