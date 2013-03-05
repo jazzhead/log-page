@@ -2,7 +2,7 @@
 	Log Page - Log categorized web page bookmarks to a text file
 
 	Version: @@VERSION@@
-	Date:    2013-03-04
+	Date:    2013-03-05
 	Author:  Steve Wheeler
 
 	Get the title, URL, current date and time, and a user-definable
@@ -283,6 +283,7 @@ General"
 		property _page_note : missing value --> string
 		property _log_record : missing value --> string
 		property _should_create_file : false --> boolean
+		property _last_line : missing value --> string
 		
 		property _root_categories : missing value --> array
 		property _all_categories : missing value --> array
@@ -405,11 +406,24 @@ General"
 			
 			my debug_log(2, my class & ".parse_log(): file = " & log_file_posix)
 			
+			-- Does file exist?
 			tell application "Finder"
-				if (not (exists log_file_mac)) or (_io's read_file(log_file_mac) is "") then
-					set _should_create_file to true
-				end if
+				if (not (exists log_file_mac)) then set _should_create_file to true
 			end tell
+			
+			-- Is file empty?
+			if not _should_create_file then
+				try
+					if (get eof file log_file_mac) is 0 then set _should_create_file to true
+				on error
+					set _should_create_file to true
+				end try
+			end if
+			
+			-- Scan last 5 lines of file to find last non-blank line.
+			-- (If it's a record delimiter, we won't need to include an
+			-- upper delimiter when writing a new record.)
+			set _last_line to _get_last_line(5, log_file_mac)
 			
 			if _should_create_file then
 				-- Use sample categories when creating a new file
@@ -506,6 +520,24 @@ General"
 		
 		(* == PRIVATE == *)
 		
+		on _get_last_line(tail_number, mac_path) --> string
+			(*
+				Get last non-blank line from file
+				
+				@param tail_number (integer) How many lines from end of file to check
+				@param mac_path (string) Mac file path
+			*)
+			local mac_path, file_tail, tail_num
+			try
+				set file_tail to reverse of (paragraphs -(tail_number) thru -1 of (read mac_path))
+				repeat with i from 1 to (file_tail's length)
+					log file_tail's item i
+					if file_tail's item i is not "" then return file_tail's item i
+				end repeat
+			end try
+			return ""
+		end _get_last_line
+		
 		on _validate_fields() --> void
 			if _page_url is missing value then
 				_error_missing("page URL")
@@ -570,8 +602,6 @@ General"
 " & _log_header_sep & linefeed & _sample_categories & linefeed & _log_header_sep & "
 # END: sample category/label list
 #
-# Do not remove this section.
-#
 # BEGIN: Web page records (after the '#' delimiter on the next line)
 " & _log_header_sep & linefeed
 			
@@ -591,7 +621,13 @@ General"
 			set record_sep to "" & multiply_text(rule_char, name_col_width - 1) & Â
 				"+" & multiply_text(rule_char, rule_width - name_col_width)
 			
-			set final_text to join_list({Â
+			if _last_line is record_sep then
+				set final_text to ""
+			else
+				set final_text to record_sep & linefeed
+			end if
+			
+			set final_text to final_text & join_list({Â
 				"Date " & field_sep & _format_date(), Â
 				"Label" & field_sep & _page_label, Â
 				"Title" & field_sep & _page_title, Â
