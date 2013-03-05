@@ -2,7 +2,7 @@
 	Log Page - Log categorized web page bookmarks to a text file
 
 	Version: @@VERSION@@
-	Date:    2013-03-03
+	Date:    2013-03-04
 	Author:  Steve Wheeler
 
 	Get the title, URL, current date and time, and a user-definable
@@ -258,9 +258,9 @@ on make_page_log(settings_model)
 		property _settings : settings_model
 		property _io : missing value
 		
-		-- Sample categories (labels) if none are found in (or there is
-		-- no) URL file. After sample categories have been written to
-		-- file, any of them can be deleted, modified or added to there.
+		-- Sample categories (labels) if the URL file is new. After
+		-- sample categories have been written to file, any of them
+		-- can be deleted, modified or added to there.
 		--
 		property _sample_categories : "Development
 Development:AppleScript
@@ -741,7 +741,7 @@ script FirefoxBrowser
 		reset_values()
 		gui_scripting_status() -- Firefox requires GUI scripting
 		
-			tell application (my short_name)
+		tell application (my short_name)
 			activate
 			try
 				set this_title to name of front window -- Standard Suite
@@ -2368,6 +2368,7 @@ on make_label_base_view(main_model)
 		property _title : __SCRIPT_NAME__ & " > Category"
 		property _ok_btn : "Next..."
 		property _bullet : my u_bullet_item
+		property _prompt_extra : "(Type a number to jump to the corresponding numbered menu item.)"
 		
 		(*
 			Subclasses must define properties for:
@@ -2406,6 +2407,22 @@ on make_label_base_view(main_model)
 				menu_rule}
 		end get_base_menu_items
 		
+		on number_menu_items(menu_items, menu_rule) --> array
+			local numbered_menu, menu_items, menu_rule, j
+			set numbered_menu to {}
+			set j to 1
+			repeat with i from 1 to menu_items's length
+				set this_item to menu_items's item i
+				if this_item is menu_rule then
+					set numbered_menu's end to this_item
+				else
+					set numbered_menu's end to j & space & this_item as string
+					set j to j + 1
+				end if
+			end repeat
+			return numbered_menu
+		end number_menu_items
+		
 		on update() --> void  (Observer Pattern)
 			set _page_label to _model's get_page_label()
 			set _chosen_root to _model's get_chosen_root_category()
@@ -2430,7 +2447,7 @@ on make_label_view(view_controller, label_base_view)
 		
 		property _bullet : my u_bullet_item
 		property _menu_rule : multiply_text(my u_dash, 18)
-		property _prompt : "Please select a top-level category for the URL you want to log. Next you will be able to select subcategories."
+		property _prompt : "Please select a top-level category for the URL you want to log. Next you will be able to select subcategories. " & my _prompt_extra
 		
 		property _default_item : missing value
 		property _menu_items : missing value
@@ -2472,10 +2489,12 @@ on make_label_view(view_controller, label_base_view)
 		end action_performed
 		
 		on set_menu() --> void
-			set _menu_items to {Â
+			local these_items
+			set these_items to {Â
 				_bullet & "Show All Categories...", Â
 				_bullet & "New Category...", Â
-				_menu_rule} & my get_base_menu_items(_menu_rule) & my _root_categories
+				_menu_rule} & my get_base_menu_items(_menu_rule)
+			set _menu_items to my number_menu_items(these_items, _menu_rule) & my _root_categories
 		end set_menu
 	end script
 end make_label_view
@@ -2489,7 +2508,7 @@ on make_sub_label_view(view_controller, label_base_view)
 		
 		property _bullet : my u_bullet_item
 		property _menu_rule : multiply_text(my u_dash, 35)
-		property _prompt : "Please select a category or subcategory for the URL you want to log. You will have a chance to edit your choice (to add a new category or subcategory)."
+		property _prompt : "Please select a category or subcategory for the URL you want to log. You will have a chance to edit your choice (to add a new category or subcategory). " & my _prompt_extra
 		
 		property _default_item : missing value
 		property _menu_items : missing value
@@ -2529,9 +2548,11 @@ on make_sub_label_view(view_controller, label_base_view)
 		end action_performed
 		
 		on set_menu() --> void
-			set _menu_items to {Â
+			local these_items
+			set these_items to {Â
 				_bullet & "Show All Categories...", Â
-				_menu_rule} & my get_base_menu_items(_menu_rule) & my _sub_categories
+				_menu_rule} & my get_base_menu_items(_menu_rule)
+			set _menu_items to my number_menu_items(these_items, _menu_rule) & my _sub_categories
 		end set_menu
 	end script
 end make_sub_label_view
@@ -2545,7 +2566,7 @@ on make_all_label_view(view_controller, label_base_view)
 		
 		property _bullet : my u_bullet_item
 		property _menu_rule : multiply_text(my u_dash, 35)
-		property _prompt : "Please select a category or subcategory for the URL you want to log. You will have a chance to edit your choice (to add a new category or subcategory)."
+		property _prompt : "Please select a category or subcategory for the URL you want to log. You will have a chance to edit your choice (to add a new category or subcategory). " & my _prompt_extra
 		
 		property _default_item : missing value
 		property _menu_items : missing value
@@ -2583,7 +2604,9 @@ on make_all_label_view(view_controller, label_base_view)
 		end action_performed
 		
 		on set_menu() --> void
-			set _menu_items to my get_base_menu_items(_menu_rule) & my _all_categories
+			local these_items
+			set these_items to my get_base_menu_items(_menu_rule)
+			set _menu_items to my number_menu_items(these_items, _menu_rule) & my _all_categories
 		end set_menu
 	end script
 end make_all_label_view
