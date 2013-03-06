@@ -2232,7 +2232,7 @@ on make_about_view(view_controller)
 		property _controller : view_controller
 		
 		property _title : __SCRIPT_NAME__
-		property _buttons : {"Go to Website", "Cancel", "OK"}
+		property _buttons : {__SCRIPT_NAME__ & " Website", "Cancel", "OK"}
 		property _prompt : missing value
 		
 		on create_view() --> void
