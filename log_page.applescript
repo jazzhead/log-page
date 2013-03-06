@@ -5,9 +5,13 @@
 	Date:    2013-03-05
 	Author:  Steve Wheeler
 
-	Get the title, URL, current date and time, and a user-definable
-	category for the frontmost Safari window and log the info to a text
-	file.
+	Get the title and URL from the frontmost web browser window and
+	save that along with the current date and time, a user-definable
+	category, and an optional note to a plain text file. The result is
+	a categorized, chronological, plain text list of bookmarks -- a
+	bookmarks log.
+
+	Supports Safari, Google Chrome, Firefox, and WebKit Nightly.
 
 	This program is free software available under the terms of a
 	BSD-style (3-clause) open source license detailed below.
@@ -46,6 +50,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 property __SCRIPT_NAME__ : "Log Page"
 property __SCRIPT_VERSION__ : "@@VERSION@@"
+property __SCRIPT_AUTHOR__ : "Steve Wheeler"
+property __SCRIPT_COPYRIGHT__ : "Copyright © 2011-2013 " & __SCRIPT_AUTHOR__
+property __SCRIPT_WEBSITE__ : "http://jazzheaddesign.com/work/code/log-page/"
 
 property __NAMESPACE__ : "Jazzhead"
 property __BUNDLE_ID__ : "net.jazzhead.scpt.LogPage"
@@ -156,6 +163,7 @@ on make_app_controller()
 			set note_controller to make_note_controller(nav_controller, page_log)
 			--
 			set label_help_controller to make_label_help_controller()
+			set about_controller to make_about_controller()
 			
 			--
 			-- Dependency Injection
@@ -178,6 +186,7 @@ on make_app_controller()
 				file_editor_controller, Â
 				file_viewer_controller, Â
 				settings_controller, Â
+				about_controller, Â
 				help_controller, Â
 				label_help_controller})
 			sub_label_controller's set_controllers({Â
@@ -186,6 +195,7 @@ on make_app_controller()
 				file_editor_controller, Â
 				file_viewer_controller, Â
 				settings_controller, Â
+				about_controller, Â
 				help_controller, Â
 				label_help_controller})
 			all_label_controller's set_controllers({Â
@@ -193,6 +203,7 @@ on make_app_controller()
 				file_editor_controller, Â
 				file_viewer_controller, Â
 				settings_controller, Â
+				about_controller, Â
 				help_controller, Â
 				label_help_controller})
 			label_edit_controller's set_controllers({note_controller})
@@ -1390,6 +1401,30 @@ on make_file_viewer_controller(navigation_controller, settings_model)
 	return this
 end make_file_viewer_controller
 
+on make_about_controller()
+	script this
+		property class : "AboutController"
+		property parent : make_base_controller() -- extends BaseController
+		property _view : missing value
+		
+		on run
+			my debug_log(1, return & "--->  running " & my class & "...")
+			if _view is missing value then set _view to make_about_view(me)
+			set ret_val to _view's create_view() --> returns boolean
+			my debug_log(1, "--->  finished " & my class & return)
+			return ret_val --> false ends controller loop and exits script
+		end run
+		
+		on go_to_website() --> void
+			my debug_log(1, my class & ".go_to_website()")
+			tell me to open location __SCRIPT_WEBSITE__
+		end go_to_website
+	end script
+	
+	my debug_log(1, return & "--->  new " & this's class & "()")
+	return this
+end make_about_controller
+
 on make_help_controller(navigation_controller, settings_model)
 	script this
 		property class : "HelpController"
@@ -1565,12 +1600,16 @@ on make_label_controller(navigation_controller, main_model, label_base_view)
 			push_controller_and_return(6)
 		end change_settings
 		
-		on show_help() --> void
+		on show_about() --> void
 			push_controller_and_return(7)
+		end show_about
+		
+		on show_help() --> void
+			push_controller_and_return(8)
 		end show_help
 		
 		on show_category_help() --> void
-			push_controller_and_return(8)
+			push_controller_and_return(9)
 		end show_category_help
 	end script
 	
@@ -1634,12 +1673,16 @@ on make_sub_label_controller(navigation_controller, main_model, label_base_view)
 			push_controller_and_return(5)
 		end change_settings
 		
-		on show_help() --> void
+		on show_about() --> void
 			push_controller_and_return(6)
+		end show_about
+		
+		on show_help() --> void
+			push_controller_and_return(7)
 		end show_help
 		
 		on show_category_help() --> void
-			push_controller_and_return(7)
+			push_controller_and_return(8)
 		end show_category_help
 	end script
 	
@@ -1703,12 +1746,16 @@ on make_all_label_controller(navigation_controller, main_model, label_base_view)
 			push_controller_and_return(4)
 		end change_settings
 		
-		on show_help() --> void
+		on show_about() --> void
 			push_controller_and_return(5)
+		end show_about
+		
+		on show_help() --> void
+			push_controller_and_return(6)
 		end show_help
 		
 		on show_category_help() --> void
-			push_controller_and_return(6)
+			push_controller_and_return(7)
 		end show_category_help
 	end script
 	
@@ -2146,6 +2193,45 @@ end make_base_view
 
 -- -- -- Main App Views -- -- --
 
+on make_about_view(view_controller)
+	script
+		property class : "AboutView"
+		property parent : make_base_view() -- extends BaseView
+		property _controller : view_controller
+		
+		property _title : __SCRIPT_NAME__
+		property _buttons : {"Go to Website", "Cancel", "OK"}
+		property _prompt : missing value
+		
+		on create_view() --> void
+			_set_prompt()
+			with timeout of (10 * 60) seconds
+				display alert _title message _prompt buttons _buttons default button 3 cancel button 2
+				set action_event to result's button returned
+				action_performed(action_event) --> returns boolean
+			end timeout
+		end create_view
+		
+		on action_performed(action_event) --> void
+			if action_event is false then error number -128 -- User canceled
+			
+			set action_event to action_event as string
+			if action_event is _buttons's item 1 then
+				_controller's go_to_website()
+				return false --> stop controller loop
+			end if
+			return true --> continue controller loop
+		end action_performed
+		
+		on _set_prompt() --> void -- PRIVATE
+			set _prompt to Â
+				"Save timestamped and categorized URLs to a log file." & return & return Â
+				& "Version " & __SCRIPT_VERSION__ & return & return & return & return Â
+				& __SCRIPT_COPYRIGHT__
+		end _set_prompt
+	end script
+end make_about_view
+
 on make_help_view(view_controller, settings_model)
 	script this
 		property class : "HelpView"
@@ -2410,6 +2496,7 @@ on make_label_base_view(main_model)
 				menu_rule, Â
 				_bullet & "Preferences...", Â
 				menu_rule, Â
+				_bullet & "About " & __SCRIPT_NAME__, Â
 				_bullet & "Help", Â
 				_bullet & "Category Help", Â
 				menu_rule, Â
@@ -2488,10 +2575,12 @@ on make_label_view(view_controller, label_base_view)
 			else if action_event is _menu_items's item 7 then
 				_controller's change_settings()
 			else if action_event is _menu_items's item 9 then
-				_controller's show_help()
+				_controller's show_about()
 			else if action_event is _menu_items's item 10 then
+				_controller's show_help()
+			else if action_event is _menu_items's item 11 then
 				_controller's show_category_help()
-			else if action_event is _menu_items's item 12 then
+			else if action_event is _menu_items's item 13 then
 				error number -128 -- User canceled
 			else -- go to subcategory view
 				_controller's set_chosen_root(action_event)
@@ -2547,10 +2636,12 @@ on make_sub_label_view(view_controller, label_base_view)
 			else if action_event is _menu_items's item 6 then
 				_controller's change_settings()
 			else if action_event is _menu_items's item 8 then
-				_controller's show_help()
+				_controller's show_about()
 			else if action_event is _menu_items's item 9 then
+				_controller's show_help()
+			else if action_event is _menu_items's item 10 then
 				_controller's show_category_help()
-			else if action_event is _menu_items's item 11 then
+			else if action_event is _menu_items's item 12 then
 				error number -128 -- User canceled
 			else -- go to category edit view
 				_controller's set_chosen_category(action_event)
@@ -2603,10 +2694,12 @@ on make_all_label_view(view_controller, label_base_view)
 			else if action_event is _menu_items's item 4 then
 				_controller's change_settings()
 			else if action_event is _menu_items's item 6 then
-				_controller's show_help()
+				_controller's show_about()
 			else if action_event is _menu_items's item 7 then
+				_controller's show_help()
+			else if action_event is _menu_items's item 8 then
 				_controller's show_category_help()
-			else if action_event is _menu_items's item 9 then
+			else if action_event is _menu_items's item 10 then
 				error number -128 -- User canceled
 			else -- go to category edit view
 				_controller's set_chosen_category(action_event)
