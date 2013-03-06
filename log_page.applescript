@@ -120,6 +120,7 @@ on make_app_controller()
 				--
 				set_page_url(browser_model's get_url())
 				set_page_title(browser_model's get_title())
+				set_browser_name(browser_model's to_string())
 				
 				my debug_log(1, "[debug] " & get_page_url())
 				my debug_log(1, "[debug] " & get_page_title())
@@ -293,6 +294,7 @@ General"
 		property _page_title : missing value --> string
 		property _page_label : missing value --> string
 		property _page_note : missing value --> string
+		property _browser_name : missing value --> string
 		property _log_record : missing value --> string
 		property _should_create_file : false --> boolean
 		
@@ -303,6 +305,11 @@ General"
 		property _chosen_category : missing value --> string -- label view state
 		
 		(* == Setters == *)
+		
+		on set_browser_name(this_value) --> void
+			set _browser_name to this_value
+			settings_changed() -- notify observers
+		end set_browser_name
 		
 		on set_page_url(this_value) --> void
 			set _page_url to this_value
@@ -336,6 +343,10 @@ General"
 		end set_chosen_category
 		
 		(* == Getters == *)
+		
+		on get_browser_name() --> string
+			return _browser_name
+		end get_browser_name
 		
 		on get_page_url() --> string
 			return _page_url
@@ -2389,9 +2400,7 @@ on make_title_view(view_controller, main_model)
 		end update
 		
 		on _set_prompt() --> void -- PRIVATE
-			set _prompt to "To log the URL for:" & return & return Â
-				& tab & "\"" & _page_title & "\"" & return & return & Â
-				"first accept or edit the title."
+			set _prompt to "To log the URL for " & _model's get_browser_name() & "'s front document, first edit and/or accept the page title."
 		end _set_prompt
 	end script
 	
@@ -2447,7 +2456,7 @@ on make_url_view(view_controller, main_model)
 		end update
 		
 		on _set_prompt() --> void -- PRIVATE
-			set _prompt to "TITLE:" & return & tab & _page_title & return & return & "Accept or edit the URL."
+			set _prompt to "TITLE:" & return & tab & _page_title & return & return & "Edit and/or accept the URL."
 		end _set_prompt
 	end script
 	
