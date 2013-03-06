@@ -2,7 +2,7 @@
 	Log Page - Log categorized web page bookmarks to a text file
 
 	Version: @@VERSION@@
-	Date:    2013-03-05
+	Date:    2013-03-06
 	Author:  Steve Wheeler
 
 	Get the title and URL from the frontmost web browser window and
@@ -706,8 +706,8 @@ on make_web_browser()
 			return my short_name
 		end to_string
 		
-		on handle_error(err_msg, err_num) --> void
-			set t to "Error: Can't get info from web browser"
+		on handle_error(page_info, err_msg, err_num) --> void
+			set t to "Error: Can't get " & page_info & " from web browser"
 			set m to "[" & my class & "] " & err_msg & " (" & err_num & ")"
 			display alert t message m buttons {"Cancel"} cancel button 1 as critical
 			--display alert t message m buttons {"OK"} default button 1 as critical
@@ -727,10 +727,16 @@ script SafariBrowser
 			tell application (my short_name)
 				activate
 				try
-					set this_url to URL of front document
 					set this_title to name of first tab of front window whose visible is true
+					get this_title -- check if defined
 				on error err_msg number err_num
-					my handle_error(err_msg, err_num)
+					my handle_error("page title", err_msg, err_num)
+				end try
+				try
+					set this_url to URL of front document
+					get this_url -- check if defined
+				on error err_msg number err_num
+					my handle_error("URL", err_msg, err_num)
 				end try
 			end tell
 		end using terms from
@@ -755,10 +761,16 @@ script ChromeBrowser
 			tell application (my short_name)
 				activate
 				try
-					set this_url to URL of (active tab of window 1)
 					set this_title to title of (active tab of window 1)
+					get this_title -- check if defined
 				on error err_msg number err_num
-					my handle_error(err_msg, err_num)
+					my handle_error("page title", err_msg, err_num)
+				end try
+				try
+					set this_url to URL of (active tab of window 1)
+					get this_url -- check if defined
+				on error err_msg number err_num
+					my handle_error("URL", err_msg, err_num)
 				end try
 			end tell
 		end using terms from
@@ -779,8 +791,9 @@ script FirefoxBrowser
 			activate
 			try
 				set this_title to name of front window -- Standard Suite
+				get this_title -- check if defined
 			on error err_msg number err_num
-				my handle_error(err_msg, err_num)
+				my handle_error("page title", err_msg, err_num)
 			end try
 		end tell
 		
@@ -797,12 +810,18 @@ script FirefoxBrowser
 				keystroke tab -- tab focus away
 				keystroke tab
 			on error err_msg number err_num
-				my handle_error(err_msg, err_num)
+				my handle_error("URL", err_msg, err_num)
 			end try
 		end tell
 		
 		delay 1 -- GUI scripting can be slow; give it a second
-		set this_url to the clipboard
+		
+		try
+			set this_url to the clipboard
+			get this_url -- check if defined
+		on error err_msg number err_num
+			my handle_error("URL", err_msg, err_num)
+		end try
 		
 		try
 			set the clipboard to old_clipboard
