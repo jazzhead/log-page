@@ -563,7 +563,9 @@ General"
 # urls.txt - Timestamped and categorized URL archive               vim:ft=conf:
 # ==================================================
 #
-# For use with \"Log Page\" (AppleScript)
+# For use with \"Log Page\", an AppleScript available at:
+#
+#     " & __SCRIPT_WEBSITE__ & "
 #
 # When editing this file, take care not to alter the format. The field
 # names, field widths, field delimiters and record delimiters should not
