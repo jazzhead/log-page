@@ -2315,8 +2315,16 @@ on make_file_edit_view(view_controller, settings_model)
 		
 		on create_view() --> void
 			with timeout of (10 * 60) seconds
-				display alert _title message _prompt buttons _buttons default button 3 as warning
-				set action_event to result's button returned
+				try
+					display alert _title message _prompt buttons _buttons default button 3 cancel button 2 as warning
+					set action_event to result's button returned
+				on error err_msg number err_num
+					if err_num is -128 then -- treat cancel (cmd-.) as back
+						set action_event to _buttons's item 2
+					else
+						error err_msg number err_num
+					end if
+				end try
 				action_performed(action_event) --> returns boolean
 			end timeout
 		end create_view
