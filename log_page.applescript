@@ -2,7 +2,7 @@
 	Log Page - Log categorized web page bookmarks to a text file
 
 	Version: @@VERSION@@
-	Date:    2013-03-06
+	Date:    2013-03-09
 	Author:  Steve Wheeler
 
 	Get the title and URL from the frontmost web browser window and
@@ -883,7 +883,7 @@ script FileApp
 		
 		tell application this_app
 			activate
-			open mac_file_path
+			open alias mac_file_path
 		end tell
 	end open_file
 end script
