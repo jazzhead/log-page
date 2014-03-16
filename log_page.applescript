@@ -2,7 +2,7 @@
 	Log Page - Log categorized web page bookmarks to a text file
 
 	Version: @@VERSION@@
-	Date:    2013-03-09
+	Date:    2014-03-15
 	Author:  Steve Wheeler
 
 	Get the title and URL from the frontmost web browser window and
@@ -18,7 +18,7 @@
 *)
 
 (*
-Copyright (c) 2011-2013 Steve Wheeler
+Copyright (c) 2011-2014 Steve Wheeler
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -51,7 +51,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 property __SCRIPT_NAME__ : "Log Page"
 property __SCRIPT_VERSION__ : "@@VERSION@@"
 property __SCRIPT_AUTHOR__ : "Steve Wheeler"
-property __SCRIPT_COPYRIGHT__ : "Copyright © 2011-2013 " & __SCRIPT_AUTHOR__
+property __SCRIPT_COPYRIGHT__ : "Copyright © 2011-2014 " & __SCRIPT_AUTHOR__
 property __SCRIPT_WEBSITE__ : "http://jazzheaddesign.com/work/code/log-page/"
 
 property __NAMESPACE__ : "Jazzhead"
@@ -2394,7 +2394,7 @@ on make_title_view(view_controller, main_model)
 			_set_prompt()
 			repeat
 				display dialog _prompt default answer _page_title with title _title buttons _buttons default button 3
-				copy result as list to {text_value, action_event}
+				set {text returned:text_value, button returned:action_event} to result
 				if text_value is not "" or action_event is _buttons's item 1 then
 					exit repeat
 				else
@@ -2449,7 +2449,7 @@ on make_url_view(view_controller, main_model)
 			_set_prompt()
 			repeat
 				display dialog _prompt default answer _page_url with title _title buttons _buttons default button 3
-				copy result as list to {text_value, action_event}
+				set {text returned:text_value, button returned:action_event} to result
 				if text_value is not "" or action_event is _buttons's item 1 then
 					exit repeat
 				else
@@ -2773,7 +2773,7 @@ on make_label_edit_view(view_controller, main_model)
 			_set_prompt()
 			repeat
 				display dialog _prompt default answer _chosen_category with title _title buttons _buttons default button 3
-				copy result as list to {text_value, action_event}
+				set {text returned:text_value, button returned:action_event} to result
 				set text_value to _chop_trailing_colons(text_value)
 				if text_value is not "" or action_event is _buttons's item 1 then
 					exit repeat
@@ -2845,7 +2845,7 @@ on make_note_view(view_controller, main_model)
 		on create_view() --> void
 			_set_prompt()
 			display dialog _prompt default answer "" with title _title buttons _buttons default button 3
-			copy result as list to {text_value, action_event}
+			set {text returned:text_value, button returned:action_event} to result
 			if text_value is not "" then set _text_field to text_value
 			action_performed(action_event)
 		end create_view
@@ -3219,7 +3219,7 @@ on make_settings_file_view(settings_controller, settings_model)
 			set m to "Enter a full file path to use for saving the URLs." & return & return & "A '~' (tilde) can be used to indicate your home directory. Example:" & return & return & tab & "~/Desktop/urls.txt"
 			set b to {my back_btn_pad, "Cancel", my ok_btn_pad}
 			display dialog m with title t default answer _log_file buttons b default button 3
-			copy result as list to {text_value, btn_pressed}
+			set {text returned:text_value, button returned:btn_pressed} to result
 			if btn_pressed is b's item 1 then
 				create_view() -- back to main view
 			else if btn_pressed is b's item 3 then
