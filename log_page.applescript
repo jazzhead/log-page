@@ -2,7 +2,7 @@
 	Log Page - Log categorized web page bookmarks to a text file
 
 	Version: @@VERSION@@
-	Date:    2014-03-15
+	Date:    2014-03-17
 	Author:  Steve Wheeler
 
 	Get the title and URL from the frontmost web browser window and
@@ -2169,7 +2169,7 @@ end make_settings_file_controller
 -- -- -- Common Views -- -- --
 
 on make_base_view()
-	script
+	script this
 		property class : "BaseView"
 		
 		property _app_description : "This script will append the URL of the front web browser document to a text file along with the current date/time, the title of the web page and a user-definable category. The script can also open the file for viewing or editing in the apps of your choice (although care should be taken when editing to not alter the format of the file)."
@@ -2199,13 +2199,12 @@ on make_base_view()
 		-- fields in AppleScript dialogs. It looks a little stupid, but
 		-- it makes the text input fields a little more functional.
 		--
-		property btn_pad : multiply_text(tab, 5)
-		property back_btn_pad : u_back_btn & btn_pad
-		property ok_btn_pad : "OK" & btn_pad
-		property next_btn_pad : "Next..." & btn_pad
-		property save_btn_pad : "Save" & btn_pad
-		property help_btn_pad : "Help" & btn_pad
-		--property cancel_btn_pad : "Cancel" & btn_pad -- this prevents cmd-. from working
+		property back_btn_pad : missing value
+		property ok_btn_pad : missing value
+		property next_btn_pad : missing value
+		property save_btn_pad : missing value
+		property help_btn_pad : missing value
+		--property cancel_btn_pad : missing value -- this prevents cmd-. from working
 		
 		(* == Methods == *)
 		
@@ -2220,7 +2219,31 @@ on make_base_view()
 				error err_msg number err_num
 			end if
 		end handle_cancel_as_back
+
+		--
+		-- This method just centers button names a fixed amount and is
+		-- meant to be used on short button names of roughly the same
+		-- width. Button names that are much longer or shorter will need
+		-- to be manually padded (either directly or with a function
+		-- that takes padding parameters.)
+		--
+		on _center_button_name(str) --> void -- PRIVATE
+			-- Oddly, the left and right sides need different amounts of padding
+			-- to (mostly) center the button name. It's never exact though.
+			set left_pad to multiply_text(tab, 2) & multiply_text(space, 2)
+			set right_pad to multiply_text(tab, 3)
+			return left_pad & str & right_pad as string
+		end _center_button_name
 	end script
+
+	set this's back_btn_pad to this's _center_button_name(this's u_back_btn)
+	set this's ok_btn_pad to this's _center_button_name("OK")
+	set this's next_btn_pad to this's _center_button_name("Next...")
+	set this's save_btn_pad to this's _center_button_name("Save")
+	set this's help_btn_pad to this's _center_button_name("Help")
+	--set this's cancel_btn_pad to this's _center_button_name("Cancel") -- this prevents cmd-. from working
+
+	return this
 end make_base_view
 
 -- -- -- Main App Views -- -- --
