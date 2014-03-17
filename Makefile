@@ -27,7 +27,15 @@ SOURCE     = log_page.applescript
 # AppleScript target compiled file
 TARGET     = Log\ Page.scpt
 
-OSACOMPILE = osacompile -o
+# Set the type (-t) and creator (-c) codes when compiling just like
+# AppleScript Editor does. The codes are useful for Spotlight searches.
+# If the -t and -c options are omitted, no codes are set.
+OSACOMPILE = osacompile -t osas -c ToyS -o
+
+# Tools
+RM         = rm -rfv
+SED        = LANG=C sed
+MKDIR      = mkdir -p
 
 # Build directory
 BUILD     = _build
@@ -54,28 +62,8 @@ WEBKITDIR   := $(prefix)/WebKit
 TARGET_AS     := $(subst \,,$(TARGET))
 CHROMEDIR_AS  := $(subst \,,$(CHROMEDIR))
 
-# ----------------------------------------------------------------------------
 
-.PHONY: all clean install uninstall \
-        install-safari install-chrome install-firefox install-webkit
-
-define trash-installed
-	@echo "--->  Deleting installed script: '$1'"
-	@osascript                                  \
-	-e "tell application \"Finder\""            \
-	-e "	if exists (POSIX file \"$1\") then" \
-	-e "		delete (POSIX file \"$1\")"     \
-	-e "	end if"                             \
-	-e "end tell" >/dev/null
-endef
-
-define make-alias
-	@echo "--->  Making alias to '$1/$2' at '$3'"
-	@osascript                                                            \
-	-e "tell application \"Finder\""                                      \
-	-e '	make new alias file to POSIX file "$1/$2" at POSIX file "$3"' \
-	-e "end tell" >/dev/null
-endef
+# ==== TARGETS ===============================================================
 
 # ---- Default rule
 
@@ -89,7 +77,7 @@ all: $(PROG)
 install: install-safari
 	@echo "* The 'install' target installs the script for Safari and then"
 	@echo "* creates aliases of the script for all the other browsers."
-	@mkdir -pv $(INSTDIRMODE) $(CHROMEDIR) $(FIREFOXDIR) $(WEBKITDIR)
+	@$(MKDIR) $(INSTDIRMODE) $(CHROMEDIR) $(FIREFOXDIR) $(WEBKITDIR)
 	@echo "--->  Installing aliases for Chrome, Firefox and WebKit..."
 	$(call trash-installed,$(CHROMEDIR_AS)/$(TARGET_AS))
 	$(call make-alias,$(INSTDIR),$(TARGET_AS),$(CHROMEDIR_AS))
@@ -134,25 +122,52 @@ uninstall:
 	$(call trash-installed,$(WEBKITDIR)/$(TARGET_AS))
 
 clean:
-	@srm -vsr $(BUILD)/*
-	@echo "--->  Deleted all files from '$(BUILD)' directory"
+	@echo "--->  Deleting '$(BUILD)' directory..."
+	@$(RM) $(BUILD)
+	@echo "--->  '$(BUILD)' directory deletion complete"
 
-# ----------------------------------------------------------------------------
+help:
+	@echo "$$HELPTEXT"
 
+.PHONY: all clean install uninstall help \
+        install-safari install-chrome install-firefox install-webkit
+
+
+# ==== FUNCTIONS =============================================================
+
+define trash-installed
+	@echo "--->  Deleting installed script: '$1'"
+	@osascript                                  \
+	-e "tell application \"Finder\""            \
+	-e "	if exists (POSIX file \"$1\") then" \
+	-e "		delete (POSIX file \"$1\")"     \
+	-e "	end if"                             \
+	-e "end tell" >/dev/null
+endef
+
+define make-alias
+	@echo "--->  Making alias to '$1/$2' at '$3'"
+	@osascript                                                            \
+	-e "tell application \"Finder\""                                      \
+	-e '	make new alias file to POSIX file "$1/$2" at POSIX file "$3"' \
+	-e "end tell" >/dev/null
+endef
 
 define strip-debug
-	LANG=C sed -e '/^[[:space:]]*\(my \)\{0,1\}debug_log(/d' "$1"
+	$(SED) -e '/^[[:space:]]*\(my \)\{0,1\}debug_log(/d' "$1"
 endef
 
 define insert-version
-	$(call strip-debug,"$1") | LANG=C sed -e 's/@@VERSION@@/$(VERSION)/g'
+	$(call strip-debug,"$1") | $(SED) -e 's/@@VERSION@@/$(VERSION)/g'
 endef
 
+
+# ==== DEPENDENCIES ==========================================================
 
 $(PROG): $(SOURCE)
 	@[ -d $(BUILD) ] || {                            \
 		echo "--->  Creating directory '$(BUILD)'..."; \
-		mkdir -pvm0700 $(BUILD);                     \
+		$(MKDIR) $(INSTDIRMODE) $(BUILD);                     \
 	}
 	@if [ 0 = $$(grep -cm1 '@@VERSION@@' $<) ]; then                        \
 		echo "--->  Stripping debug lines and compiling '$@' from '$<'..."; \
@@ -162,4 +177,42 @@ $(PROG): $(SOURCE)
 		echo "--->  and compiling '$@' from '$<'...";                       \
 		$(call insert-version,"$<") | $(OSACOMPILE) "$@";                   \
 	fi
+
+
+# ==== TEXT VARIABLES ========================================================
+
+define HELPTEXT
+
+Make Commands for Log Page
+--------------------------
+
+make
+make all
+    Compile the script to the build directory, performing
+    any substitutions such as inserting the version number
+    and stripping debug statements.
+
+make install
+    Install the compiled script for all supported web browsers
+    (Safari, Firefox, Google Chrome, WebKit Nightly). Only one
+    actual copy of the script is installed -- for Safari. Aliases
+    are created to that script for the other browsers.
+
+make install-safari
+make install-chrome
+make install-firefox
+make install-webkit
+    Install the compiled script for only a specific web browser.
+
+make uninstall
+    Uninstall the script from all web browsers.
+
+make clean
+    Delete all build files.
+
+make help
+    Display this help.
+
+endef
+export HELPTEXT
 
