@@ -2,7 +2,7 @@
 	Log Page - Log timestamped, categorized web bookmarks to a text file
 
 	Version: @@VERSION@@
-	Date:    2014-12-23
+	Date:    2014-12-24
 	Author:  Steve Wheeler
 
 	Get the title and URL from the frontmost web browser window and
@@ -421,7 +421,7 @@ General"
 			
 			local log_file_posix, log_file_mac, header_items
 			local all_category_txt, root_category_txt
-			local all_categories, root_categories, existing_categories
+			local all_categories, root_categories
 			
 			set log_file_posix to expand_home_path(_settings's get_log_file())
 			set log_file_mac to get_mac_path(log_file_posix)
@@ -442,38 +442,23 @@ General"
 				end try
 			end if
 			
-			if _should_create_file then
-				-- Use sample categories when creating a new file
-				set all_category_txt to _sample_categories
-			else
-				-- Read manually-entered (and/or previous sample)
-				-- categories from existing file header
-				try
-					set header_items to split_text(_io's read_file(log_file_mac), _log_header_sep)
-					if header_items's length is 5 then
-						set all_category_txt to text 2 thru -2 of header_items's item 3
-					else
-						error
-					end if
-				on error -- file header is bad or missing, or user deleted samples
-					set all_category_txt to missing value
-				end try
-			end if
+			my debug_log(2, "[debug] " & my class & ".parse_log(): parsing categories from file")
 			
-			-- Parse any existing labels from the "Label" fields of the
+			-- Parse any existing categories from the "Label" fields of the
 			-- bookmarks log file:
 			--
-			set s to "LANG=C sed -n 's/^Label | //p' " & quoted form of log_file_posix Â
+			set s to "LANG=C sed -n 's/^Label  *|  *//p' " & quoted form of log_file_posix Â
 				& " | sort | uniq"
-			set existing_categories to do shell script s without altering line endings
-			
-			-- Sort those along with the manual/sample categories/labels:
-			--
-			if all_category_txt is not missing value then
-				set existing_categories to all_category_txt & linefeed & existing_categories
-			end if
-			set s to "echo \"" & existing_categories & "\" | egrep -v '^$' | sort | uniq"
 			set all_category_txt to do shell script s without altering line endings
+			
+			-- If creating a new file, add the sample categories to the list:
+			--
+			if _should_create_file then
+				my debug_log(2, "[debug] " & my class & ".parse_log(): parsing sample categories for new file")
+				set all_category_txt to _sample_categories & linefeed & all_category_txt
+				set s to "echo \"" & all_category_txt & "\" | egrep -v '^$' | sort | uniq"
+				set all_category_txt to do shell script s without altering line endings
+			end if
 			
 			-- Coerce the lines into a list:
 			--
@@ -485,6 +470,8 @@ General"
 			on error -- no categories found
 				set all_categories to {}
 			end try
+			
+			my debug_log(2, "[debug] " & my class & ".parse_log(): parsing top-level categories")
 			
 			-- Get root-level categories:
 			--
@@ -561,51 +548,50 @@ General"
 			set log_file_mac to get_mac_path(log_file_posix)
 			
 			set file_header to _log_header_sep & "
-# urls.txt - Timestamped and categorized web bookmark archive      vim:ft=conf:
-# ===========================================================
+#  Timestamped and Categorized Web Bookmark Archive               vim:ft=conf:
+#  ================================================
 #
-# For use with \"Log Page\", an AppleScript available at:
+#  For use with \"Log Page\", an AppleScript available at:
 #
-#     " & __SCRIPT_WEBSITE__ & "
+#      " & __SCRIPT_WEBSITE__ & "
 #
-# When editing this file, take care not to alter the format. The field
-# names, field widths, field delimiters and record delimiters should not
-# be altered or the script will not be able to parse the data. Each
-# bookmark record consists of a date, label (category), title, URL, and
-# optional note:
+#  This section of lines beginning with a '#' character is just a header
+#  area for free-form notes and is ignored by the script. Feel free to add
+#  your own notes.
 #
-#     ------+----------------------------------------------------------
-#     Date  | 2013-02-28 20:14:38
-#     Label | Example Category:Subcategory:Another Subcategory
-#     Title | Example Web Page Record
-#     URL   | http://example.com
-#     Note  | An optional note
-#     ------+----------------------------------------------------------
+#  When editing this file, take care not to alter the format of the bookmark
+#  records. The field names, field widths, field delimiters and record
+#  delimiters should not be altered or the script might not be able to parse
+#  the data. Each bookmark record consists of a date, label (category),
+#  title, URL, and optional note:
 #
-# The \"Label\" field is for categories and subcategories assigned to a
-# bookmark. A colon (:) is used to separate subcategories. Subcategories
-# delimited in such a way represent a nested hierarchy. For example, a
-# category of \"Development:AppleScript:Mail\" could be thought of as a
-# nested list as in:
+#      ------+----------------------------------------------------------
+#      Date  | 2013-02-28 20:14:38
+#      Label | Example Category:Subcategory:Another Subcategory
+#      Title | Example Web Page Bookmark Record
+#      URL   | http://example.com
+#      Note  | An optional note
+#      ------+----------------------------------------------------------
 #
-#     - Development
-#         - AppleScript
-#             - Mail
+#  The \"Label\" field is for categories and subcategories assigned to a
+#  bookmark. A colon (:) is used to separate subcategories. Subcategories
+#  delimited in such a way represent a nested hierarchy. For example, a
+#  category of \"Development:AppleScript:Mail\" could be thought of as a
+#  nested list as in:
 #
-# Optionally list some sample categories/labels below that might not yet
-# be used in any web page records. Any sample categories/labels listed
-# below will be presented along with categories/labels parsed from the
-# web page records as a list to select from when saving new bookmarks.
+#      - Development
+#          - AppleScript
+#              - Mail
 #
-# The two sections that are surrounded by '#' characters (this one, and
-# the one that follows the sample category list) should not be deleted.
-#
-# BEGIN: sample category/label list (after the '#' delimiter on the next line)
-" & _log_header_sep & linefeed & _sample_categories & linefeed & _log_header_sep & "
-# END: sample category/label list
-#
-# BEGIN: Web page records (after the '#' delimiter on the next line)
-" & _log_header_sep & linefeed & _log_record_sep & linefeed
+#  Below this header section and before the first bookmark record,
+#  optionally list some sample categories/labels that might not yet be used
+#  in any bookmark records. Any sample categories/labels listed below will
+#  be presented along with categories/labels parsed from the bookmark
+#  records as a list to select from when saving new bookmarks. The format is
+#  the same as in a regular bookmark record -- field name, pipe delimiter,
+#  and category. You can delete these default categories and/or add your
+#  own. They are all optional.
+" & _log_header_sep & linefeed & _format_sample_categories() & linefeed & _log_record_sep & linefeed
 			
 			_io's append_file(log_file_mac, file_header)
 		end _create_log_file
@@ -656,6 +642,16 @@ General"
 				& "| fmt -w 72 | sed '1 s/^/Note  | /; 2,$ s/^/      | /'"
 			do shell script s without altering line endings
 		end _format_note
+		
+		on _format_sample_categories()
+			local these_lines, this_line
+			set these_lines to split_text(_sample_categories, linefeed)
+			repeat with i from 1 to count these_lines
+				set this_line to "Label | " & these_lines's item i
+				set these_lines's item i to this_line
+			end repeat
+			return join_list(these_lines, linefeed)
+		end _format_sample_categories
 	end script
 	
 	my debug_log(1, return & "--->  new " & this's class & "()" & return)
@@ -2220,7 +2216,7 @@ on make_base_view()
 				error err_msg number err_num
 			end if
 		end handle_cancel_as_back
-
+		
 		--
 		-- This method just centers button names a fixed amount and is
 		-- meant to be used on short button names of roughly the same
@@ -2236,14 +2232,14 @@ on make_base_view()
 			return left_pad & str & right_pad as string
 		end _center_button_name
 	end script
-
+	
 	set this's back_btn_pad to this's _center_button_name(this's u_back_btn)
 	set this's ok_btn_pad to this's _center_button_name("OK")
 	set this's next_btn_pad to this's _center_button_name("Next...")
 	set this's save_btn_pad to this's _center_button_name("Save")
 	set this's help_btn_pad to this's _center_button_name("Help")
 	--set this's cancel_btn_pad to this's _center_button_name("Cancel") -- this prevents cmd-. from working
-
+	
 	return this
 end make_base_view
 
@@ -3606,11 +3602,11 @@ on make_io()
 		on write_file(file_path, this_data)
 			_write_file(file_path, this_data, string, false) -- overwrite existing file
 		end write_file
-
+		
 		on append_file(file_path, this_data)
 			_write_file(file_path, this_data, string, true) -- append new data to end of existing file
 		end append_file
-
+		
 		on read_file(file_path)
 			_read_file(file_path, string)
 		end read_file
