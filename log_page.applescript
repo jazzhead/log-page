@@ -413,6 +413,10 @@ General"
 			
 			if _should_create_file then _create_log_file()
 			
+			if _should_add_log_record_sep(log_file_mac) then
+				set _log_record to _log_record_sep & linefeed & _log_record
+			end if
+			
 			_io's append_file(log_file_mac, _log_record)
 		end write_record
 		
@@ -595,6 +599,22 @@ General"
 			
 			_io's append_file(log_file_mac, file_header)
 		end _create_log_file
+		
+		-- A bookmark record should always start with a record delimiter.
+		on _should_add_log_record_sep(log_file_mac) --> boolean
+			local last_line, log_lines
+			set last_line to ""
+			set log_lines to paragraphs of (read file log_file_mac)
+			repeat with i from (count log_lines) to 1 by -1
+				set last_line to log_lines's item i
+				if trim_whitespace(last_line) is not "" then exit repeat
+			end repeat
+			if last_line is _log_record_sep then
+				return false
+			else
+				return true
+			end if
+		end _should_add_log_record_sep
 		
 		on _set_record_delimiter() --> string
 			-- Format the record separator between log entries
@@ -3794,6 +3814,42 @@ on join_list(lst, delim)
 		error "Can't join_list(): " & err_msg number err_num
 	end try
 end join_list
+
+on trim_whitespace(str)
+	set white_space to space & tab & return & linefeed
+	
+	-- trim start
+	try
+		set str to str's items
+		--log str
+		try
+			repeat while str's first item is in white_space
+				set str to rest of str
+			end repeat
+			--return str as text -- don't return yet; still need to trim end
+		on error number -1700 -- empty list or nothing but whitespace
+			return ""
+		end try
+	on error err_msg number err_num
+		error "Can't trim start: " & err_msg number err_num
+	end try
+	
+	-- trim end
+	try
+		set str to reverse of str's items
+		--log str
+		try
+			repeat while str's first item is in white_space
+				set str to rest of str
+			end repeat
+			return str's reverse as text
+		on error number -1700 -- empty list or nothing but whitespace
+			return ""
+		end try
+	on error err_msg number err_num
+		error "Can't trim end: " & err_msg number err_num
+	end try
+end trim_whitespace
 
 on debug_log(_level, _msg)
 	if __DEBUG_LEVEL__ is greater than or equal to _level then log _msg
