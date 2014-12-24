@@ -1,8 +1,8 @@
 (*
-	Log Page - Log categorized web page bookmarks to a text file
+	Log Page - Log timestamped, categorized web bookmarks to a text file
 
 	Version: @@VERSION@@
-	Date:    2014-03-17
+	Date:    2014-12-23
 	Author:  Steve Wheeler
 
 	Get the title and URL from the frontmost web browser window and
@@ -60,7 +60,7 @@ property __PLIST_DIR__ : missing value
 
 -- Debug settings
 property __DEBUG_LEVEL__ : 0 -- integer (0 = no event logging)
-property __NULL_IO__ : false -- boolean (if true, don't write to URL file)
+property __NULL_IO__ : false -- boolean (if true, don't write to bookmarks file)
 
 on run
 	-- Initialize any script properties here that should not be hardcoded
@@ -270,9 +270,9 @@ on make_page_log(settings_model)
 		property _settings : settings_model --> Settings
 		property _io : missing value --> IO
 		
-		-- Sample categories (labels) if the URL file is new. After
-		-- sample categories have been written to file, any of them
-		-- can be deleted, modified or added to there.
+		-- Sample categories (labels) if the bookmarks log file is new.
+		-- After sample categories have been written to file, any of
+		-- them can be deleted, modified or added to there.
 		--
 		property _sample_categories : "Development
 Development:AppleScript
@@ -460,7 +460,8 @@ General"
 				end try
 			end if
 			
-			-- Parse any existing labels from the "Label" fields of the URLs file:
+			-- Parse any existing labels from the "Label" fields of the
+			-- bookmarks log file:
 			--
 			set s to "LANG=C sed -n 's/^Label | //p' " & quoted form of log_file_posix Â
 				& " | sort | uniq"
@@ -560,8 +561,8 @@ General"
 			set log_file_mac to get_mac_path(log_file_posix)
 			
 			set file_header to _log_header_sep & "
-# urls.txt - Timestamped and categorized URL archive               vim:ft=conf:
-# ==================================================
+# urls.txt - Timestamped and categorized web bookmark archive      vim:ft=conf:
+# ===========================================================
 #
 # For use with \"Log Page\", an AppleScript available at:
 #
@@ -569,9 +570,9 @@ General"
 #
 # When editing this file, take care not to alter the format. The field
 # names, field widths, field delimiters and record delimiters should not
-# be altered or the script will not be able to parse the data. Each URL
-# record consists of a date, label (category), title, URL and optional
-# note:
+# be altered or the script will not be able to parse the data. Each
+# bookmark record consists of a date, label (category), title, URL, and
+# optional note:
 #
 #     ------+----------------------------------------------------------
 #     Date  | 2013-02-28 20:14:38
@@ -582,7 +583,7 @@ General"
 #     ------+----------------------------------------------------------
 #
 # The \"Label\" field is for categories and subcategories assigned to a
-# URL. A colon (:) is used to separate subcategories. Subcategories
+# bookmark. A colon (:) is used to separate subcategories. Subcategories
 # delimited in such a way represent a nested hierarchy. For example, a
 # category of \"Development:AppleScript:Mail\" could be thought of as a
 # nested list as in:
@@ -594,7 +595,7 @@ General"
 # Optionally list some sample categories/labels below that might not yet
 # be used in any web page records. Any sample categories/labels listed
 # below will be presented along with categories/labels parsed from the
-# web page records as a list to select from when saving new URLs.
+# web page records as a list to select from when saving new bookmarks.
 #
 # The two sections that are surrounded by '#' characters (this one, and
 # the one that follows the sample category list) should not be deleted.
@@ -2172,7 +2173,7 @@ on make_base_view()
 	script this
 		property class : "BaseView"
 		
-		property _app_description : "This script will append the URL of the front web browser document to a text file along with the current date/time, the title of the web page and a user-definable category. The script can also open the file for viewing or editing in the apps of your choice (although care should be taken when editing to not alter the format of the file)."
+		property _app_description : "This script will append the URL of the front web browser document to a text file along with the current date/time, the title of the web page, a user-definable category, and an optional note. The script can also open the file for viewing or editing in the apps of your choice (although care should be taken when editing to not alter the format of the file)."
 		
 		(* == Unicode Characters for Views == *)
 		
@@ -2280,7 +2281,7 @@ on make_about_view(view_controller)
 		
 		on _set_prompt() --> void -- PRIVATE
 			set _prompt to Â
-				"Save timestamped and categorized URLs to a log file." & return & return Â
+				"Log timestamped, categorized web bookmarks to a text file." & return & return Â
 				& "Version " & __SCRIPT_VERSION__ & return & return & return & return Â
 				& __SCRIPT_COPYRIGHT__
 		end _set_prompt
@@ -2326,9 +2327,9 @@ on make_help_view(view_controller, settings_model)
 		
 		on _set_prompt() --> void -- PRIVATE
 			set _prompt to my _app_description & " The current settings are:" & return & return Â
-				& tab & "URLs File:    " & _log_file & return & return Â
-				& tab & "File Viewer:  " & _file_viewer & return & return Â
-				& tab & "Text Editor:  " & _text_editor & return & return Â
+				& tab & "Log File:" & tab & tab & _log_file & return & return Â
+				& tab & "File Viewer:" & tab & _file_viewer & return & return Â
+				& tab & "Text Editor:" & tab & _text_editor & return & return Â
 				& "You can change those settings by clicking \"Preferences\"."
 		end _set_prompt
 	end script
@@ -2344,7 +2345,7 @@ on make_label_help_view()
 		
 		property _title : __SCRIPT_NAME__ & " Category Help"
 		property _buttons : {"Cancel", "OK"}
-		property _prompt : "Assign a category and/or subcategories to the logged URL by using a colon (:) to separate subcategories. Subcategories delimited in such a way represent a nested hierarchy. For example, a category (also called a label in the URLs file) of \"Development:AppleScript:Mail\" could be thought of as a nested list as in:" & return & return Â
+		property _prompt : "Assign a category and/or subcategories to the logged bookmark by using a colon (:) to separate subcategories. Subcategories delimited in such a way represent a nested hierarchy. For example, a category (also called a label in the bookmarks log file) of \"Development:AppleScript:Mail\" could be thought of as a nested list as in:" & return & return Â
 			& tab & "¥ Development" & return Â
 			& tab & tab & "¥ AppleScript" & return Â
 			& tab & tab & tab & "¥ Mail"
@@ -2444,7 +2445,7 @@ on make_title_view(view_controller, main_model)
 		end update
 		
 		on _set_prompt() --> void -- PRIVATE
-			set _prompt to "To log the URL for " & _model's get_browser_name() & "'s front document, first edit and/or accept the page title."
+			set _prompt to "To log a bookmark for " & _model's get_browser_name() & "'s front document, first edit and/or accept the page title."
 		end _set_prompt
 	end script
 	
@@ -2605,7 +2606,7 @@ on make_label_view(view_controller, label_base_view)
 		
 		property _bullet : my u_bullet_item
 		property _menu_rule : multiply_text(my u_dash, 18)
-		property _prompt : "Please select a top-level category for the URL you want to log. Next you will be able to select subcategories. " & my _prompt_extra
+		property _prompt : "Please select a top-level category for the web page you want to log. Next you will be able to select subcategories. " & my _prompt_extra
 		
 		property _default_item : missing value
 		property _menu_items : missing value
@@ -2668,7 +2669,7 @@ on make_sub_label_view(view_controller, label_base_view)
 		
 		property _bullet : my u_bullet_item
 		property _menu_rule : multiply_text(my u_dash, 35)
-		property _prompt : "Please select a category or subcategory for the URL you want to log. You will have a chance to edit your choice (to add a new category or subcategory). " & my _prompt_extra
+		property _prompt : "Please select a category or subcategory for the web page you want to log. You will have a chance to edit your choice (to add a new category or subcategory). " & my _prompt_extra
 		
 		property _default_item : missing value
 		property _menu_items : missing value
@@ -2728,7 +2729,7 @@ on make_all_label_view(view_controller, label_base_view)
 		
 		property _bullet : my u_bullet_item
 		property _menu_rule : multiply_text(my u_dash, 35)
-		property _prompt : "Please select a category or subcategory for the URL you want to log. You will have a chance to edit your choice (to add a new category or subcategory). " & my _prompt_extra
+		property _prompt : "Please select a category or subcategory for the web page you want to log. You will have a chance to edit your choice (to add a new category or subcategory). " & my _prompt_extra
 		
 		property _default_item : missing value
 		property _menu_items : missing value
@@ -2840,7 +2841,7 @@ on make_label_edit_view(view_controller, main_model)
 		on _set_prompt() --> void -- PRIVATE
 			set _prompt to "TITLE:" & return & tab & _page_title & return & return Â
 				& "URL:" & return & tab & _page_url & return & return Â
-				& "Please provide a category and any optional subcategories (or edit your selected category) for the URL. Use a colon to separate subcategories. Example: \"Development:AppleScript:Mail\""
+				& "Please provide a category and any optional subcategories (or edit your selected category) for the web page bookmark. Use a colon to separate subcategories. Example: \"Development:AppleScript:Mail\""
 		end _set_prompt
 	end script
 	
@@ -2939,10 +2940,10 @@ on make_settings_first_view(settings_controller, settings_model)
 		
 		on _set_prompt() --> void -- PRIVATE
 			set _prompt to my _app_description & " The defaults are:" & return & return Â
-				& "	URLs File:		" & _model's get_default_log_file() & return & return Â
-				& "	File Viewer:	" & _model's get_default_file_viewer() & return & return Â
-				& "	Text Editor:	" & _model's get_default_text_editor() & return & return Â
-				& "You can continue using those defaults or change the settings now. You can also change the settings later by selecting the \"Preferences\" item from any list dialog. (You would have to manually move your old URLs file though if you wanted to keep appending to it.)"
+				& tab & "Log File:" & tab & tab & _model's get_default_log_file() & return & return Â
+				& tab & "File Viewer:" & tab & _model's get_default_file_viewer() & return & return Â
+				& tab & "Text Editor:" & tab & _model's get_default_text_editor() & return & return Â
+				& "You can continue using those defaults or change the settings now. You can also change the settings later by selecting the \"Preferences\" item from any list dialog. (You would have to manually move your old bookmarks log file though if you wanted to keep appending to it.)"
 		end _set_prompt
 	end script
 end make_settings_first_view
@@ -2960,7 +2961,7 @@ on make_settings_main_view(settings_controller, settings_model)
 		
 		property _title : __SCRIPT_NAME__ & " > Preferences"
 		property _prompt : missing value
-		property _buttons : {"Choose a File Editor/Viewer...", "Choose a URLs File...", "OK"}
+		property _buttons : {"Choose a File Editor/Viewer...", "Choose a Log File...", "OK"}
 		
 		on create_view() --> void
 			_set_prompt()
@@ -2987,8 +2988,8 @@ on make_settings_main_view(settings_controller, settings_model)
 		end update
 		
 		on _set_prompt() --> void -- PRIVATE
-			set _prompt to "Choose a different URLs file, file viewer or text editor. The current settings are:" & return & return Â
-				& tab & "URLs File:" & tab & _log_file & return & return Â
+			set _prompt to "Choose a different bookmarks log file, file viewer, or text editor. The current settings are:" & return & return Â
+				& tab & "Log File:" & tab & tab & _log_file & return & return Â
 				& tab & "File Viewer:" & tab & _file_viewer & return & return Â
 				& tab & "Text Editor:" & tab & _text_editor & return & return
 		end _set_prompt
@@ -3039,7 +3040,7 @@ on make_settings_app_view(settings_controller, settings_model)
 		end update
 		
 		on _set_prompt() --> void -- PRIVATE
-			set _prompt to "Choose an application for editing or viewing the URLs file. The current settings are:" & return & return Â
+			set _prompt to "Choose an application for editing or viewing the bookmarks log file. The current settings are:" & return & return Â
 				& tab & "File Viewer:" & tab & _file_viewer & return & return Â
 				& tab & "Text Editor:" & tab & _text_editor & return & return
 		end _set_prompt
@@ -3058,7 +3059,7 @@ on make_settings_editor_view(settings_controller, settings_model)
 		property _model : settings_model
 		
 		property _title : __SCRIPT_NAME__ & " > Preferences > Choose App > Editor"
-		property _prompt : "Choose a text editor application for editing the URLs file." & return & return
+		property _prompt : "Choose a text editor application for editing the bookmarks log file." & return & return
 		property _buttons : {my u_back_btn, "Use Default Editor...", "Choose Another Editor..."}
 		property _app_type : "text editor"
 		property _app_usage : "editing"
@@ -3083,7 +3084,7 @@ on make_settings_viewer_view(settings_controller, settings_model)
 		property _model : settings_model
 		
 		property _title : __SCRIPT_NAME__ & " > Preferences > Choose App > Viewer"
-		property _prompt : "Choose an application for viewing the URLs file." & return & return
+		property _prompt : "Choose an application for viewing the bookmarks log file." & return & return
 		property _buttons : {my u_back_btn, "Use Default App...", "Choose Another App..."}
 		property _app_type : "file viewer"
 		property _app_usage : "viewing"
@@ -3132,7 +3133,7 @@ on make_settings_app_base_view()
 		on choose_another() --> void
 			local _app, t, m
 			set t to my _title & " > Choose Application"
-			set m to "Select an application to use for " & my _app_usage & " the URLs file. (Click \"Cancel\" to return to the previous dialog.)"
+			set m to "Select an application to use for " & my _app_usage & " the bookmarks log file. (Click \"Cancel\" to return to the previous dialog.)"
 			try
 				set _app to name of (choose application with title t with prompt m)
 				my _controller's set_app(_app)
@@ -3170,7 +3171,7 @@ on make_settings_file_view(settings_controller, settings_model)
 		property _model : settings_model
 		
 		property _title : __SCRIPT_NAME__ & " > Preferences > Choose File"
-		property _prompt : "Choose a file in which to save URLs:"
+		property _prompt : "Choose a plain text file in which to save bookmarks:"
 		property _menu_rule : multiply_text(my u_dash, 19)
 		property _menu_items_base : {Â
 			"Use Default File...", Â
@@ -3204,7 +3205,7 @@ on make_settings_file_view(settings_controller, settings_model)
 		
 		on choose_default() --> void
 			set t to _title & " > Default"
-			set m to "The default URLs file is:" & return & return & tab & _model's get_default_log_file() & return & return & "Use this file?" & return & return
+			set m to "The default bookmarks log file is:" & return & return & tab & _model's get_default_log_file() & return & return & "Use this file?" & return & return
 			set b to {my u_back_btn, "Cancel", "Use Default"}
 			display dialog m with title t buttons b default button 3 with icon note
 			set btn_pressed to button returned of result
@@ -3217,7 +3218,7 @@ on make_settings_file_view(settings_controller, settings_model)
 		end choose_default
 		
 		on choose_existing() --> void
-			set m to "Choose an existing URLs file. (Click \"Cancel\" to return to the previous dialog.)"
+			set m to "Choose an existing bookmarks log file. (Click \"Cancel\" to return to the previous dialog.)"
 			try
 				set _log_file to POSIX path of (choose file with prompt m default location path to desktop folder from user domain)
 				_controller's set_log_file(_log_file)
@@ -3227,7 +3228,7 @@ on make_settings_file_view(settings_controller, settings_model)
 		end choose_existing
 		
 		on choose_new() --> void
-			set m to "Choose a file name and location for the URLs file. (Click \"Cancel\" to return to the previous dialog.)"
+			set m to "Choose a file name and location for the bookmarks log file. (Click \"Cancel\" to return to the previous dialog.)"
 			set file_name to item 2 of split_path_into_dir_and_file(_model's get_default_log_file())
 			try
 				set _log_file to POSIX path of (choose file name with prompt m default name file_name default location path to desktop folder from user domain)
@@ -3239,7 +3240,7 @@ on make_settings_file_view(settings_controller, settings_model)
 		
 		on enter_path() --> void
 			set t to _title & " > Enter Path"
-			set m to "Enter a full file path to use for saving the URLs." & return & return & "A '~' (tilde) can be used to indicate your home directory. Example:" & return & return & tab & "~/Desktop/urls.txt"
+			set m to "Enter a full file path to use for saving the bookmarks." & return & return & "A '~' (tilde) can be used to indicate your home directory. Example:" & return & return & tab & "~/Desktop/urls.txt"
 			set b to {my back_btn_pad, "Cancel", my ok_btn_pad}
 			display dialog m with title t default answer _log_file buttons b default button 3
 			set {text returned:text_value, button returned:btn_pressed} to result
