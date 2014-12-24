@@ -3707,7 +3707,7 @@ on convert_to_ascii(non_ascii_txt)
 			cannot be represented in the target character set will be silently
 			discarded.
 	*)
-	set s to "iconv -f UTF-8 -t US-ASCII//TRANSLIT//IGNORE <<<" & quoted form of non_ascii_txt & " | sed 's/   */ /g'"
+	set s to "iconv -f UTF-8 -t US-ASCII//TRANSLIT//IGNORE <<<" & quoted form of non_ascii_txt & " | tr -s ' '"
 	do shell script s
 end convert_to_ascii
 
