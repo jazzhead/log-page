@@ -62,6 +62,19 @@ property __PLIST_DIR__ : missing value
 property __DEBUG_LEVEL__ : 0 -- integer (0 = no event logging)
 property __NULL_IO__ : false -- boolean (if true, don't write to bookmarks file)
 
+property __SCRIPT_LICENSE_SUMMARY__ : "This program is free software available under the terms of a BSD-style (3-clause) open source license. Click the \"License\" button or see the README file included with the distribution for details."
+property __SCRIPT_LICENSE__ : __SCRIPT_COPYRIGHT__ & return & "All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+
+  ¥ Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+
+  ¥ Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+
+  ¥ Neither the name of the copyright holder nor the names of contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
+
 on run
 	-- Initialize any script properties here that should not be hardcoded
 	set __PLIST_DIR__ to POSIX path of (path to preferences from user domain)
@@ -97,8 +110,9 @@ on make_app_controller()
 			-- Main model needs the settings model
 			set page_log to make_page_log(settings_model)
 			
-			-- Settings controller needs both models
-			set settings_controller to make_settings_controller(settings_model, page_log)
+			-- Settings controller needs both models plus the license controller
+			set license_controller to make_license_controller()
+			set settings_controller to make_settings_controller(settings_model, page_log, license_controller)
 			run settings_controller
 			
 			(* == Data Retrieval == *)
@@ -164,7 +178,7 @@ on make_app_controller()
 			set note_controller to make_note_controller(nav_controller, page_log)
 			--
 			set label_help_controller to make_label_help_controller()
-			set about_controller to make_about_controller()
+			set about_controller to make_about_controller(nav_controller)
 			
 			--
 			-- Dependency Injection
@@ -175,6 +189,7 @@ on make_app_controller()
 			-- ease of implementation, add the default action first. For
 			-- list dialogs, then add actions in the list order.)
 			--
+			about_controller's set_controllers({license_controller})
 			help_controller's set_controllers({settings_controller})
 			title_controller's set_controllers({Â
 				help_controller, Â
@@ -1450,10 +1465,40 @@ on make_file_viewer_controller(navigation_controller, settings_model)
 	return this
 end make_file_viewer_controller
 
-on make_about_controller()
+on make_license_controller()
+	script this
+		property class : "LicenseController"
+		property parent : make_base_controller() -- extends BaseController
+		property _buttons : {"Cancel", "OK"}
+		
+		on run
+			my debug_log(1, return & "--->  running " & my class & "...")
+			--
+			-- No need to construct and display a custom view object here
+			-- because there are no custom actions to trigger. Just display
+			-- a simple AppleScript alert view and the script will either
+			-- proceed to the next controller in the stack with "OK" or exit
+			-- with "Cancel".
+			--
+			with timeout of (10 * 60) seconds
+				display alert __SCRIPT_NAME__ message __SCRIPT_LICENSE__ buttons _buttons default button 2 cancel button 1
+			end timeout
+			--
+			-- The cancel button will stop the script before it gets here.
+			my debug_log(1, "--->  finished " & my class & return)
+			return true --> false ends controller loop and exits script
+		end run
+	end script
+	
+	my debug_log(1, return & "--->  new " & this's class & "()")
+	return this
+end make_license_controller
+
+on make_about_controller(navigation_controller)
 	script this
 		property class : "AboutController"
 		property parent : make_base_controller() -- extends BaseController
+		property _nav_controller : navigation_controller
 		property _view : missing value
 		
 		on run
@@ -1463,6 +1508,11 @@ on make_about_controller()
 			my debug_log(1, "--->  finished " & my class & return)
 			return ret_val --> false ends controller loop and exits script
 		end run
+		
+		on show_license() --> void
+			my debug_log(1, my class & ".show_license()")
+			_nav_controller's push_controller({my other_controllers's item 1})
+		end show_license
 		
 		on go_to_website() --> void
 			my debug_log(1, my class & ".go_to_website()")
@@ -1866,11 +1916,12 @@ end make_note_controller
 
 -- -- -- Settings Controllers -- -- --
 
-on make_settings_controller(settings_model, app_model)
+on make_settings_controller(settings_model, app_model, license_controller)
 	script this
 		property class : "SettingsController"
 		property _model : settings_model
 		property _app_model : app_model
+		property _license_controller : license_controller
 		property _is_first_run : missing value --> boolean
 		property _has_run_this_session : false --> boolean
 		
@@ -1925,6 +1976,9 @@ on make_settings_controller(settings_model, app_model)
 			end if
 			
 			if _is_first_run then
+				-- Before showing any other user interface, show the license
+				run _license_controller
+				-- Continue if the user did not cancel
 				set root_controller to make_settings_first_controller(nav_controller, _model)
 				root_controller's set_controllers({main_controller})
 			else
@@ -2272,13 +2326,13 @@ on make_about_view(view_controller)
 		property _controller : view_controller
 		
 		property _title : __SCRIPT_NAME__
-		property _buttons : {__SCRIPT_NAME__ & " Website", "Cancel", "OK"}
+		property _buttons : {"License", "Website", "OK"}
 		property _prompt : missing value
 		
 		on create_view() --> void
 			_set_prompt()
 			with timeout of (10 * 60) seconds
-				display alert _title message _prompt buttons _buttons default button 3 cancel button 2
+				display alert _title message _prompt buttons _buttons default button 3
 				set action_event to result's button returned
 				action_performed(action_event) --> returns boolean
 			end timeout
@@ -2289,6 +2343,8 @@ on make_about_view(view_controller)
 			
 			set action_event to action_event as string
 			if action_event is _buttons's item 1 then
+				_controller's show_license()
+			else if action_event is _buttons's item 2 then
 				_controller's go_to_website()
 				return false --> stop controller loop
 			end if
@@ -2299,7 +2355,8 @@ on make_about_view(view_controller)
 			set _prompt to Â
 				"Log timestamped, categorized web bookmarks to a text file." & return & return Â
 				& "Version " & __SCRIPT_VERSION__ & return & return & return & return Â
-				& __SCRIPT_COPYRIGHT__
+				& __SCRIPT_COPYRIGHT__ & return & return Â
+				& __SCRIPT_LICENSE_SUMMARY__ & return
 		end _set_prompt
 	end script
 end make_about_view
