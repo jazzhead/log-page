@@ -288,7 +288,6 @@ on make_page_log(settings_model)
 		-- Sample categories (labels) if the bookmarks log file is new.
 		-- After sample categories have been written to file, any of
 		-- them can be deleted, modified or added to there.
-		--
 		property _sample_categories : "Development
 Development:AppleScript
 Development:AppleScript:Mail
@@ -302,6 +301,12 @@ Health
 Health:Diet
 Health:Fitness
 General"
+		-- Sample bookmarks if the bookmarks log file is new.
+		property _sample_bookmarks : {Â
+			{_label:"Development:AppleScript", _title:"Log Page - AppleScript for Plain Text, Timestamped, Categorized Web Bookmarks", _url:"http://jazzheaddesign.com/work/code/log-page/", _note:"Developer notes:  OOP, MVC, object-oriented design patterns"}, Â
+			{_label:"Development:AppleScript:Safari", _title:"Resize Window - AppleScript for Mac OS X That Resizes Safari Windows", _url:"http://jazzheaddesign.com/work/code/safari-resize-window/", _note:"Useful when designing responsive websites that adapt to different sizes."}, Â
+			{_label:"Development:Shell:Bash", _title:"shmark - Categorized Shell Directory Bookmarking for Bash", _url:"http://jazzheaddesign.com/work/code/shmark/", _note:missing value}}
+		
 		property _log_header_sep : my multiply_text("#", 80)
 		property _log_record_sep : missing value --> string
 		
@@ -419,7 +424,7 @@ General"
 			-- Write last selected category to preferences file (save state)
 			_settings's set_pref(_settings's get_last_category_key(), _page_label)
 			
-			_format_record()
+			set _log_record to _format_record(_page_label, _page_title, _page_url, _page_note)
 			
 			_validate_fields()
 			
@@ -610,10 +615,19 @@ General"
 #  the same as in a regular bookmark record -- field name, pipe delimiter,
 #  and category. You can delete these default categories and/or add your
 #  own. They are all optional.
-" & _log_header_sep & linefeed & _format_sample_categories() & linefeed & _log_record_sep & linefeed
+" & _log_header_sep & linefeed & _format_sample_categories() & linefeed & _log_record_sep & linefeed & _generate_sample_bookmarks()
 			
 			_io's append_file(log_file_mac, file_header)
 		end _create_log_file
+		
+		on _generate_sample_bookmarks() --> string
+			local sample_bookmarks
+			set sample_bookmarks to {}
+			repeat with this_sample in _sample_bookmarks
+				set end of sample_bookmarks to _format_record(this_sample's _label, this_sample's _title, this_sample's _url, this_sample's _note)
+			end repeat
+			return sample_bookmarks as string
+		end _generate_sample_bookmarks
 		
 		-- A bookmark record should always start with a record delimiter.
 		on _should_add_log_record_sep(log_file_mac) --> boolean
@@ -641,20 +655,20 @@ General"
 				"+" & my multiply_text(rule_char, rule_width - name_col_width)
 		end _set_record_delimiter
 		
-		on _format_record() --> void
+		on _format_record(_label, _title, _url, _note) --> string
 			local field_sep, final_text
 			
 			set field_sep to " | "
 			set final_text to join_list({Â
 				"Date " & field_sep & _format_date(), Â
-				"Label" & field_sep & _page_label, Â
-				"Title" & field_sep & _page_title, Â
-				"URL  " & field_sep & _page_url}, linefeed) & linefeed
-			if _page_note is not missing value then
-				set final_text to final_text & _format_note(_page_note)
+				"Label" & field_sep & _label, Â
+				"Title" & field_sep & _title, Â
+				"URL  " & field_sep & _url}, linefeed) & linefeed
+			if _note is not missing value then
+				set final_text to final_text & _format_note(_note)
 			end if
 			
-			set _log_record to final_text & _log_record_sep & linefeed
+			return final_text & _log_record_sep & linefeed
 		end _format_record
 		
 		on _format_date() --> string  (YYYY-MM-DD HH:MM:SS)
@@ -678,7 +692,7 @@ General"
 			do shell script s without altering line endings
 		end _format_note
 		
-		on _format_sample_categories()
+		on _format_sample_categories() --> string
 			local these_lines, this_line
 			set these_lines to split_text(_sample_categories, linefeed)
 			repeat with i from 1 to count these_lines
