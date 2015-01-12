@@ -2,7 +2,7 @@
 	Log Page - Log timestamped, categorized web bookmarks to a text file
 
 	Version: @@VERSION@@
-	Date:    2014-12-24
+	Date:    2015-01-11
 	Author:  Steve Wheeler
 
 	Get the title and URL from the frontmost web browser window and
@@ -18,7 +18,7 @@
 *)
 
 (*
-Copyright (c) 2011-2014 Steve Wheeler
+Copyright (c) 2011-2015 Steve Wheeler
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -51,7 +51,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 property __SCRIPT_NAME__ : "Log Page"
 property __SCRIPT_VERSION__ : "@@VERSION@@"
 property __SCRIPT_AUTHOR__ : "Steve Wheeler"
-property __SCRIPT_COPYRIGHT__ : "Copyright © 2011-2014 " & __SCRIPT_AUTHOR__
+property __SCRIPT_COPYRIGHT__ : "Copyright © 2011-2015 " & __SCRIPT_AUTHOR__
 property __SCRIPT_WEBSITE__ : "http://jazzheaddesign.com/work/code/log-page/"
 
 property __NAMESPACE__ : "Jazzhead"
@@ -95,6 +95,13 @@ on make_app_controller()
 		on run
 			my debug_log(1, "--->  running " & my class & "...")
 			
+			--
+			-- Create the shared navigation controller first, then
+			-- a license controller
+			--
+			set nav_controller to make_navigation_controller()
+			set license_controller to make_license_controller(nav_controller)
+			
 			(* == Settings == *)
 			
 			--
@@ -110,9 +117,9 @@ on make_app_controller()
 			-- Main model needs the settings model
 			set page_log to make_page_log(settings_model)
 			
-			-- Settings controller needs both models plus the license controller
-			set license_controller to make_license_controller()
-			set settings_controller to make_settings_controller(settings_model, page_log, license_controller)
+			-- Settings controller needs both models plus the nav
+			-- and license controllers
+			set settings_controller to make_settings_controller(nav_controller, settings_model, page_log, license_controller)
 			run settings_controller
 			
 			(* == Data Retrieval == *)
@@ -150,11 +157,6 @@ on make_app_controller()
 			(* == Controllers == *)
 			
 			--
-			-- Create the shared navigation controller
-			--
-			set nav_controller to make_navigation_controller()
-			
-			--
 			-- Create shared category base view
 			--
 			set label_base_view to make_label_base_view(page_log)
@@ -177,7 +179,7 @@ on make_app_controller()
 			set label_edit_controller to make_label_edit_controller(nav_controller, page_log)
 			set note_controller to make_note_controller(nav_controller, page_log)
 			--
-			set label_help_controller to make_label_help_controller()
+			set label_help_controller to make_label_help_controller(nav_controller)
 			set about_controller to make_about_controller(nav_controller)
 			
 			--
@@ -227,34 +229,51 @@ on make_app_controller()
 			--
 			-- Load the first (root) controller onto the stack
 			--
-			nav_controller's push_root_controller(title_controller)
+			nav_controller's set_root_controller(title_controller)
 			
-			my debug_log(1, my class & "'s History Stack: " & nav_controller's history_to_string())
 			my debug_log(1, my class & "'s Controller Stack: " & nav_controller's to_string())
 			
 			(* == UI == *)
 			
 			--
-			-- This is the main UI/View loop. It will loop through the
-			-- controller stack until empty, prompting the user for info.
+			-- This is the main UI/View event loop. It will loop through the
+			-- controller stack until the stack is empty (prompting the user
+			-- for info) or until one of the controllers on the stack
+			-- indicates that the loop should end.
 			--
-			-- The controller stack can be modified by any controller so
-			-- the loop will run as long as controllers keep pushing
-			-- other controllers onto the stack in response to user
-			-- action.
+			-- The controller stack can be modified by any controller that has
+			-- a reference to it so the loop will run as long as those
+			-- controllers keep pushing other controllers onto the stack in
+			-- response to user action.
 			--
 			if nav_controller's is_empty() then
 				error "The navigation controller stack needs at least one controller."
 			end if
+			my debug_log(1, return & "--->  " & my class & " is starting the nav controller loop...")
 			repeat while not nav_controller's is_empty()
-				set this_controller to nav_controller's pop()
+				--
+				-- Run the next (top) controller on the stack by getting a
+				-- reference to it but leaving it on the stack. Each
+				-- individual controller on the stack determines what
+				-- controllers to push on or pop off the stack. Any controller
+				-- on the stack can also clear the stack to end the loop thus
+				-- allowing the program to proceed with any final processing
+				-- to be done after user interaction and before the program
+				-- ends.
+				--
+				-- If a controller should not be kept in the controller
+				-- history (for instance, a settings controller that acts as a
+				-- modal dialog with it's own internal controller loop for
+				-- navigating settings views), then it should pop itself from
+				-- the stack right after it starts executing.
+				--
+				set this_controller to nav_controller's peek()
 				set ret_val to run this_controller --> returns boolean
 				
-				my debug_log(1, my class & "'s History Stack: " & nav_controller's history_to_string())
 				my debug_log(1, my class & "'s Controller Stack: " & nav_controller's to_string())
 				
 				if not ret_val then -- {FileEditor,FileViewer}Controller will return false
-					my debug_log(1, "--->  finished " & my class)
+					my debug_log(1, "--->  finished " & my class & "; no post-processing.")
 					return -- don't do any post-processing
 				end if
 			end repeat
@@ -412,6 +431,14 @@ General"
 		on get_chosen_category() --> string
 			return _chosen_category
 		end get_chosen_category
+		
+		on get_only_category() --> string
+			return _all_categories's last item's contents
+		end get_only_category
+		
+		on get_only_sub_category() --> string
+			return get_sub_categories()'s last item's contents
+		end get_only_sub_category
 		
 		(* == Actions == *)
 		
@@ -755,9 +782,8 @@ on make_web_browser()
 		on handle_error(page_info, err_msg, err_num) --> void
 			set t to "Error: Can't get " & page_info & " from web browser"
 			set m to "[" & my class & "] " & err_msg & " (" & err_num & ")"
-			display alert t message m buttons {"Cancel"} cancel button 1 as critical
-			--display alert t message m buttons {"OK"} default button 1 as critical
-			--error err_msg number err_num
+			display alert t message m buttons {"Cancel"} default button 1 as critical
+			error number -128 -- User canceled
 		end handle_error
 	end script
 end make_web_browser
@@ -899,9 +925,8 @@ script WebBrowserFactory
 		set t to "Error: Unsupported Application (" & err_num & ")"
 		set m to err_msg
 		if __DEBUG_LEVEL__ > 0 then set m to "[" & my class & "]" & return & m
-		display alert t message m buttons {"Cancel"} cancel button 1 as critical
-		--display alert t message m buttons {"OK"} default button 1 as critical
-		--error err_msg number err_num
+		display alert t message m buttons {"Cancel"} default button 1 as critical
+		error number -128 -- User canceled
 	end _handle_unsupported
 	
 	on get_browser_names() --> string
@@ -954,6 +979,9 @@ on make_settings()
 		property _plist : missing value --> Plist (object)
 		
 		on init()
+			if __PLIST_DIR__'s last character is not "/" then
+				set __PLIST_DIR__ to __PLIST_DIR__ & "/"
+			end if
 			set plist_path to __PLIST_DIR__ & __BUNDLE_ID__ & ".plist"
 			set _plist to make_plist(plist_path, me)
 		end init
@@ -1195,6 +1223,7 @@ on make_plist(plist_path, settings_model)
 					_model's set_item(this_key, this_value)
 				end repeat
 			on error err_msg number err_num
+				my debug_log(2, "[debug] Can't read_settings(): " & err_msg & "(" & err_num & ")")
 				error "Can't read_settings(): " & err_msg number err_num
 			end try
 			my debug_log(1, "[debug] read_settings(): done")
@@ -1299,51 +1328,23 @@ on make_navigation_controller()
 	script this
 		property class : "NavigationController"
 		property controller_stack : make_named_stack("ControllerStack") --> Stack
-		property controller_history : make_named_stack("ControllerHistory") --> Stack
 		
-		(* == Private Methods == *)
-		
-		on _push_controller_with_history(controller_array) --> void -- PRIVATE
-			set {current_controller, next_controller} to controller_array
-			controller_history's push(current_controller) -- save this controller in history
-			controller_stack's push(next_controller) -- push next controller onto stack
-		end _push_controller_with_history
-		
-		on _push_controller_without_history(controller_array) --> void -- PRIVATE
-			set {next_controller} to controller_array
-			controller_stack's push(next_controller) -- push next controller onto stack
-		end _push_controller_without_history
-		
-		(* == Convenience Methods == *)
-		
-		on push_controller(controller_array) --> void
-			if controller_array's class is not list then
-				error my class & ".push_controller(): Invalid parameter." number -1704
-			end if
-			-- Simulate method overloading. Delegate to another
-			-- method depending on number of items in list.
-			if controller_array's length is 2 then
-				_push_controller_with_history(controller_array)
-			else if controller_array's length is 1 then
-				_push_controller_without_history(controller_array)
-			else
-				error my class & ".push_controller(): More than two items in list." number -1704
-			end if
-		end push_controller
-		
-		on push_root_controller(next_controller) --> void
-			controller_history's reset() -- clear the history stack
-			controller_stack's reset() -- clear the controller stack
-			controller_stack's push(next_controller) -- push root controller onto stack
-		end push_root_controller
+		on set_root_controller(next_controller) --> void
+			reset() -- clear the controller stack
+			push(next_controller) -- push root controller onto stack
+		end set_root_controller
 		
 		on go_back() --> void
-			-- Pop the top controller off the history stack and push it
-			-- onto the pending controller stack.
-			controller_stack's push(controller_history's pop())
+			-- Pop the current controller off the stack so that the
+			-- previous one (next on the stack) will run next.
+			controller_stack's pop()
 		end go_back
 		
-		(* == Controller Stack Methods == *)
+		(* == Controller Stack Methods (Delegate) == *)
+		
+		on push(this_controller) --> void
+			controller_stack's push(this_controller)
+		end push
 		
 		on pop() --> controller object
 			controller_stack's pop()
@@ -1353,6 +1354,10 @@ on make_navigation_controller()
 			controller_stack's peek()
 		end peek
 		
+		on reset() --> void
+			controller_stack's reset()
+		end reset
+		
 		on is_empty() --> boolean
 			controller_stack's is_empty()
 		end is_empty
@@ -1360,28 +1365,6 @@ on make_navigation_controller()
 		on to_string() --> string
 			controller_stack's to_string()
 		end to_string
-		
-		(* == History Stack Methods == *)
-		
-		on push_history(this_controller) --> void
-			controller_history's push(this_controller)
-		end push_history
-		
-		on pop_history() --> controller object
-			controller_history's pop()
-		end pop_history
-		
-		on peek_history() --> controller object
-			controller_history's peek()
-		end peek_history
-		
-		on history_is_empty() --> boolean
-			controller_history's is_empty()
-		end history_is_empty
-		
-		on history_to_string() --> string
-			controller_history's to_string()
-		end history_to_string
 	end script
 	
 	my debug_log(1, return & "--->  new " & this's class & "()")
@@ -1391,9 +1374,13 @@ end make_navigation_controller
 on make_base_controller()
 	script
 		property class : "BaseController"
-		property other_controllers : {} --> array
+		property _nav_controller : missing value -- must be set by subclasses
+		property other_controllers : {} --> array (for pushing on the stack)
 		
-		-- subclasses must define a '_nav_controller' property
+		on run
+			my debug_log(1, return & "--->  running " & my class & "...")
+			my debug_log(1, "Other controllers: " & other_controllers_to_string())
+		end run
 		
 		on set_controllers(these_controllers) --> void
 			set my other_controllers to these_controllers
@@ -1406,6 +1393,25 @@ on make_base_controller()
 		on to_string() --> string
 			return my class
 		end to_string
+		
+		-- Get the classes of the other_controllers (mostly for testing/debugging)
+		on other_controllers_to_string() --> string
+			if other_controllers's length = 0 then
+				return ""
+			else if other_controllers's length = 1 then
+				return other_controllers's item 1's class
+			end if
+			set controller_items to ""
+			repeat with i from 1 to other_controllers's length
+				set this_item to other_controllers's item i
+				if i = 1 then
+					set controller_items to this_item's class
+				else
+					set controller_items to controller_items & ", " & this_item's class
+				end if
+			end repeat
+			return controller_items
+		end other_controllers_to_string
 	end script
 end make_base_controller
 
@@ -1421,7 +1427,7 @@ on make_file_editor_controller(navigation_controller, settings_model)
 		property _view : missing value
 		
 		on run
-			my debug_log(1, return & "--->  running " & my class & "...")
+			continue run -- call superclass
 			if _model's warn_before_editing() then
 				if _view is missing value then set _view to make_file_edit_view(me, _model)
 				set ret_val to _view's create_view() --> returns boolean
@@ -1461,7 +1467,7 @@ on make_file_viewer_controller(navigation_controller, settings_model)
 		property _view : missing value
 		
 		on run
-			my debug_log(1, return & "--->  running " & my class & "...")
+			continue run -- call superclass
 			launch_app()
 			my debug_log(1, "--->  finished " & my class & return)
 			return false --> false ends controller loop and exits script
@@ -1479,14 +1485,20 @@ on make_file_viewer_controller(navigation_controller, settings_model)
 	return this
 end make_file_viewer_controller
 
-on make_license_controller()
+on make_license_controller(navigation_controller)
 	script this
 		property class : "LicenseController"
 		property parent : make_base_controller() -- extends BaseController
+		property _nav_controller : navigation_controller
 		property _buttons : {"Cancel", "OK"}
 		
 		on run
-			my debug_log(1, return & "--->  running " & my class & "...")
+			continue run -- call superclass
+			try
+				_nav_controller's pop() -- remove from history
+			on error
+				my debug_log(2, my class & " is running before the main app navigation loop has started so it did not pop itself off the stack which is currently empty.")
+			end try
 			--
 			-- No need to construct and display a custom view object here
 			-- because there are no custom actions to trigger. Just display
@@ -1516,7 +1528,8 @@ on make_about_controller(navigation_controller)
 		property _view : missing value
 		
 		on run
-			my debug_log(1, return & "--->  running " & my class & "...")
+			continue run -- call superclass
+			_nav_controller's pop() -- remove from history
 			if _view is missing value then set _view to make_about_view(me)
 			set ret_val to _view's create_view() --> returns boolean
 			my debug_log(1, "--->  finished " & my class & return)
@@ -1525,7 +1538,7 @@ on make_about_controller(navigation_controller)
 		
 		on show_license() --> void
 			my debug_log(1, my class & ".show_license()")
-			_nav_controller's push_controller({my other_controllers's item 1})
+			_nav_controller's push(my other_controllers's item 1)
 		end show_license
 		
 		on go_to_website() --> void
@@ -1547,7 +1560,8 @@ on make_help_controller(navigation_controller, settings_model)
 		property _view : missing value
 		
 		on run
-			my debug_log(1, return & "--->  running " & my class & "...")
+			continue run -- call superclass
+			_nav_controller's pop() -- remove from history
 			if _view is missing value then set _view to make_help_view(me, _model)
 			_view's create_view()
 			my debug_log(1, "--->  finished " & my class & return)
@@ -1555,7 +1569,7 @@ on make_help_controller(navigation_controller, settings_model)
 		end run
 		
 		on change_settings() --> void
-			_nav_controller's push_controller({my other_controllers's item 1})
+			_nav_controller's push(my other_controllers's item 1)
 		end change_settings
 	end script
 	
@@ -1563,14 +1577,16 @@ on make_help_controller(navigation_controller, settings_model)
 	return this
 end make_help_controller
 
-on make_label_help_controller()
+on make_label_help_controller(navigation_controller)
 	script this
 		property class : "LabelHelpController"
 		property parent : make_base_controller() -- extends BaseController
+		property _nav_controller : navigation_controller
 		property _view : missing value
 		
 		on run
-			my debug_log(1, return & "--->  running " & my class & "...")
+			continue run -- call superclass
+			_nav_controller's pop() -- remove from history
 			if _view is missing value then set _view to make_label_help_view()
 			_view's create_view()
 			my debug_log(1, "--->  finished " & my class & return)
@@ -1591,7 +1607,7 @@ on make_title_controller(navigation_controller, main_model)
 		property _view : missing value
 		
 		on run
-			my debug_log(1, return & "--->  running " & my class & "...")
+			continue run -- call superclass
 			if _view is missing value then set _view to make_title_view(me, _model)
 			_view's create_view()
 			my debug_log(1, "--->  finished " & my class & return)
@@ -1599,18 +1615,13 @@ on make_title_controller(navigation_controller, main_model)
 		end run
 		
 		on show_help() --> void
-			--
-			-- We want to return to the current controller after the
-			-- help controller is finished, so push this controller back
-			-- onto the stack first, then the help controller.
-			--
-			_nav_controller's push_controller({me})
-			_nav_controller's push_controller({my other_controllers's item 1})
+			_nav_controller's push(my other_controllers's item 1)
+			-- NOTE: The Help controller will need to pop itself off the stack.
 		end show_help
 		
 		on set_page_title(this_value) --> void
 			_model's set_page_title(this_value)
-			_nav_controller's push_controller({me, my other_controllers's item 2})
+			_nav_controller's push(my other_controllers's item 2)
 		end set_page_title
 	end script
 	
@@ -1627,7 +1638,7 @@ on make_url_controller(navigation_controller, main_model)
 		property _view : missing value
 		
 		on run
-			my debug_log(1, return & "--->  running " & my class & "...")
+			continue run -- call superclass
 			if _view is missing value then set _view to make_url_view(me, _model)
 			_view's create_view()
 			my debug_log(1, "--->  finished " & my class & return)
@@ -1636,7 +1647,7 @@ on make_url_controller(navigation_controller, main_model)
 		
 		on set_page_url(this_value) --> void
 			_model's set_page_url(this_value)
-			_nav_controller's push_controller({me, my other_controllers's item 1})
+			_nav_controller's push(my other_controllers's item 1)
 		end set_page_url
 	end script
 	
@@ -1650,15 +1661,8 @@ on make_label_base_controller()
 		property parent : make_base_controller() -- extends BaseController
 		
 		on push_controller(i) --> void
-			my _nav_controller's push_controller({me, my other_controllers's item i})
+			my _nav_controller's push(my other_controllers's item i)
 		end push_controller
-		
-		on push_controller_and_return(i) --> void
-			-- Return to current controller after next controller is
-			-- finished.
-			my _nav_controller's push_controller({me})
-			my _nav_controller's push_controller({my other_controllers's item i})
-		end push_controller_and_return
 	end script
 end make_label_base_controller
 
@@ -1672,9 +1676,12 @@ on make_label_controller(navigation_controller, main_model, label_base_view)
 		property _label_base_view : label_base_view
 		
 		on run
-			my debug_log(1, return & "--->  running " & my class & "...")
-			if _model's get_root_categories()'s length < 2 Â
-				and _model's get_sub_categories()'s length < 2 then
+			continue run -- call superclass
+			if _model's get_root_categories()'s length < 2 and _model's get_sub_categories()'s length < 2 then
+				if _model's get_all_categories()'s length > 0 then
+					_model's set_chosen_category(_model's get_only_category())
+				end if
+				my debug_log(2, "[debug] 01/10 " & my class & " skipping to edit category")
 				_skip_to_edit_label()
 			else
 				if _view is missing value then set _view to make_label_view(me, _label_base_view)
@@ -1685,7 +1692,8 @@ on make_label_controller(navigation_controller, main_model, label_base_view)
 		end run
 		
 		on _skip_to_edit_label() --> void -- PRIVATE
-			_nav_controller's push_controller({my other_controllers's item 3})
+			_nav_controller's pop() -- remove from history
+			_nav_controller's push(my other_controllers's item 3)
 		end _skip_to_edit_label
 		
 		on set_chosen_root(this_value) --> void
@@ -1710,19 +1718,19 @@ on make_label_controller(navigation_controller, main_model, label_base_view)
 		end view_file
 		
 		on change_settings() --> void
-			push_controller_and_return(6)
+			push_controller(6)
 		end change_settings
 		
 		on show_about() --> void
-			push_controller_and_return(7)
+			push_controller(7)
 		end show_about
 		
 		on show_help() --> void
-			push_controller_and_return(8)
+			push_controller(8)
 		end show_help
 		
 		on show_category_help() --> void
-			push_controller_and_return(9)
+			push_controller(9)
 		end show_category_help
 	end script
 	
@@ -1740,9 +1748,10 @@ on make_sub_label_controller(navigation_controller, main_model, label_base_view)
 		property _label_base_view : label_base_view
 		
 		on run
-			my debug_log(1, return & "--->  running " & my class & "...")
+			continue run -- call superclass
 			if _model's get_sub_categories()'s length < 2 then
-				_model's set_chosen_category(_model's get_chosen_root_category())
+				_model's set_chosen_category(_model's get_only_sub_category())
+				my debug_log(2, "[debug] 01/10 " & my class & " skipping to edit category w/pre-fill")
 				_skip_to_edit_label()
 			else
 				if _view is missing value then set _view to make_sub_label_view(me, _label_base_view)
@@ -1757,11 +1766,12 @@ on make_sub_label_controller(navigation_controller, main_model, label_base_view)
 				-- This dialog always follows the root category dialog,
 				-- so remove that last controller from the navigation
 				-- history if it also has less than two items.
-				if _model's get_root_categories()'s length < 2 then pop_history()
+				if _model's get_root_categories()'s length < 2 then pop()
 				
-				-- Now go to the next controller w/o adding this
-				-- controller to the history.
-				push_controller({my other_controllers's item 1})
+				-- Now go to the next controller w/o keeping this
+				-- controller in the history.
+				pop() -- remove from history
+				push(my other_controllers's item 1)
 			end tell
 		end _skip_to_edit_label
 		
@@ -1783,19 +1793,19 @@ on make_sub_label_controller(navigation_controller, main_model, label_base_view)
 		end view_file
 		
 		on change_settings() --> void
-			push_controller_and_return(5)
+			push_controller(5)
 		end change_settings
 		
 		on show_about() --> void
-			push_controller_and_return(6)
+			push_controller(6)
 		end show_about
 		
 		on show_help() --> void
-			push_controller_and_return(7)
+			push_controller(7)
 		end show_help
 		
 		on show_category_help() --> void
-			push_controller_and_return(8)
+			push_controller(8)
 		end show_category_help
 	end script
 	
@@ -1813,34 +1823,12 @@ on make_all_label_controller(navigation_controller, main_model, label_base_view)
 		property _label_base_view : label_base_view
 		
 		on run
-			my debug_log(1, return & "--->  running " & my class & "...")
-			if _model's get_all_categories()'s length < 2 then
-				_skip_to_edit_label()
-			else
-				if _view is missing value then set _view to make_all_label_view(me, _label_base_view)
-				_view's create_view()
-			end if
+			continue run -- call superclass
+			if _view is missing value then set _view to make_all_label_view(me, _label_base_view)
+			_view's create_view()
 			my debug_log(1, "--->  finished " & my class & return)
 			return true
 		end run
-		
-		on _skip_to_edit_label() --> void -- PRIVATE
-			tell _nav_controller
-				-- This dialog always follows at least one other list
-				-- dialog, so remove the last controller from the
-				-- navigation history.
-				pop_history()
-				
-				-- If the previous list dialog was a subcategory list,
-				-- then there is still a root category controller that
-				-- needs to be removed from the history.
-				if peek_history()'s class is "LabelController" then pop_history()
-				
-				-- Okay, now go to the next controller w/o adding this
-				-- controller to the history.
-				push_controller({my other_controllers's item 1})
-			end tell
-		end _skip_to_edit_label
 		
 		on set_chosen_category(this_value) --> void
 			_model's set_chosen_category(this_value)
@@ -1856,19 +1844,19 @@ on make_all_label_controller(navigation_controller, main_model, label_base_view)
 		end view_file
 		
 		on change_settings() --> void
-			push_controller_and_return(4)
+			push_controller(4)
 		end change_settings
 		
 		on show_about() --> void
-			push_controller_and_return(5)
+			push_controller(5)
 		end show_about
 		
 		on show_help() --> void
-			push_controller_and_return(6)
+			push_controller(6)
 		end show_help
 		
 		on show_category_help() --> void
-			push_controller_and_return(7)
+			push_controller(7)
 		end show_category_help
 	end script
 	
@@ -1885,7 +1873,7 @@ on make_label_edit_controller(navigation_controller, main_model)
 		property _view : missing value
 		
 		on run
-			my debug_log(1, return & "--->  running " & my class & "...")
+			continue run -- call superclass
 			if _view is missing value then set _view to make_label_edit_view(me, _model)
 			_view's create_view()
 			my debug_log(1, "--->  finished " & my class & return)
@@ -1895,7 +1883,7 @@ on make_label_edit_controller(navigation_controller, main_model)
 		on set_chosen_category(this_value) --> void
 			_model's set_page_label(this_value)
 			_model's set_chosen_category(this_value)
-			_nav_controller's push_controller({me, my other_controllers's item 1})
+			_nav_controller's push(my other_controllers's item 1)
 		end set_chosen_category
 	end script
 	
@@ -1912,7 +1900,7 @@ on make_note_controller(navigation_controller, main_model)
 		property _view : missing value
 		
 		on run
-			my debug_log(1, return & "--->  running " & my class & "...")
+			continue run -- call superclass
 			if _view is missing value then set _view to make_note_view(me, _model)
 			_view's create_view()
 			my debug_log(1, "--->  finished " & my class & return)
@@ -1921,6 +1909,7 @@ on make_note_controller(navigation_controller, main_model)
 		
 		on set_page_note(this_value) --> void
 			if this_value is not missing value then _model's set_page_note(this_value)
+			_nav_controller's reset() -- clear the controller stack to end nav loop
 		end set_page_note
 	end script
 	
@@ -1930,9 +1919,10 @@ end make_note_controller
 
 -- -- -- Settings Controllers -- -- --
 
-on make_settings_controller(settings_model, app_model, license_controller)
+on make_settings_controller(navigation_controller, settings_model, app_model, license_controller)
 	script this
 		property class : "SettingsController"
+		property nav_controller : navigation_controller -- common navigation (main app)
 		property _model : settings_model
 		property _app_model : app_model
 		property _license_controller : license_controller
@@ -1940,7 +1930,7 @@ on make_settings_controller(settings_model, app_model, license_controller)
 		property _has_run_this_session : false --> boolean
 		
 		-- Controllers instantiated during construction:
-		property nav_controller : make_navigation_controller()
+		property settings_nav_controller : make_navigation_controller()
 		property app_settings_controller : missing value
 		property file_settings_controller : missing value
 		-- Controllers instantiated on first run:
@@ -1949,6 +1939,16 @@ on make_settings_controller(settings_model, app_model, license_controller)
 		on run
 			my debug_log(1, return & "--->  running " & my class & "...")
 			
+			try
+				-- Pop itself off the main app nav stack first thing so that
+				-- it doesn't become part of the main app navigation history.
+				--
+				my debug_log(2, my class & " is immediately popping itself off the main navigation stack so that it won't be part of the navigation history and control will be returned to the controller that launched it when it completes.")
+				nav_controller's pop()
+			on error
+				my debug_log(2, my class & " is running before the main app navigation loop has started so it did not pop itself off the stack which is currently empty.")
+			end try
+			
 			-- Read required keys
 			try
 				_model's read_settings(_model's get_default_keys())
@@ -1956,6 +1956,7 @@ on make_settings_controller(settings_model, app_model, license_controller)
 			on error err_msg number err_num
 				set _is_first_run to true
 			end try
+			my debug_log(2, my class & ": first run? " & _is_first_run as string)
 			
 			-- Read optional keys (such as saved state)
 			repeat with this_key in _model's get_optional_keys()
@@ -1984,7 +1985,7 @@ on make_settings_controller(settings_model, app_model, license_controller)
 		on _show_ui() --> void
 			if main_controller is missing value then
 				-- Create main settings view controller
-				set main_controller to make_settings_main_controller(nav_controller, _model)
+				set main_controller to make_settings_main_controller(settings_nav_controller, _model)
 				-- Inject any controller dependencies
 				main_controller's set_controllers({app_settings_controller, file_settings_controller})
 			end if
@@ -1993,24 +1994,22 @@ on make_settings_controller(settings_model, app_model, license_controller)
 				-- Before showing any other user interface, show the license
 				run _license_controller
 				-- Continue if the user did not cancel
-				set root_controller to make_settings_first_controller(nav_controller, _model)
+				set root_controller to make_settings_first_controller(settings_nav_controller, _model)
 				root_controller's set_controllers({main_controller})
 			else
 				set root_controller to main_controller
 			end if
 			
 			-- Load first controller
-			nav_controller's push_root_controller(root_controller)
+			settings_nav_controller's set_root_controller(root_controller)
 			
-			my debug_log(1, my class & "'s History Stack: " & nav_controller's history_to_string())
-			my debug_log(1, my class & "'s Controller Stack: " & nav_controller's to_string())
+			my debug_log(1, my class & "'s Controller Stack: " & settings_nav_controller's to_string())
 			
-			repeat while not nav_controller's is_empty()
-				set this_controller to nav_controller's pop() -- Pop controller off top of stack
+			repeat while not settings_nav_controller's is_empty()
+				set this_controller to settings_nav_controller's peek() -- Get controller from top of stack
 				run this_controller -- Call its run() method
 				
-				my debug_log(1, my class & "'s History Stack: " & nav_controller's history_to_string())
-				my debug_log(1, my class & "'s Controller Stack: " & nav_controller's to_string())
+				my debug_log(1, my class & "'s Controller Stack: " & settings_nav_controller's to_string())
 			end repeat
 			
 			if _is_first_run then -- clean-up after first run
@@ -2021,8 +2020,8 @@ on make_settings_controller(settings_model, app_model, license_controller)
 		
 		on _create_controllers() --> void -- PRIVATE
 			-- Controllers for the preference editing dialogs:
-			set app_settings_controller to make_settings_app_controller(nav_controller, _model)
-			set file_settings_controller to make_settings_file_controller(nav_controller, _model, _app_model)
+			set app_settings_controller to make_settings_app_controller(settings_nav_controller, _model)
+			set file_settings_controller to make_settings_file_controller(settings_nav_controller, _model, _app_model)
 		end _create_controllers
 		
 		on to_string() --> string
@@ -2044,7 +2043,7 @@ on make_settings_first_controller(navigation_controller, settings_model)
 		property _view : missing value
 		
 		on run
-			my debug_log(1, return & "--->  running " & my class & "...")
+			continue run -- call superclass
 			if _view is missing value then set _view to make_settings_first_view(me, _model)
 			_view's create_view()
 			my debug_log(1, "--->  finished " & my class & return)
@@ -2053,11 +2052,12 @@ on make_settings_first_controller(navigation_controller, settings_model)
 		
 		on use_defaults() --> void
 			_set_missing_prefs()
+			_nav_controller's pop()
 		end use_defaults
 		
 		on change_settings() --> void
 			_set_missing_prefs() -- the main view will need the defaults too
-			_nav_controller's push_controller({me, my other_controllers's item 1})
+			_nav_controller's push(my other_controllers's item 1)
 		end change_settings
 		
 		on _set_missing_prefs() --> void -- PRIVATE
@@ -2086,7 +2086,7 @@ on make_settings_main_controller(navigation_controller, settings_model)
 		property _view : missing value
 		
 		on run
-			my debug_log(1, return & "--->  running " & my class & "...")
+			continue run -- call superclass
 			if _view is missing value then set _view to make_settings_main_view(me, _model)
 			_view's create_view()
 			my debug_log(1, "--->  finished " & my class & return)
@@ -2094,12 +2094,16 @@ on make_settings_main_controller(navigation_controller, settings_model)
 		end run
 		
 		on choose_app() --> void
-			_nav_controller's push_controller({me, my other_controllers's item 1})
+			_nav_controller's push(my other_controllers's item 1)
 		end choose_app
 		
 		on choose_file() --> void
-			_nav_controller's push_controller({me, my other_controllers's item 2})
+			_nav_controller's push(my other_controllers's item 2)
 		end choose_file
+		
+		on finish_settings() --> void
+			_nav_controller's pop()
+		end finish_settings
 	end script
 	
 	my debug_log(1, return & "--->  new " & this's class & "()")
@@ -2117,7 +2121,7 @@ on make_settings_app_controller(navigation_controller, settings_model)
 		property _viewer_controller : missing value
 		
 		on run
-			my debug_log(1, return & "--->  running " & my class & "...")
+			continue run -- call superclass
 			if _view is missing value then
 				set _view to make_settings_app_view(me, _model)
 			end if
@@ -2130,14 +2134,14 @@ on make_settings_app_controller(navigation_controller, settings_model)
 			if _editor_controller is missing value then -- lazy instantiation
 				set _editor_controller to make_settings_editor_controller(_nav_controller, _model)
 			end if
-			_nav_controller's push_controller({me, _editor_controller})
+			_nav_controller's push(_editor_controller)
 		end choose_editor
 		
 		on choose_viewer() --> void
 			if _viewer_controller is missing value then -- lazy instantiation
 				set _viewer_controller to make_settings_viewer_controller(_nav_controller, _model)
 			end if
-			_nav_controller's push_controller({me, _viewer_controller})
+			_nav_controller's push(_viewer_controller)
 		end choose_viewer
 	end script
 	
@@ -2221,7 +2225,7 @@ on make_settings_file_controller(navigation_controller, settings_model, app_mode
 		property _view : missing value
 		
 		on run
-			my debug_log(1, return & "--->  running " & my class & "...")
+			continue run -- call superclass
 			if _view is missing value then
 				set _view to make_settings_file_view(me, _model)
 			end if
@@ -3065,6 +3069,8 @@ on make_settings_main_view(settings_controller, settings_model)
 				_controller's choose_app()
 			else if action_event is _buttons's item 2 then
 				_controller's choose_file()
+			else
+				_controller's finish_settings()
 			end if
 		end action_performed
 		
@@ -3757,21 +3763,22 @@ end gui_scripting_status
 
 on get_front_app_name()
 	tell application "System Events"
-		if __DEBUG_LEVEL__ is 0 then
-			set current_app to short name of first process where it is frontmost
-		else
-			-- We're most likely running in AppleScript Editor so hide
-			-- the front app, get the name of the next app, then return
-			-- the original app to the front.
-			-- Source:  http://macscripter.net/viewtopic.php?id=35442
+		
+		-- Ignore (Apple)Script Editor and Terminal when getting the front app
+		-- name since they can be used to launch the script
+		repeat 10 times -- limit repetitions just in case
 			set frontmost_process to first process where it is frontmost
-			set visible of frontmost_process to false
-			repeat while (frontmost_process is frontmost)
-				delay 0.2
-			end repeat
-			set current_app to short name of first process where it is frontmost
-			set frontmost of frontmost_process to true
-		end if
+			if short name of frontmost_process is in {"Script Editor", "AppleScript Editor", "Terminal"} then
+				set visible of frontmost_process to false
+				repeat while (frontmost_process is frontmost)
+					delay 0.2
+				end repeat
+			else
+				exit repeat
+			end if
+		end repeat
+		set current_app to short name of first process where it is frontmost
+		--set frontmost of frontmost_process to true -- return orginal app to front
 	end tell
 	return current_app
 end get_front_app_name
