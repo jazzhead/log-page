@@ -57,6 +57,7 @@ property __SCRIPT_WEBSITE__ : "http://jazzheaddesign.com/work/code/log-page/"
 property __NAMESPACE__ : "Jazzhead"
 property __BUNDLE_ID__ : "net.jazzhead.scpt.LogPage"
 property __PLIST_DIR__ : missing value
+property __DEFAULT_LOGFILE__ : missing value
 
 -- Debug settings
 property __DEBUG_LEVEL__ : 0 -- integer (0 = no event logging)
@@ -75,13 +76,65 @@ Redistribution and use in source and binary forms, with or without modification,
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
 
-on run
+on run argv -- argv is for 'run script with parameters' or osascript cli arguments
 	-- Initialize any script properties here that should not be hardcoded
 	set __PLIST_DIR__ to POSIX path of (path to preferences from user domain)
+	set __DEFAULT_LOGFILE__ to Â
+		POSIX path of (path to application support folder from user domain) Â
+		& __NAMESPACE__ & "/" & __SCRIPT_NAME__ & "/urls.txt"
 	
-	set app_controller to make_app_controller()
-	run app_controller
+	-- Override any default script properties
+	modify_runtime_config(argv)
+	
+	my debug_log(2, "[debug] " & name & ".__BUNDLE_ID__: " & __BUNDLE_ID__)
+	my debug_log(2, "[debug] " & name & ".__PLIST_DIR__: " & __PLIST_DIR__)
+	my debug_log(2, "[debug] " & name & ".__DEFAULT_LOGFILE__: " & __DEFAULT_LOGFILE__)
+	my debug_log(2, "[debug] " & name & ".__DEBUG_LEVEL__: " & __DEBUG_LEVEL__)
+	
+	run make_app_controller()
 end run
+
+(*
+ *  Modify Runtime Configuration
+ *
+ *  Configuration settings stored in script properties can be modified on
+ *  start-up by passing in command arguments from `osascript`. The arguments
+ *  will need both a key and a value in the format "key:value". The keys are
+ *  then parsed to assign the right value to the right property. See the
+ *  handler's conditional statements for available keys (which need to be
+ *  hard-coded because of AppleScript limitations).
+ *
+ *  @param  argv Array of arguments in "key:value" format.
+ *  @return No return value. Modifies script properties.
+ *)
+on modify_runtime_config(argv) --> void
+	local args, k, v
+	
+	if (count of argv) = 0 then return
+	
+	-- Parse arguments into key/value pairs
+	set args to {}
+	repeat with i from 1 to count argv
+		set {k, v} to split_text(argv's item i, ":")
+		set end of args to {key:k, val:v}
+	end repeat
+	
+	-- Modify script property values for matching keys
+	repeat with this_arg in args
+		if this_arg's key is "BUNDLE_ID" then
+			set __BUNDLE_ID__ to this_arg's val
+		else if this_arg's key is "PLIST_DIR" then
+			set __PLIST_DIR__ to this_arg's val
+		else if this_arg's key is "DEFAULT_LOGFILE" then
+			set __DEFAULT_LOGFILE__ to this_arg's val
+		else if this_arg's key is "DEBUG_LEVEL" then
+			set __DEBUG_LEVEL__ to this_arg's val
+		else if this_arg's key is "NULL_IO" then
+			set __NULL_IO__ to this_arg's val
+		end if
+	end repeat
+end modify_runtime_config
+
 
 (* ==== Main Controller ==== *)
 
@@ -1095,9 +1148,7 @@ on make_page_log_settings()
 			-- Initialize default values for required preferences
 			my _default_settings's set_item(_text_editor_key, "TextEdit")
 			my _default_settings's set_item(_file_viewer_key, "Safari")
-			my _default_settings's set_item(_log_file_key, Â
-				POSIX path of (path to application support folder from user domain) Â
-				& __NAMESPACE__ & "/" & __SCRIPT_NAME__ & "/urls.txt")
+			my _default_settings's set_item(_log_file_key, __DEFAULT_LOGFILE__)
 		end init
 		
 		(* == Preferences Methods == *)
