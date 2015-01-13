@@ -2,7 +2,7 @@
 	Log Page - Log timestamped, categorized web bookmarks to a text file
 
 	Version: @@VERSION@@
-	Date:    2015-01-11
+	Date:    2015-01-12
 	Author:  Steve Wheeler
 
 	Get the title and URL from the frontmost web browser window and
@@ -2103,12 +2103,13 @@ on make_settings_first_controller(navigation_controller, settings_model)
 		
 		on use_defaults() --> void
 			_set_missing_prefs()
-			_nav_controller's pop()
+			_nav_controller's pop() -- done with first-run settings controller
 		end use_defaults
 		
 		on change_settings() --> void
-			_set_missing_prefs() -- the main view will need the defaults too
-			_nav_controller's push(my other_controllers's item 1)
+			_set_missing_prefs() -- the main settings view will need the defaults too
+			_nav_controller's pop() -- done with first-run settings controller
+			_nav_controller's push(my other_controllers's item 1) -- main settings controller
 		end change_settings
 		
 		on _set_missing_prefs() --> void -- PRIVATE
