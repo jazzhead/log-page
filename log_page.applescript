@@ -2,7 +2,7 @@
 	Log Page - Log timestamped, categorized web bookmarks to a text file
 
 	Version: @@VERSION@@
-	Date:    2015-01-12
+	Date:    2015-01-13
 	Author:  Steve Wheeler
 
 	Get the title and URL from the frontmost web browser window and
@@ -532,19 +532,9 @@ General"
 			
 			my debug_log(2, my class & ".parse_log(): file = " & log_file_posix)
 			
-			-- Does file exist?
-			tell application "Finder"
-				if (not (exists log_file_mac)) then set _should_create_file to true
-			end tell
-			
-			-- If file exists, is it empty?
-			if not _should_create_file then
-				try
-					if (get eof file log_file_mac) is 0 then set _should_create_file to true
-				on error
-					set _should_create_file to true
-				end try
-			end if
+			-- Does file exist? Is file empty?
+			--
+			_check_log_file(log_file_mac)
 			
 			my debug_log(2, "[debug] " & my class & ".parse_log(): parsing categories from file")
 			
@@ -644,6 +634,24 @@ General"
 		on _error_missing(this_field) --> void
 			error my class & ": missing value for: " & this_field & " - can't append to log"
 		end _error_missing
+		
+		-- Does file exist? Is file empty?
+		on _check_log_file(log_file_mac) --> void (sets '_should_create_file' boolean)
+			try -- nonexistent files will error
+				if (get eof file log_file_mac) is 0 then
+					set _should_create_file to true
+					my debug_log(2, "[debug] " & my class & ".parse_log(): file is empty")
+				else
+					set _should_create_file to false
+					my debug_log(2, "[debug] " & my class & ".parse_log(): file is not empty")
+				end if
+			on error err_msg number err_num
+				set _should_create_file to true
+				my debug_log(2, "[debug] " & my class & ".parse_log(): " & err_msg & "(" & err_num & ")")
+				my debug_log(2, "[debug] " & my class & ".parse_log(): file doesn't exist")
+			end try
+			my debug_log(2, "[debug] " & my class & ".parse_log(): _should_create_file = " & _should_create_file)
+		end _check_log_file
 		
 		on _create_log_file() --> void
 			local log_file_posix, log_file_mac, file_header
