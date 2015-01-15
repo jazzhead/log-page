@@ -113,6 +113,60 @@ script
 		_read_file(file_path, string)
 	end read_file
 	
+	---
+	
+	on gui_scripting_status()
+		local os_ver, is_before_mavericks, ui_enabled, apple_accessibility_article
+		local err_msg, err_num, msg, t, b
+		
+		set os_ver to system version of (system info)
+		
+		considering numeric strings -- version strings
+			set is_before_mavericks to os_ver < "10.9"
+		end considering
+		
+		if is_before_mavericks then -- things changed in Mavericks (10.9)
+			-- check to see if assistive devices is enabled
+			tell application "System Events"
+				set ui_enabled to UI elements enabled
+			end tell
+			if ui_enabled is false then
+				tell application "System Preferences"
+					activate
+					set current pane to pane id "com.apple.preference.universalaccess"
+					display dialog "This script utilizes the built-in Graphic User Interface Scripting architecture of Mac OS X which is currently disabled." & return & return & "You can activate GUI Scripting by selecting the checkbox \"Enable access for assistive devices\" in the Accessibility preference pane." with icon 1 buttons {"Cancel"} default button 1
+				end tell
+			end if
+		else
+			-- In Mavericks (10.9) and later, the system should prompt the user with
+			-- instructions on granting accessibility access, so try to trigger that.
+			try
+				tell application "System Events"
+					tell (first process whose frontmost is true)
+						set frontmost to true
+						tell window 1
+							UI elements
+						end tell
+					end tell
+				end tell
+			on error err_msg number err_num
+				-- In some cases, the system prompt doesn't appear, so always give some info.
+				set msg to "Error: " & err_msg & " (" & err_num & ")"
+				if err_num is -1719 then
+					set apple_accessibility_article to "http://support.apple.com/en-us/HT202802"
+					set t to "GUI Scripting needs to be activated"
+					set msg to msg & return & return & "This script utilizes the built-in Graphic User Interface Scripting architecture of Mac OS X which is currently disabled." & return & return & "If the system doesn't prompt you with instructions for how to enable GUI scripting access, then see Apple's article at: " & return & apple_accessibility_article
+				set b to {"Go to Apple's Webpage", "Cancel"}
+				display alert t message msg buttons b default button 2
+					if button returned of result is b's item 1 then
+						tell me to open location apple_accessibility_article
+					end if
+					error number -128 --> User canceled
+				end if
+			end try
+		end if
+	end gui_scripting_status
+	
 	
 	(* == Private == *)
 	

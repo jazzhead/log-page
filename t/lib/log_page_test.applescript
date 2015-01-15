@@ -17,7 +17,7 @@
  *  sets up and runs all the tests that it finds (based on the name/identifier
  *  of the calling subclass).
  *
- *  @date   2015-01-14 Last modified
+ *  @date   2015-01-15 Last modified
  *  @date   2015-01-03 First version
  *  @author Steve Wheeler
  *)
@@ -126,6 +126,10 @@ script
 		set test_file_count to 0
 		
 		set _test_count to 0
+		
+		-- The testing framework utilizes GUI scripting, so check if it's enabled.
+		--
+		_Util's gui_scripting_status()
 		
 		-- This is needed when running from Script Editor to bring this
 		-- script's dialog to the front after launching the target script with
