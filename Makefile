@@ -33,9 +33,10 @@ TARGET     = Log\ Page.scpt
 OSACOMPILE = osacompile -t osas -c ToyS -o
 
 # Tools
-RM         = rm -rfv
+RM         = rm -rf
 SED        = LANG=C sed
 MKDIR      = mkdir -p
+PROVE      = prove -f
 
 # Build directory
 BUILD     = _build
@@ -61,6 +62,8 @@ WEBKITDIR   := $(prefix)/WebKit
 # without the escapes to use for AppleScript (osascript)
 TARGET_AS     := $(subst \,,$(TARGET))
 CHROMEDIR_AS  := $(subst \,,$(CHROMEDIR))
+
+TEST_TMP = t/tmp
 
 
 # ==== TARGETS ===============================================================
@@ -123,13 +126,29 @@ uninstall:
 
 clean:
 	@echo "--->  Deleting '$(BUILD)' directory..."
-	@$(RM) $(BUILD)
+	@$(RM) -v $(BUILD)
 	@echo "--->  '$(BUILD)' directory deletion complete"
+
+test:
+	@echo "--->  ** Running Log Page tests..."
+	$(PROVE) -v ./t/[0-9][0-9][0-9][0-9]-*.sh :: SKIP_INFO:true
+	@echo "--->  Deleting temporary test files in '$(TEST_TMP)'..."
+	@$(RM) $(TEST_TMP)
+
+test-quiet:
+	@echo "--->  ** Running Log Page tests..."
+	$(PROVE) ./t/[0-9][0-9][0-9][0-9]-*.sh :: SKIP_INFO:true
+	@echo "--->  Deleting temporary test files in '$(TEST_TMP)'..."
+	@$(RM) $(TEST_TMP)
+
+check: test
+
+check-quiet: test-quiet
 
 help:
 	@echo "$$HELPTEXT"
 
-.PHONY: all clean install uninstall help \
+.PHONY: all test test-quiet check check-quiet clean install uninstall help \
         install-safari install-chrome install-firefox install-webkit
 
 
@@ -206,6 +225,15 @@ make install-webkit
 
 make uninstall
     Uninstall the script from all web browsers.
+
+make test
+    Run tests using the 'prove' command. There are over a thousand tests
+    and it can take over ten minutes to run them all. Most of the tests
+    are for the user interface (GUI windows), but the resulting data is
+    also checked.
+
+make test-quiet
+    Run tests quietly (without the verbose flag to 'prove').
 
 make clean
     Delete all build files.
