@@ -1,0 +1,81 @@
+################################################################################
+#  Timestamped and Categorized Web Bookmark Archive               vim:ft=conf:
+#  ================================================
+#
+#  For use with "Log Page", an AppleScript available at:
+#
+#      http://jazzheaddesign.com/work/code/log-page/
+#
+#  This section of lines beginning with a '#' character is just a header
+#  area for free-form notes and is ignored by the script. Feel free to add
+#  your own notes.
+#
+#  When editing this file, take care not to alter the format of the bookmark
+#  records. The field names, field widths, field delimiters and record
+#  delimiters should not be altered or the script might not be able to parse
+#  the data. Each bookmark record consists of a date, label (category),
+#  title, URL, and optional note:
+#
+#      ------+----------------------------------------------------------
+#      Date  | 2013-02-28 20:14:38
+#      Label | Example Category:Subcategory:Another Subcategory
+#      Title | Example Web Page Bookmark Record
+#      URL   | http://example.com
+#      Note  | An optional note
+#      ------+----------------------------------------------------------
+#
+#  The "Label" field is for categories and subcategories assigned to a
+#  bookmark. A colon (:) is used to separate subcategories. Subcategories
+#  delimited in such a way represent a nested hierarchy. For example, a
+#  category of "Development:AppleScript:Mail" could be thought of as a
+#  nested list as in:
+#
+#      - Development
+#          - AppleScript
+#              - Mail
+#
+#  Below this header section and before the first bookmark record,
+#  optionally list some sample categories/labels that might not yet be used
+#  in any bookmark records. Any sample categories/labels listed below will
+#  be presented along with categories/labels parsed from the bookmark
+#  records as a list to select from when saving new bookmarks. The format is
+#  the same as in a regular bookmark record -- field name, pipe delimiter,
+#  and category. You can delete these default categories and/or add your
+#  own. They are all optional.
+################################################################################
+Label | Development
+Label | Development:AppleScript
+Label | Development:AppleScript:Mail
+Label | Design
+Label | Productivity:GTD
+Label | Apple:Mac OS X
+Label | Apple:iOS
+Label | Career
+Label | Education
+Label | Health
+Label | Health:Diet
+Label | Health:Fitness
+Label | General
+------+-------------------------------------------------------------------------
+Date  | 2015-01-13 15:56:13
+Label | Development:AppleScript
+Title | Log Page - AppleScript for Plain Text, Timestamped, Categorized Web Bookmarks
+URL   | http://jazzheaddesign.com/work/code/log-page/
+Note  | Developer notes: OOP, MVC, object-oriented design patterns
+------+-------------------------------------------------------------------------
+Date  | 2015-01-13 15:56:13
+Label | Development:AppleScript:Safari
+Title | Resize Window - AppleScript for Mac OS X That Resizes Safari Windows
+URL   | http://jazzheaddesign.com/work/code/safari-resize-window/
+Note  | Useful when designing responsive websites that adapt to different sizes.
+------+-------------------------------------------------------------------------
+Date  | 2015-01-13 15:56:13
+Label | Development:Shell:Bash
+Title | shmark - Categorized Shell Directory Bookmarking for Bash
+URL   | http://jazzheaddesign.com/work/code/shmark/
+------+-------------------------------------------------------------------------
+Date  | 2015-01-13 15:56:13
+Label | Development:AppleScript
+Title | Log Page Automated Tests
+URL   | {SAMPLE_PAGE}
+------+-------------------------------------------------------------------------

@@ -5,3 +5,6 @@ _*/
 *.scpt
 *.scptd
 *.app
+
+# Temporary test files
+/t/tmp/

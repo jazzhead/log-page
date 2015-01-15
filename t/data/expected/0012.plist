@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>fileViewer</key>
+	<string>Safari</string>
+	<key>lastCategory</key>
+	<string>TEST</string>
+	<key>logFile</key>
+	<string>{TMP_DIR}/0012b-urls-chosen.txt</string>
+	<key>textEditor</key>
+	<string>TextEdit</string>
+	<key>warnBeforeEditing</key>
+	<true/>
+</dict>
+</plist>

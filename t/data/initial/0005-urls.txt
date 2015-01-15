@@ -1,0 +1,1 @@
+# No bookmark records and no sample categories, but not an empty file.
