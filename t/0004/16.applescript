@@ -15,7 +15,7 @@ on run
 				click_button("OK")
 
 				-- 2
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 3
 				list_has_no_selection()
 				-- 4

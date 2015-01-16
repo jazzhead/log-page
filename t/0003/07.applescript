@@ -12,7 +12,7 @@ on run
 				--delay my _test_delay -- start with delay for first dialog
 				
 				-- 1
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 2
 				text_field_is("Development:AppleScript")
 				-- 3
@@ -21,7 +21,7 @@ on run
 				click_button("Next")
 				
 				-- 5
-				dialog_title_is("Log Page > Note")
+				dialog_title_is("Log Page > Title > URL > Category > Note")
 				-- 6
 				text_field_is("")
 				-- 7

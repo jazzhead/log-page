@@ -21,7 +21,7 @@ on run
 				click_button("Next")
 				
 				-- 4
-				dialog_title_is("Log Page > URL")
+				dialog_title_is("Log Page > Title > URL")
 				-- 5
 				text_field_starts_with("file:///")
 				-- 6
@@ -30,7 +30,7 @@ on run
 				click_button("Next")
 				
 				-- 8
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 9
 				list_has_no_selection()
 				-- 10
@@ -45,7 +45,7 @@ on run
 				choose_list_item("TEST-2", "Next")
 				
 				-- 15
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 16
 				text_field_is("TEST-2:Subcategory 2")
 				-- 17
@@ -54,7 +54,7 @@ on run
 				click_button("Back")
 				
 				-- 19
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 20
 				selected_list_item_is("TEST-2")
 				-- 21
@@ -69,7 +69,7 @@ on run
 				choose_list_item("TEST-1", "Next")
 				
 				-- 26
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 27
 				list_has_no_selection()
 				-- 28
@@ -84,7 +84,7 @@ on run
 				choose_list_item("TEST-1:Subcategory 1", "Next")
 				
 				-- 33
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 34
 				text_field_is("TEST-1:Subcategory 1")
 				-- 35
@@ -93,7 +93,7 @@ on run
 				click_button("Back")
 				
 				-- 37
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 38
 				selected_list_item_is("TEST-1:Subcategory 1")
 				-- 39
@@ -108,7 +108,7 @@ on run
 				choose_list_item_containing("Show All Categories", "Next")
 				
 				-- 44
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 45
 				selected_list_item_is("TEST-1:Subcategory 1")
 				-- 46
@@ -125,7 +125,7 @@ on run
 				click_button("Back")
 				
 				-- 52
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 53
 				selected_list_item_is("TEST-1:Subcategory 1")
 				-- 54
@@ -140,7 +140,7 @@ on run
 				click_button("Back")
 				
 				-- 59
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 60
 				selected_list_item_is("TEST-1")
 				-- 61
@@ -155,7 +155,7 @@ on run
 				choose_list_item_containing("Show All Categories", "Next")
 				
 				-- 66
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 67
 				selected_list_item_is("TEST-1:Subcategory 1")
 				-- 68
@@ -172,7 +172,7 @@ on run
 				click_button("Back")
 				
 				-- 74
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 75
 				selected_list_item_is("TEST-1")
 				-- 76

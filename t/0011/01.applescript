@@ -44,7 +44,7 @@ Productivity"
 				click_button("Next")
 				
 				-- 4
-				dialog_title_is("Log Page > URL")
+				dialog_title_is("Log Page > Title > URL")
 				-- 5
 				text_field_starts_with("file:///")
 				-- 6
@@ -53,7 +53,7 @@ Productivity"
 				click_button("Next")
 				
 				-- 8
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 9
 				list_has_no_selection()
 				-- 10
@@ -71,7 +71,7 @@ Productivity"
 				choose_list_item_containing("Show All Categories", "Next")
 				
 				-- 21
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 22
 				list_has_no_selection()
 				-- 23

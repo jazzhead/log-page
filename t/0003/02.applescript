@@ -12,7 +12,7 @@ on run
 				--delay my _test_delay -- start with delay for first dialog
 				
 				-- 1
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 2
 				text_field_is("Development:AppleScript")
 				-- 3
@@ -21,28 +21,28 @@ on run
 				click_button("Next")
 				
 				-- 5
-				dialog_title_is("Log Page > Note")
+				dialog_title_is("Log Page > Title > URL > Category > Note")
 				-- 6
 				text_field_is("")
 				-- 7
 				click_button("Back")
 				
 				-- 8
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 9
 				text_field_is("Development:AppleScript:TEST")
 				-- 10
 				click_button("Back")
 				
 				-- 11
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 12
 				list_has_no_selection()
 				-- 13
 				click_button("Back")
 				
 				-- 14
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 15
 				selected_list_item_is("Development")
 				-- 16

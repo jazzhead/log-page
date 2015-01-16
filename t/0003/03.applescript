@@ -12,21 +12,21 @@ on run
 				--delay my _test_delay -- start with delay for first dialog
 				
 				-- 1
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 2
 				list_has_no_selection()
 				-- 3
 				choose_list_item("Development:AppleScript", "Next")
 				
 				-- 4
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 5
 				text_field_is("Development:AppleScript")
 				-- 6
 				click_button("Next")
 				
 				-- 7
-				dialog_title_is("Log Page > Note")
+				dialog_title_is("Log Page > Title > URL > Category > Note")
 				-- 8
 				text_field_is("")
 				-- 9
@@ -35,28 +35,28 @@ on run
 				click_button("Back")
 				
 				-- 11
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 12
 				text_field_is("Development:AppleScript")
 				-- 13
 				click_button("Back")
 				
 				-- 14
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 15
 				selected_list_item_is("Development:AppleScript")
 				-- 16
 				click_button("Back")
 				
 				-- 17
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 18
 				selected_list_item_is("Development")
 				-- 19
 				click_button("Back")
 				
 				-- 20
-				dialog_title_is("Log Page > URL")
+				dialog_title_is("Log Page > Title > URL")
 				-- 21
 				text_field_starts_with("file:///")
 				-- 22

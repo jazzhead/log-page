@@ -95,7 +95,7 @@ on run
 				click_button("Next")
 				
 				-- 35
-				dialog_title_is("Log Page > URL")
+				dialog_title_is("Log Page > Title > URL")
 				-- 36
 				text_field_starts_with("file:///")
 				-- 37
@@ -104,7 +104,7 @@ on run
 				click_button("Next")
 				
 				-- 39
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 40
 				text_field_is("")
 				-- 42
@@ -113,7 +113,7 @@ on run
 				click_button("Next")
 				
 				-- 43
-				dialog_title_is("Log Page > Note")
+				dialog_title_is("Log Page > Title > URL > Category > Note")
 				-- 44
 				text_field_is("")
 				-- 45

@@ -12,7 +12,7 @@ on run
 				--delay my _test_delay -- start with delay for first dialog
 				
 				-- 1
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 2
 				selected_list_item_is("Development:AppleScript")
 				-- 3
@@ -23,7 +23,7 @@ on run
 				choose_list_item_containing("Show All Categories", "Next")
 				
 				-- 6
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 7
 				selected_list_item_is("Development:AppleScript")
 				-- 8
@@ -32,7 +32,7 @@ on run
 				click_button("Back")
 				
 				-- 10
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 11
 				selected_list_item_is("Development:AppleScript")
 				-- 12
@@ -50,7 +50,7 @@ on run
 				click_button("OK")
 				
 				-- 18
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 19
 				selected_list_item_is("Development:AppleScript")
 				-- 20
@@ -76,7 +76,7 @@ on run
 				click_button("OK")
 				
 				-- 30
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 31
 				selected_list_item_is("Development:AppleScript")
 				-- 32
@@ -96,7 +96,7 @@ on run
 				click_button("OK")
 				
 				-- 39
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 40
 				selected_list_item_is("Development:AppleScript")
 				-- 41
@@ -114,7 +114,7 @@ on run
 				click_button("OK")
 				
 				-- 47
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 48
 				selected_list_item_is("Development:AppleScript")
 				-- 49

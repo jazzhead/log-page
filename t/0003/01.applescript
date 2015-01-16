@@ -21,7 +21,7 @@ on run
 				click_button("Next")
 				
 				-- 4
-				dialog_title_is("Log Page > URL")
+				dialog_title_is("Log Page > Title > URL")
 				-- 5
 				text_field_starts_with("file:///")
 				-- 6
@@ -30,28 +30,28 @@ on run
 				click_button("Next")
 				
 				-- 8
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 9
 				list_has_no_selection()
 				-- 10
 				choose_list_item("Development", "Next")
 				
 				-- 11
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 12
 				list_has_no_selection()
 				-- 13
 				choose_list_item("Development:AppleScript", "Next")
 				
 				-- 14
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 15
 				text_field_is("Development:AppleScript")
 				-- 16
 				click_button("Next")
 				
 				-- 17
-				dialog_title_is("Log Page > Note")
+				dialog_title_is("Log Page > Title > URL > Category > Note")
 				-- 18
 				text_field_is("")
 				-- 19

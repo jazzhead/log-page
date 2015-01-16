@@ -19,7 +19,7 @@ on run
 				click_button("Next")
 				
 				-- 4
-				dialog_title_is("Log Page > URL")
+				dialog_title_is("Log Page > Title > URL")
 				-- 5
 				text_field_starts_with("file:///")
 				-- 6
@@ -28,7 +28,7 @@ on run
 				click_button("Next")
 				
 				-- 8
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 9
 				selected_list_item_is("Development")
 				-- 10
@@ -39,7 +39,7 @@ on run
 				choose_list_item_containing("Show All Categories", "Next")
 				
 				-- 13
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 14
 				selected_list_item_is("Development:AppleScript")
 				-- 15
@@ -48,7 +48,7 @@ on run
 				click_button("Back")
 				
 				-- 17
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 18
 				selected_list_item_is("Development")
 				-- 19
@@ -59,14 +59,14 @@ on run
 				choose_list_item_containing("New Category", "Next")
 				
 				-- 22
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 23
 				text_field_is("Development:AppleScript")
 				-- 24
 				click_button("Back")
 				
 				-- 25
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 26
 				selected_list_item_is("Development")
 				-- 27
@@ -84,7 +84,7 @@ on run
 				click_button("OK")
 				
 				-- 33
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 34
 				selected_list_item_is("Development")
 				-- 35
@@ -110,7 +110,7 @@ on run
 				click_button("OK")
 				
 				-- 45
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 46
 				selected_list_item_is("Development")
 				-- 47
@@ -145,7 +145,7 @@ on run
 				click_button("OK")
 				
 				-- 61
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 62
 				selected_list_item_is("Development")
 				-- 63
@@ -165,7 +165,7 @@ on run
 				click_button("OK")
 				
 				-- 70
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 71
 				selected_list_item_is("Development")
 				-- 72
@@ -183,7 +183,7 @@ on run
 				click_button("OK")
 				
 				-- 78
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 79
 				selected_list_item_is("Development")
 				-- 80

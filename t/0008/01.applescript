@@ -21,7 +21,7 @@ on run
 				click_button("Next")
 				
 				-- 4
-				dialog_title_is("Log Page > URL")
+				dialog_title_is("Log Page > Title > URL")
 				-- 5
 				text_field_starts_with("file:///")
 				-- 6
@@ -30,7 +30,7 @@ on run
 				click_button("Next")
 				
 				-- 8
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 9
 				list_has_no_selection()
 				-- 10
@@ -45,7 +45,7 @@ on run
 				choose_list_item("TEST-1", "Next")
 				
 				-- 15
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 16
 				text_field_is("TEST-1")
 				-- 17
@@ -54,7 +54,7 @@ on run
 				click_button("Back")
 				
 				-- 19
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 20
 				selected_list_item_is("TEST-1")
 				-- 21
@@ -69,7 +69,7 @@ on run
 				choose_list_item("TEST-2", "Next")
 				
 				-- 26
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 27
 				text_field_is("TEST-2")
 				-- 28
@@ -78,7 +78,7 @@ on run
 				click_button("Back")
 				
 				-- 30
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 31
 				selected_list_item_is("TEST-2")
 				-- 32
@@ -93,7 +93,7 @@ on run
 				choose_list_item_containing("Show All Categories", "Next")
 				
 				-- 37
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 38
 				selected_list_item_is("TEST-2")
 				-- 39
@@ -108,7 +108,7 @@ on run
 				click_button("Next")
 				
 				-- 44
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 45
 				text_field_is("TEST-2")
 				-- 46
@@ -117,7 +117,7 @@ on run
 				click_button("Back")
 				
 				-- 48
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 49
 				selected_list_item_is("TEST-2")
 				-- 50
@@ -132,7 +132,7 @@ on run
 				click_button("Back")
 				
 				-- 55
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 56
 				selected_list_item_is("TEST-2")
 				-- 57
@@ -147,7 +147,7 @@ on run
 				click_button("Next")
 				
 				-- 62
-				dialog_title_is("Log Page > Category")
+				dialog_title_is("Log Page > Title > URL > Category")
 				-- 63
 				text_field_is("TEST-2")
 				-- 64

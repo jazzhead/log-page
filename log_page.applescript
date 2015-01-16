@@ -2615,7 +2615,7 @@ on make_url_view(view_controller, main_model)
 		property _page_title : missing value
 		property _page_url : missing value
 		
-		property _title : __SCRIPT_NAME__ & " > URL"
+		property _title : __SCRIPT_NAME__ & " > Title > URL"
 		property _buttons : {my back_btn_pad, "Cancel", my next_btn_pad}
 		property _prompt : missing value
 		property _text_field : missing value
@@ -2674,7 +2674,7 @@ on make_label_base_view(main_model)
 		property _sub_categories : missing value --> array
 		property _all_categories : missing value --> array
 		
-		property _title : __SCRIPT_NAME__ & " > Category"
+		property _title : __SCRIPT_NAME__ & " > Title > URL > Category"
 		property _ok_btn : "Next..."
 		property _bullet : my u_bullet_item
 		property _prompt_extra : "(Type a number to jump to the corresponding numbered menu item.)"
@@ -2940,7 +2940,7 @@ on make_label_edit_view(view_controller, main_model)
 		
 		property _chosen_category : missing value --> string
 		
-		property _title : __SCRIPT_NAME__ & " > Category"
+		property _title : __SCRIPT_NAME__ & " > Title > URL > Category"
 		property _buttons : {my back_btn_pad, "Cancel", my next_btn_pad}
 		property _prompt : missing value
 		
@@ -3012,7 +3012,7 @@ on make_note_view(view_controller, main_model)
 		property _page_url : missing value
 		property _page_label : missing value
 		
-		property _title : __SCRIPT_NAME__ & " > Note"
+		property _title : __SCRIPT_NAME__ & " > Title > URL > Category > Note"
 		property _buttons : {my back_btn_pad, "Cancel", my save_btn_pad}
 		property _prompt : missing value
 		property _text_field : missing value
