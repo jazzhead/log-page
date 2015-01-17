@@ -17,7 +17,7 @@
  *  sets up and runs all the tests that it finds (based on the name/identifier
  *  of the calling subclass).
  *
- *  @date   2015-01-15 Last modified
+ *  @date   2015-01-17 Last modified
  *  @date   2015-01-03 First version
  *  @author Steve Wheeler
  *)
@@ -28,7 +28,10 @@ script
 	property description : "Run test suites for subclasses"
 	property _Util : _load_lib("util.applescript")
 	
-	property _target_script : "log_page.applescript" -- relative to project root directory
+	-- Target script to test (path relative to project root directory)
+	property _source_script : "log_page.applescript" -- Default test target
+	property _compiled_script : "_build/Log Page.scpt" -- Optional test target
+	
 	property _sample_page_name : "sample.html"
 	property _expected_data_dir : "/data/expected" -- relative to test directory
 	property _initial_data_dir : "/data/initial" -- relative to test directory
@@ -65,8 +68,9 @@ script
 	--
 	property __TEST_DELAY__ : 1 -- for viewing dialogs during testing
 	property __INFO_DELAY__ : 20 -- for viewing the test description and results
-	property __SKIP_INFO__ : false -- show test info before & after tests or not
+	property __SKIP_INFO__ : false -- skip showing test info before & after tests?
 	property __TARGET_BROWSER__ : "Safari"
+	property __TEST_COMPILED__ : false -- test compiled script instead of source?
 	
 	
 	(*
@@ -333,6 +337,8 @@ script
 				set __INFO_DELAY__ to this_arg's val
 			else if this_arg's key is "SKIP_INFO" then
 				set __SKIP_INFO__ to this_arg's val as boolean
+			else if this_arg's key is "TEST_COMPILED" then
+				set __TEST_COMPILED__ to this_arg's val as boolean
 			else if this_arg's key is "TARGET_BROWSER" then
 				set __TARGET_BROWSER__ to this_arg's val
 			else if this_arg's key is in {"BUNDLE_ID", "PLIST_DIR", "DEFAULT_LOGFILE", "DEBUG_LEVEL", "NULL_IO"} then
@@ -369,8 +375,16 @@ script
 	end _set_footer_boilerplate
 	
 	on _launch_target_script(target_args) --> void
+		local target_args, target_script, target_script_path, proj_dir, s
+		
+		if __TEST_COMPILED__ then
+			set target_script to _compiled_script -- alternate
+		else
+			set target_script to _source_script -- default
+		end if
+		
 		set proj_dir to do shell script "dirname " & _test_dir
-		set target_script_path to proj_dir & "/" & _target_script
+		set target_script_path to quoted form of (proj_dir & "/" & target_script)
 		
 		-- This shell script runs the target script using `osascript` and sends
 		-- the process to the background. The `sh` special variable `$!` is the

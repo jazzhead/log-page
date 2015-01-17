@@ -178,20 +178,36 @@ dist: all doc
 	@echo "--->  Release distribution archive created"
 
 test:
-	@echo "--->  ** Running Log Page tests..."
+	@echo "--->  Running Log Page tests on source script..."
 	$(PROVE) -v ./t/[0-9][0-9][0-9][0-9]-*.sh :: SKIP_INFO:true
 	@echo "--->  Deleting temporary test files in '$(TEST_TMP)'..."
 	@$(RM) $(TEST_TMP)
 
 test-quiet:
-	@echo "--->  ** Running Log Page tests..."
+	@echo "--->  Running Log Page tests on source script..."
 	$(PROVE) ./t/[0-9][0-9][0-9][0-9]-*.sh :: SKIP_INFO:true
+	@echo "--->  Deleting temporary test files in '$(TEST_TMP)'..."
+	@$(RM) $(TEST_TMP)
+
+test-compiled: all
+	@echo "--->  Running Log Page tests on compiled script..."
+	$(PROVE) -v ./t/[0-9][0-9][0-9][0-9]-*.sh :: SKIP_INFO:true TEST_COMPILED:true
+	@echo "--->  Deleting temporary test files in '$(TEST_TMP)'..."
+	@$(RM) $(TEST_TMP)
+
+test-compiled-quiet: all
+	@echo "--->  Running Log Page tests on compiled script..."
+	$(PROVE) ./t/[0-9][0-9][0-9][0-9]-*.sh :: SKIP_INFO:true TEST_COMPILED:true
 	@echo "--->  Deleting temporary test files in '$(TEST_TMP)'..."
 	@$(RM) $(TEST_TMP)
 
 check: test
 
 check-quiet: test-quiet
+
+check-compiled: test-compiled
+
+check-compiled-quiet: test-compiled-quiet
 
 help:
 	@echo "$$HELPTEXT"
@@ -212,8 +228,8 @@ $(PROG): $(SOURCE)
 		echo "--->  Stripping debug lines and compiling '$@' from '$<'..."; \
 		$(call strip-debug,"$<") | $(OSACOMPILE) "$@";                      \
 	else                                                                    \
-		echo "--->  Stripping debug statements, inserting VERSION number";  \
-		echo "--->  and compiling '$@' from '$<'...";                       \
+		echo "--->  Stripping debug statements, inserting VERSION number,"; \
+		echo "--->    and compiling '$@' from '$<'...";                     \
 		$(call insert-version,"$<") | $(OSACOMPILE) "$@";                   \
 	fi
 	@touch -r "$<" "$@"
@@ -313,6 +329,13 @@ make test
 
 make test-quiet
     Run tests quietly (without the verbose flag to 'prove').
+
+make test-compiled
+    Test the compiled, final script instead of the source script which
+    is tested by default.
+
+make test-compiled-quiet
+    Same as 'test-compiled' except without verbose output.
 
 make doc
     Generate the RTFD documentation file for the distribution.
