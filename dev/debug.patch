@@ -1,0 +1,19 @@
+diff --git a/log_page.applescript b/log_page.applescript
+index cff51be..d700ac2 100644
+--- a/log_page.applescript
++++ b/log_page.applescript
+@@ -55,12 +55,12 @@ property __SCRIPT_COPYRIGHT__ : "Copyright 
+ property __SCRIPT_WEBSITE__ : "http://jazzheaddesign.com/work/code/log-page/"
+ 
+ property __NAMESPACE__ : "Jazzhead"
+-property __BUNDLE_ID__ : "net.jazzhead.scpt.LogPage"
++property __BUNDLE_ID__ : "net.jazzhead.scpt.LogPage.DEBUG" -- :DEBUG:revert
+ property __PLIST_DIR__ : missing value
+ property __DEFAULT_LOGFILE__ : missing value
+ 
+ -- Debug settings
+-property __DEBUG_LEVEL__ : 0 -- integer (0 = no event logging)
++property __DEBUG_LEVEL__ : 2 -- integer (0 = no event logging) -- :DEBUG:revert
+ property __NULL_IO__ : false -- boolean (if true, don't write to bookmarks file)
+ 
+ property __SCRIPT_LICENSE_SUMMARY__ : "This program is free software available under the terms of a BSD-style (3-clause) open source license. Click the \"License\" button or see the README file included with the distribution for details."

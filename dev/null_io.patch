@@ -1,0 +1,13 @@
+diff --git a/log_page.applescript b/log_page.applescript
+index 977cdd8..2b9fbe4 100644
+--- a/log_page.applescript
++++ b/log_page.applescript
+@@ -60,7 +60,7 @@ property __PLIST_DIR__ : missing value
+ 
+ -- Debug settings
+ property __DEBUG_LEVEL__ : 0 -- integer (0 = no event logging)
+-property __NULL_IO__ : false -- boolean (if true, don't write to bookmarks file)
++property __NULL_IO__ : true -- boolean (if true, don't write to bookmarks file) -- :DEBUG:revert
+ 
+ property __SCRIPT_LICENSE_SUMMARY__ : "This program is free software available under the terms of a BSD-style (3-clause) open source license. Click the \"License\" button or see the README file included with the distribution for details."
+ property __SCRIPT_LICENSE__ : __SCRIPT_COPYRIGHT__ & return & "All rights reserved.
