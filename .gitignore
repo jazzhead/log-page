@@ -6,5 +6,8 @@ _*/
 *.scptd
 *.app
 
+# Distribution archives
+*.zip
+
 # Temporary test files
 /t/tmp/

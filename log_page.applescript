@@ -2,7 +2,7 @@
 	Log Page - Log timestamped, categorized web bookmarks to a text file
 
 	Version: @@VERSION@@
-	Date:    2015-01-15
+	Date:    @@RELEASE_DATE@@
 	Author:  Steve Wheeler
 
 	Get the title and URL from the frontmost web browser window and

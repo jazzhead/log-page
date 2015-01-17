@@ -2,15 +2,23 @@
 #
 # Makefile for Log Page
 #
+# Website: http://jazzheaddesign.com/work/code/log-page/
 # Author:  Steve Wheeler
 #
 ##############################################################################
 
+# **BEFORE** tagging release, update version number.
+#
 # Version used for distributions (when there is no git repo).
-# BEFORE tagging release, update version number.
-VERSION = 0.0.0
+VERSION       = 0.0.0
 
-SHELL   = /bin/sh
+SHELL         = /bin/sh
+
+# Make will use the current date when inserting the release date into the
+# generated compiled script and README file. To override with a specific
+# date, pass a date on the command-line when calling make, i.e.,
+# `make RELEASE_DATE=YYYY-MM-DD`
+RELEASE_DATE := $(shell date "+%F")
 
 
 # If run from a git repo, then override the version above with
@@ -21,49 +29,72 @@ VERSION := $(subst v,,$(shell git describe --match "v[0-9]*" --dirty --always))
 #       instead of falling back to an abbreviated commit hash.
 endif
 
+# Format:  full_month_name day, year
+RELEASE_DATE_FULL := $(shell date -j -f "%F" "$(RELEASE_DATE)" "+%B %e, %Y" \
+                     | tr -s ' ')
 
-# AppleScript source code file
-SOURCE     = log_page.applescript
-# AppleScript target compiled file
-TARGET     = Log\ Page.scpt
+# File names
+SOURCE        = log_page.applescript
+BASENAME      = Log\ Page
+PACKAGE       = log-page
+
+# Locations
+prefix        = $(HOME)/Library/Scripts/Applications
+bindir       := $(prefix)/Safari
+BUILD         = _build
+DOC_DIR       = doc
+TEST_TMP      = t/tmp
+
+# Installation directories for alternate browsers
+CHROMEDIR    := $(prefix)/Google\ Chrome
+FIREFOXDIR   := $(prefix)/Firefox
+WEBKITDIR    := $(prefix)/WebKit
+
+# Output files
+TARGET       := $(BASENAME).scpt
+DOC_FILE     := $(BASENAME)\ README.rtfd
+# Distribution archive file basename
+ARCHIVE      := $(PACKAGE)-$(VERSION)
+
+# Documentation source files (text files in concatenation order)
+TEXT_FILES    = readme.md LICENSE
+DOC_SRC      := $(patsubst %,$(DOC_DIR)/%,$(TEXT_FILES))
+HTML_LAYOUT  := $(DOC_DIR)/layout.erb
+# Temporary file
+HTML_FILE    := $(DOC_DIR)/readme.html
+# ed commands for tweaking RTF formatting
+ED_COMMANDS  := $(DOC_DIR)/doc.ed.txt
+
+# Output file paths
+PROG         := $(BUILD)/$(TARGET)
+DOC_TARGET   := $(BUILD)/$(DOC_FILE)
+
+# For files or directories that have backslash-escaped spaces, make variables
+# without the escapes to use for AppleScript (osascript)
+TARGET_AS    := $(subst \,,$(TARGET))
+CHROMEDIR_AS := $(subst \,,$(CHROMEDIR))
+
+# Tools
+RM            = rm -rf
+ED            = ed -s
+SED           = LANG=C sed
+MKDIR         = mkdir -p
+MARKDOWN      = kramdown
+MARKDOWN_OPT := --no-auto-ids --entity-output :numeric --template $(HTML_LAYOUT)
+ARCHIVE_CMD   = ditto -c -k --sequesterRsrc --keepParent
+PROVE         = prove -f
 
 # Set the type (-t) and creator (-c) codes when compiling just like
 # AppleScript Editor does. The codes are useful for Spotlight searches.
 # If the -t and -c options are omitted, no codes are set.
 OSACOMPILE = osacompile -t osas -c ToyS -o
 
-# Tools
-RM         = rm -rf
-SED        = LANG=C sed
-MKDIR      = mkdir -p
-PROVE      = prove -f
-
-# Build directory
-BUILD     = _build
-# Build target
-PROG     :=  $(BUILD)/$(TARGET)
-
-prefix    = $(HOME)/Library/Scripts/Applications
-# Installation directory
-bindir   := $(prefix)/Safari
-
+# Install tool and options
 INSTALL      = install
 INSTDIR     := $(bindir)
 INSTOPTS     = -pSv     # Don't use -b option; backups show up in script menu
 INSTMODE     = -m 0600
 INSTDIRMODE  = -m 0700
-
-# Installation directories for alternate browsers
-CHROMEDIR   := $(prefix)/Google\ Chrome
-FIREFOXDIR  := $(prefix)/Firefox
-WEBKITDIR   := $(prefix)/WebKit
-
-# For files or directories that have backslash-escaped spaces, make variables
-# without the escapes to use for AppleScript (osascript)
-TARGET_AS     := $(subst \,,$(TARGET))
-CHROMEDIR_AS  := $(subst \,,$(CHROMEDIR))
-
-TEST_TMP = t/tmp
 
 
 # ==== TARGETS ===============================================================
@@ -125,9 +156,26 @@ uninstall:
 	$(call trash-installed,$(WEBKITDIR)/$(TARGET_AS))
 
 clean:
-	@echo "--->  Deleting '$(BUILD)' directory..."
-	@$(RM) -v $(BUILD)
-	@echo "--->  '$(BUILD)' directory deletion complete"
+	@echo "--->  Deleting build files..."
+	@[ -d "$(BUILD)" ] && $(RM) $(BUILD) || true
+	@[ -f "$(HTML_FILE)" ] && $(RM) $(HTML_FILE) || true
+	@echo "--->  Deleting distribution files..."
+	@[ -d "$(ARCHIVE)" ] && $(RM) $(ARCHIVE) || true
+	@$(RM) $(PACKAGE)-*.zip 2>/dev/null || true
+	@echo "--->  Deletion complete"
+
+doc: $(DOC_TARGET)
+
+dist: all doc
+	@echo "--->  Making a release..."
+	@[ -d "$(ARCHIVE)" ] && $(RM) $(ARCHIVE) || true
+	@[ -f "$(ARCHIVE).zip" ] && $(RM) $(ARCHIVE).zip || true
+	@$(MKDIR) $(ARCHIVE)
+	@cp -a $(BUILD)/* $(ARCHIVE)
+	@find $(ARCHIVE) -name .DS_Store -print0 | xargs -0 $(RM)
+	@$(ARCHIVE_CMD) $(ARCHIVE) $(ARCHIVE).zip
+	@$(RM) $(ARCHIVE)
+	@echo "--->  Release distribution archive created"
 
 test:
 	@echo "--->  ** Running Log Page tests..."
@@ -148,8 +196,55 @@ check-quiet: test-quiet
 help:
 	@echo "$$HELPTEXT"
 
-.PHONY: all test test-quiet check check-quiet clean install uninstall help \
+.PHONY: all install uninstall clean doc dist help \
+        test test-quiet check check-quiet \
         install-safari install-chrome install-firefox install-webkit
+
+
+# ==== DEPENDENCIES ==========================================================
+
+$(PROG): $(SOURCE)
+	@[ -d $(BUILD) ] || {                              \
+		echo "--->  Creating directory '$(BUILD)'..."; \
+		$(MKDIR) $(INSTDIRMODE) $(BUILD);              \
+	}
+	@if [ 0 = $$(grep -cm1 '@@VERSION@@' $<) ]; then                        \
+		echo "--->  Stripping debug lines and compiling '$@' from '$<'..."; \
+		$(call strip-debug,"$<") | $(OSACOMPILE) "$@";                      \
+	else                                                                    \
+		echo "--->  Stripping debug statements, inserting VERSION number";  \
+		echo "--->  and compiling '$@' from '$<'...";                       \
+		$(call insert-version,"$<") | $(OSACOMPILE) "$@";                   \
+	fi
+	@touch -r "$<" "$@"
+
+$(DOC_TARGET): $(HTML_FILE)
+	@echo "--->  Generating RTFD file from HTML..."
+	@[ -d $(DOC_TARGET) ] && $(RM) $(DOC_TARGET) || true
+	@[ -d $(BUILD) ] || $(MKDIR) $(BUILD)
+	@textutil -format html -convert rtfd -output "$@" $<
+	@echo "--->  Removing temporary HTML file..."
+	@$(RM) $<
+	@echo "--->  Tweaking RTF documentation formatting with 'ed' commands..."
+	@$(ED) $(DOC_TARGET)/TXT.rtf < $(ED_COMMANDS) >/dev/null 2>&1
+	@touch -r "$(DOC_DIR)/readme.md" "$@"
+	@touch -r "$(DOC_DIR)/readme.md" $(DOC_TARGET)/TXT.rtf
+
+$(HTML_FILE): $(DOC_SRC)
+	@echo "--->  Concatenating Markdown files and generating temp HTML file..."
+	@if ! which $(MARKDOWN) >/dev/null; then \
+		echo "Can't find '$(MARKDOWN)' in PATH, needed for Markdown to HTML."; \
+		false; \
+	fi
+	@# Make substitutions (version, etc.) before passing to Markdown parser
+	@cat $^ | $(SED) -e 's/@@VERSION@@/$(VERSION)/g' -e 's/ (c) / \&copy; /g' \
+		-e 's/[[:<:]]\(20[0-9][0-9]\)-\(20[0-9][0-9]\)[[:>:]]/\1--\2/g' \
+		-e 's/@@RELEASE_DATE@@/$(RELEASE_DATE_FULL)/g' \
+		| $(MARKDOWN) $(MARKDOWN_OPT) > $@
+	@# Center the images since textutil ignores CSS margin auto on p > img
+	@printf "%s\n" H \
+	    'g/^\(<p\)\(><img \)/s//\1 style="text-align:center"\2/' . w | \
+	    $(ED) $@ >/dev/null 2>&1
 
 
 # ==== FUNCTIONS =============================================================
@@ -177,25 +272,9 @@ define strip-debug
 endef
 
 define insert-version
-	$(call strip-debug,"$1") | $(SED) -e 's/@@VERSION@@/$(VERSION)/g'
+	$(call strip-debug,"$1") | $(SED) -e 's/@@VERSION@@/$(VERSION)/g' \
+		-e 's/@@RELEASE_DATE@@/$(RELEASE_DATE)/g'
 endef
-
-
-# ==== DEPENDENCIES ==========================================================
-
-$(PROG): $(SOURCE)
-	@[ -d $(BUILD) ] || {                            \
-		echo "--->  Creating directory '$(BUILD)'..."; \
-		$(MKDIR) $(INSTDIRMODE) $(BUILD);                     \
-	}
-	@if [ 0 = $$(grep -cm1 '@@VERSION@@' $<) ]; then                        \
-		echo "--->  Stripping debug lines and compiling '$@' from '$<'..."; \
-		$(call strip-debug,"$<") | $(OSACOMPILE) "$@";                      \
-	else                                                                    \
-		echo "--->  Stripping debug statements, inserting VERSION number";  \
-		echo "--->  and compiling '$@' from '$<'...";                       \
-		$(call insert-version,"$<") | $(OSACOMPILE) "$@";                   \
-	fi
 
 
 # ==== TEXT VARIABLES ========================================================
@@ -207,15 +286,15 @@ Make Commands for Log Page
 
 make
 make all
-    Compile the script to the build directory, performing
-    any substitutions such as inserting the version number
-    and stripping debug statements.
+    Compile the script to the build directory, performing any
+    substitutions such as inserting the version number and stripping
+    debug statements.
 
 make install
-    Install the compiled script for all supported web browsers
-    (Safari, Firefox, Google Chrome, WebKit Nightly). Only one
-    actual copy of the script is installed -- for Safari. Aliases
-    are created to that script for the other browsers.
+    Install the compiled script for all supported web browsers (Safari,
+    Firefox, Google Chrome, WebKit Nightly). Only one actual copy of the
+    script is installed -- for Safari. Aliases are created to that
+    script for the other browsers.
 
 make install-safari
 make install-chrome
@@ -235,8 +314,15 @@ make test
 make test-quiet
     Run tests quietly (without the verbose flag to 'prove').
 
+make doc
+    Generate the RTFD documentation file for the distribution.
+
+make dist
+    Make a release distribution archive consisting of the compiled
+    AppleScript program and the RTFD documentation file.
+
 make clean
-    Delete all build files.
+    Delete all build files and distribution files.
 
 make help
     Display this help.
