@@ -17,7 +17,7 @@
  *  sets up and runs all the tests that it finds (based on the name/identifier
  *  of the calling subclass).
  *
- *  @date   2015-01-17 Last modified
+ *  @date   2015-01-18 Last modified
  *  @date   2015-01-03 First version
  *  @author Steve Wheeler
  *)
@@ -96,8 +96,6 @@ script
 		
 		_set_sample_page(_test_dir & "/data")
 		
-		_set_footer_boilerplate()
-		
 		-- Delete any leftover test files from previous tests
 		try -- in case there are no previous files
 			do shell script "rm" & space & _tmp_dir & "/" & _test_suite & "*"
@@ -149,6 +147,8 @@ script
 		-- target script.
 		--
 		set target_args to _parse_args(argv)
+		
+		_set_footer_boilerplate()
 		
 		-- Open the sample HTML page in the target browser
 		--
@@ -314,7 +314,7 @@ script
 	 *  @return Modifies script properties. Returns string w/args for target script.
 	 *)
 	on _parse_args(argv) --> string
-		local args, k, v, target_args
+		local args, k, v, target_args, this_arg
 		
 		if (count of argv) = 0 then return ""
 		
@@ -332,13 +332,21 @@ script
 		set target_args to {}
 		repeat with this_arg in args
 			if this_arg's key is "TEST_DELAY" then
-				set __TEST_DELAY__ to this_arg's val
+				set __TEST_DELAY__ to this_arg's val as integer
 			else if this_arg's key is "INFO_DELAY" then
-				set __INFO_DELAY__ to this_arg's val
+				set __INFO_DELAY__ to this_arg's val as integer
 			else if this_arg's key is "SKIP_INFO" then
-				set __SKIP_INFO__ to this_arg's val as boolean
+				try -- true/false, yes/no
+					set __SKIP_INFO__ to this_arg's val as boolean
+				on error -- allow 1 or 0
+					set __SKIP_INFO__ to this_arg's val as integer as boolean
+				end try
 			else if this_arg's key is "TEST_COMPILED" then
-				set __TEST_COMPILED__ to this_arg's val as boolean
+				try
+					set __TEST_COMPILED__ to this_arg's val as boolean
+				on error
+					set __TEST_COMPILED__ to this_arg's val as integer as boolean
+				end try
 			else if this_arg's key is "TARGET_BROWSER" then
 				set __TARGET_BROWSER__ to this_arg's val
 			else if this_arg's key is in {"BUNDLE_ID", "PLIST_DIR", "DEFAULT_LOGFILE", "DEBUG_LEVEL", "NULL_IO"} then

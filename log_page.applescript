@@ -108,7 +108,7 @@ end run
  *  @return No return value. Modifies script properties.
  *)
 on modify_runtime_config(argv) --> void
-	local args, k, v
+	local args, k, v, this_arg
 	
 	if (count of argv) = 0 then return
 	
@@ -128,9 +128,13 @@ on modify_runtime_config(argv) --> void
 		else if this_arg's key is "DEFAULT_LOGFILE" then
 			set __DEFAULT_LOGFILE__ to this_arg's val
 		else if this_arg's key is "DEBUG_LEVEL" then
-			set __DEBUG_LEVEL__ to this_arg's val
+			set __DEBUG_LEVEL__ to this_arg's val as integer
 		else if this_arg's key is "NULL_IO" then
-			set __NULL_IO__ to this_arg's val
+			try -- true/false, yes/no
+				set __NULL_IO__ to this_arg's val as boolean
+			on error -- allow 1 or 0
+				set __NULL_IO__ to this_arg's val as integer as boolean
+			end try
 		end if
 	end repeat
 end modify_runtime_config
