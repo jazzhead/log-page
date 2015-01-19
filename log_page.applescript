@@ -51,7 +51,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 property __SCRIPT_NAME__ : "Log Page"
 property __SCRIPT_VERSION__ : "@@VERSION@@"
 property __SCRIPT_AUTHOR__ : "Steve Wheeler"
-property __SCRIPT_COPYRIGHT__ : "Copyright © 2011-2015 " & __SCRIPT_AUTHOR__
+property __SCRIPT_COPYRIGHT__ : "Copyright © 2011Ð2015 " & __SCRIPT_AUTHOR__
 property __SCRIPT_WEBSITE__ : "http://jazzheaddesign.com/work/code/log-page/"
 
 property __NAMESPACE__ : "Jazzhead"
@@ -935,8 +935,9 @@ script FirefoxBrowser
 		end tell
 		
 		try
-			set old_clipboard to the clipboard
+			set old_clipboard to the clipboard -- be nice
 		end try
+		set the clipboard to missing value -- so we'll know if the copy op fails
 		
 		-- Firefox has very limited AppleScript support, so GUI
 		-- scripting is required.
@@ -955,8 +956,11 @@ script FirefoxBrowser
 		
 		try
 			set this_url to the clipboard
-			get this_url -- check if defined
+			get this_url as string -- check if defined ('missing value' can't be coerced)
 		on error err_msg number err_num
+			try
+				set the clipboard to old_clipboard
+			end try
 			my handle_error("URL", err_msg, err_num)
 		end try
 		
