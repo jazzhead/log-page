@@ -121,8 +121,8 @@ URL   | http://jazzheaddesign.com/work/code/log-page/
 ------+-------------------------------------------------------------------------
 Date  | 2014-12-23 18:42:45
 Label | Development:AppleScript:Safari
-Title | Resize Window - AppleScript for Mac OS X That Resizes Safari Windows
-URL   | http://jazzheaddesign.com/work/code/safari-resize-window/
+Title | Resize Window - AppleScript for Mac OS X That Quickly Resizes Windows
+URL   | http://jazzheaddesign.com/work/code/resize-window/
 ------+-------------------------------------------------------------------------
 Date  | 2014-12-23 18:43:11
 Label | Development:Shell:Bash

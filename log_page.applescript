@@ -380,7 +380,7 @@ General"
 		-- Sample bookmarks if the bookmarks log file is new.
 		property _sample_bookmarks : {Â
 			{_label:"Development:AppleScript", _title:"Log Page - AppleScript for Plain Text, Timestamped, Categorized Web Bookmarks", _url:"http://jazzheaddesign.com/work/code/log-page/", _note:"Developer notes:  OOP, MVC, object-oriented design patterns"}, Â
-			{_label:"Development:AppleScript:Safari", _title:"Resize Window - AppleScript for Mac OS X That Resizes Safari Windows", _url:"http://jazzheaddesign.com/work/code/safari-resize-window/", _note:"Useful when designing responsive websites that adapt to different sizes."}, Â
+			{_label:"Development:AppleScript:Safari", _title:"Resize Window - AppleScript for Mac OS X That Quickly Resizes Windows", _url:"http://jazzheaddesign.com/work/code/resize-window/", _note:"Useful when designing responsive websites that adapt to different sizes."}, Â
 			{_label:"Development:Shell:Bash", _title:"shmark - Categorized Shell Directory Bookmarking for Bash", _url:"http://jazzheaddesign.com/work/code/shmark/", _note:missing value}}
 		
 		property _log_header_sep : my multiply_text("#", 80)

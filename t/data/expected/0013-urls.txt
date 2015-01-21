@@ -65,8 +65,8 @@ Note  | Developer notes: OOP, MVC, object-oriented design patterns
 ------+-------------------------------------------------------------------------
 Date  | 2015-01-13 15:56:13
 Label | Development:AppleScript:Safari
-Title | Resize Window - AppleScript for Mac OS X That Resizes Safari Windows
-URL   | http://jazzheaddesign.com/work/code/safari-resize-window/
+Title | Resize Window - AppleScript for Mac OS X That Quickly Resizes Windows
+URL   | http://jazzheaddesign.com/work/code/resize-window/
 Note  | Useful when designing responsive websites that adapt to different sizes.
 ------+-------------------------------------------------------------------------
 Date  | 2015-01-13 15:56:13
