@@ -18,7 +18,7 @@
 *)
 
 (*
-Copyright (c) 2011-2015 Steve Wheeler
+Copyright (c) 2011-2016 Steve Wheeler
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -51,7 +51,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 property __SCRIPT_NAME__ : "Log Page"
 property __SCRIPT_VERSION__ : "@@VERSION@@"
 property __SCRIPT_AUTHOR__ : "Steve Wheeler"
-property __SCRIPT_COPYRIGHT__ : "Copyright © 2011Ð2015 " & __SCRIPT_AUTHOR__
+property __SCRIPT_COPYRIGHT__ : "Copyright © 2011Ð2016 " & __SCRIPT_AUTHOR__
 property __SCRIPT_WEBSITE__ : "http://jazzheaddesign.com/work/code/log-page/"
 
 property __NAMESPACE__ : "Jazzhead"
@@ -3932,7 +3932,7 @@ end split_path_into_dir_and_file
 on get_mac_path(posix_path)
 	-- Expand '~/' or '$HOME/' at the beginning of a posix file path.
 	set posix_file to expand_home_path(posix_path)
-	return POSIX file posix_file
+	return POSIX file posix_file as string
 end get_mac_path
 
 -- Could alternatively use 'do shell script "echo" & space & file_path'
