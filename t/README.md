@@ -26,34 +26,40 @@ extension)
 
 To run directly from the command-line (from the project root directory):
 
-    $ osascript t/TEST_NAME.applescript
+```bash
+$ osascript t/TEST_NAME.applescript
 
-    # Arguments can also be passed to the test script:
-    $ osascript t/TEST_NAME.applescript TEST_DELAY:3 INFO_DELAY:10
+# Arguments can also be passed to the test script:
+$ osascript t/TEST_NAME.applescript TEST_DELAY:3 INFO_DELAY:10
+```
 
 To run through the `prove` TAP harness from the command-line:
 
-    # Doesn't work, maybe because of osascript buffering issues
-    #$ prove [-fv] -e '/usr/bin/osascript' t/TEST_NAME.applescript
+```bash
+# Doesn't work, maybe because of osascript buffering issues
+#$ prove [-fv] -e '/usr/bin/osascript' t/TEST_NAME.applescript
 
-    # Need to instead create a shell script wrapper that disables
-    # output buffering:
-    #
-    #   #!/bin/sh
-    #   script -q /dev/null /usr/bin/osascript t/TEST_NAME.applescript "$@"
-    #   exit
-    #
-    # and then run that wrapper with prove:
-    $ prove [-fv] t/TEST_NAME.sh
-    #
-    # or with arguments (the `::` separates them from prove's own args)
-    $ prove [-fv] t/TEST_NAME.sh :: TEST_DELAY:3 INFO_DELAY:10
+# Need to instead create a shell script wrapper that disables
+# output buffering:
+#
+#   #!/bin/sh
+#   script -q /dev/null /usr/bin/osascript t/TEST_NAME.applescript "$@"
+#   exit
+#
+# and then run that wrapper with prove:
+$ prove [-fv] t/TEST_NAME.sh
+#
+# or with arguments (the `::` separates them from prove's own args)
+$ prove [-fv] t/TEST_NAME.sh :: TEST_DELAY:3 INFO_DELAY:10
+```
 
 To run all tests in the test directory with 'prove':
 
-    $ prove [-fv] t/[0-9][0-9][0-9][0-9]-*.sh
-    # or with arguments:
-    $ prove [-fv] t/[0-9][0-9][0-9][0-9]-*.sh :: TEST_DELAY:3 SKIP_INFO:true
+```bash
+$ prove [-fv] t/[0-9][0-9][0-9][0-9]-*.sh
+# or with arguments:
+$ prove [-fv] t/[0-9][0-9][0-9][0-9]-*.sh :: TEST_DELAY:3 SKIP_INFO:true
+```
 
 There are also Makefile targets for running all of the tests. `make test` runs
 `prove -fv` while `make test-quiet` runs `prove -f`.
@@ -61,28 +67,30 @@ There are also Makefile targets for running all of the tests. `make test` runs
 File listing showing a hypothetical "0001" test suite and all supporting files
 (the actual "0001" test suite doesn't have every supporting file shown):
 
-    .                                     # project root directory
-    |-- t                                 # test directory
-    |   |-- 0001                          # a test suite directory
-    |   |   |-- 01.applescript            # a test group (the actual tests)
-    |   |   `-- 02.applescript            # a test group (the actual tests)
-    |   |-- 0001-first.applescript        # a test suite controller/wrapper
-    |   |-- 0001-first.sh -> template.sh  # shell script wrapper symlink
-    |   |-- data                          # data files used by tests
-    |   |   |-- expected                  # expected results for tests
-    |   |   |   |-- 0001-urls.txt         # expected bookmarks file
-    |   |   |   `-- 0001.plist            # expected plist file
-    |   |   |-- initial                   # preconfigured files for tests
-    |   |   |   `-- 0001-urls.txt         # bookmarks file to use for tests
-    |   |   `-- sample.html               # HTML file used by all tests
-    |   |-- lib
-    |   |   |-- log_page_test.applescript # custom test superclass
-    |   |   |-- tap.applescript           # TAP library
-    |   |   |-- test_data.applescript     # data testing lib (extends TAP)
-    |   |   |-- test_gui.applescript      # gui testing lib (extends TAP)
-    |   |   `-- util.applescript          # shared utility functions
-    |   `-- template.sh                   # actual shell script wrapper
-    `-- log_page.applescript              # target script being tested
+```
+.                                     # project root directory
+|-- t                                 # test directory
+|   |-- 0001                          # a test suite directory
+|   |   |-- 01.applescript            # a test group (the actual tests)
+|   |   `-- 02.applescript            # a test group (the actual tests)
+|   |-- 0001-first.applescript        # a test suite controller/wrapper
+|   |-- 0001-first.sh -> template.sh  # shell script wrapper symlink
+|   |-- data                          # data files used by tests
+|   |   |-- expected                  # expected results for tests
+|   |   |   |-- 0001-urls.txt         # expected bookmarks file
+|   |   |   `-- 0001.plist            # expected plist file
+|   |   |-- initial                   # preconfigured files for tests
+|   |   |   `-- 0001-urls.txt         # bookmarks file to use for tests
+|   |   `-- sample.html               # HTML file used by all tests
+|   |-- lib
+|   |   |-- log_page_test.applescript # custom test superclass
+|   |   |-- tap.applescript           # TAP library
+|   |   |-- test_data.applescript     # data testing lib (extends TAP)
+|   |   |-- test_gui.applescript      # gui testing lib (extends TAP)
+|   |   `-- util.applescript          # shared utility functions
+|   `-- template.sh                   # actual shell script wrapper
+`-- log_page.applescript              # target script being tested
+```
 
 As mentioned above, all test suites should follow the same naming format --- a
 four-digit identifier used for:

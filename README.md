@@ -75,7 +75,7 @@ haven't been used in a bookmark record yet. The following is an example
 bookmarks file that shows a file header, optional sample categories, and a few
 bookmark records:
 
-~~~
+```
 ################################################################################
 #
 # Optional file header consisting of lines beginning with a "#" character. This
@@ -120,7 +120,7 @@ Label | Development:Shell:Bash
 Title | shmark - Categorized Shell Directory Bookmarking for Bash
 URL   | http://jazzheaddesign.com/work/code/shmark/
 ------+-------------------------------------------------------------------------
-~~~
+```
 
 
 Usage
@@ -183,10 +183,10 @@ Installation
 To compile and install the script, `cd` into the directory containing the
 source code and run:
 
-~~~ bash
+```bash
 $ make
 $ make install
-~~~
+```
 
 That uses `osacompile` to create a compiled AppleScript named "Log Page.scpt"
 from the source file and installs it in a
@@ -195,12 +195,12 @@ that script in script directories for all of the other supported browsers. To
 only install the script for specific web browsers, run any of the following
 install commands:
 
-~~~ bash
+```bash
 $ make install-safari
 $ make install-chrome
 $ make install-firefox
 $ make install-webkit
-~~~
+```
 
 ### Enable the Script Menu
 

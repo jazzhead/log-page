@@ -40,13 +40,13 @@ Before running the command, first switch to the web browser that you want to
 test to bring it to the front. Then switch directly to the Terminal app, `cd`
 to the Log Page source code directory, and run:
 
-~~~
+```bash
 $ osascript log_page.applescript \
   DEBUG_LEVEL:2 \
   BUNDLE_ID:LogPage.DEBUG \
   PLIST_DIR:~/Desktop \
   DEFAULT_LOGFILE:~/Desktop/log-page-urls-debug.txt
-~~~
+```
 
 
 Automated Integration Testing
@@ -96,15 +96,21 @@ file, but the procedure is the same for the other patch files as well.
 
 Apply the patch:
 
-    $ git apply dev/debug.patch
+```bash
+$ git apply dev/debug.patch
+```
 
 Before applying the patch, you can see a summary of what's in it with:
 
-    $ git apply --stat dev/debug.patch
+```bash
+$ git apply --stat dev/debug.patch
+```
 
 To test the patch without applying it, use:
 
-    $ git apply --check dev/debug.patch
+```bash
+$ git apply --check dev/debug.patch
+```
 
 
 Reversing the Debugging Patch
@@ -120,7 +126,9 @@ changes were made that cause the patch to fail.
 To skip the `debug.patch` changes before committing just revert them manually
 in the file or apply the patch in reverse:
 
-    $ git apply -R dev/debug.patch
+```bash
+$ git apply -R dev/debug.patch
+```
 
 This might be the best way since the patch can easily be reapplied after
 committing.
@@ -135,18 +143,24 @@ skipping over the changes to `__BUNDLE_ID__`, `__DEBUG_LEVEL_`, and
 `__NULL_IO__`. In the interactive session, after skipping over those changes
 with `s`, the rest of the changes can be added all at once with `a`.
 
-    $ git add -i log_page.applescript
+```bash
+$ git add -i log_page.applescript
+```
 
 After committing, if the patch changes were the only changes skipped, those
 changes can be deleted by running:
 
-    $ git reset --hard HEAD
+```bash
+$ git reset --hard HEAD
+```
 
 **Only** do that if you don't want to keep any uncommitted changes because it
 deletes those changes. If you skipped other changes when you added and
 committed and want to keep them without committing them yet, use:
 
-    $ git stash
+```bash
+$ git stash
+```
 
   [website]: http://jazzheaddesign.com/work/code/log-page/
   [t/README]: ../t/README.md
