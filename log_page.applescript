@@ -82,15 +82,15 @@ on run argv -- argv is for 'run script with parameters' or osascript cli argumen
 	set __DEFAULT_LOGFILE__ to Â
 		POSIX path of (path to application support folder from user domain) Â
 		& __NAMESPACE__ & "/" & __SCRIPT_NAME__ & "/urls.txt"
-	
+
 	-- Override any default script properties
 	modify_runtime_config(argv)
-	
+
 	my debug_log(2, "[debug] " & name & ".__BUNDLE_ID__: " & __BUNDLE_ID__)
 	my debug_log(2, "[debug] " & name & ".__PLIST_DIR__: " & __PLIST_DIR__)
 	my debug_log(2, "[debug] " & name & ".__DEFAULT_LOGFILE__: " & __DEFAULT_LOGFILE__)
 	my debug_log(2, "[debug] " & name & ".__DEBUG_LEVEL__: " & __DEBUG_LEVEL__)
-	
+
 	run make_app_controller()
 end run
 
@@ -109,16 +109,16 @@ end run
  *)
 on modify_runtime_config(argv) --> void
 	local args, k, v, this_arg
-	
+
 	if (count of argv) = 0 then return
-	
+
 	-- Parse arguments into key/value pairs
 	set args to {}
 	repeat with i from 1 to count argv
 		set {k, v} to split_text(argv's item i, ":")
 		set end of args to {key:k, val:v}
 	end repeat
-	
+
 	-- Modify script property values for matching keys
 	repeat with this_arg in args
 		if this_arg's key is "BUNDLE_ID" then
@@ -148,76 +148,76 @@ end modify_runtime_config
 on make_app_controller()
 	script this
 		property class : "AppController" -- the main controller
-		
+
 		on run
 			my debug_log(1, "--->  running " & my class & "...")
-			
+
 			--
 			-- Create the shared navigation controller first, then
 			-- a license controller
 			--
 			set nav_controller to make_navigation_controller()
 			set license_controller to make_license_controller(nav_controller)
-			
+
 			(* == Settings == *)
-			
+
 			--
 			-- The settings controller is run first to load the saved
 			-- settings from disk or show a "first run" settings dialog
 			-- if there is no existing preferences file.
 			--
-			
+
 			-- Need the settings model first
 			set settings_model to make_page_log_settings()
 			settings_model's init()
-			
+
 			-- Main model needs the settings model
 			set page_log to make_page_log(settings_model)
-			
+
 			-- Settings controller needs both models plus the nav
 			-- and license controllers
 			set settings_controller to make_settings_controller(nav_controller, settings_model, page_log, license_controller)
 			run settings_controller
-			
+
 			(* == Data Retrieval == *)
-			
+
 			--
 			-- Get the web page info from the web browser
 			--
 			set browser_model to my WebBrowserFactory's make_browser()
 			browser_model's fetch_page_info()
-			
+
 			--
 			-- Load initial data into the main model
 			--
 			tell page_log
 				-- Get last-used category read from preferences file
 				update_category_state()
-				
+
 				-- Store the web page info in the main model
 				--
 				set_page_url(browser_model's get_url())
 				set_page_title(browser_model's get_title())
 				set_browser_name(browser_model's to_string())
-				
+
 				my debug_log(1, "[debug] " & get_page_url())
 				my debug_log(1, "[debug] " & get_page_title())
-				
+
 				-- Parse the categories from the log file
 				--
 				parse_log()
 			end tell
-			
+
 			-- Done with browser. Does this make any difference?
 			set browser_model to missing value
-			
+
 			(* == Controllers == *)
-			
+
 			--
 			-- Create shared category base view
 			--
 			set label_base_view to make_label_base_view(page_log)
-			
+
 			--
 			-- Create any other needed controllers, passing in whatever
 			-- shared models, controllers and/or views they need.
@@ -228,7 +228,7 @@ on make_app_controller()
 			--
 			set title_controller to make_title_controller(nav_controller, page_log)
 			set url_controller to make_url_controller(nav_controller, page_log)
-			-- 
+			--
 			set label_controller to make_label_controller(nav_controller, page_log, label_base_view)
 			set sub_label_controller to make_sub_label_controller(nav_controller, page_log, label_base_view)
 			set all_label_controller to make_all_label_controller(nav_controller, page_log, label_base_view)
@@ -238,7 +238,7 @@ on make_app_controller()
 			--
 			set label_help_controller to make_label_help_controller(nav_controller)
 			set about_controller to make_about_controller(nav_controller)
-			
+
 			--
 			-- Dependency Injection
 			--
@@ -282,16 +282,16 @@ on make_app_controller()
 				help_controller, Â
 				label_help_controller})
 			label_edit_controller's set_controllers({note_controller})
-			
+
 			--
 			-- Load the first (root) controller onto the stack
 			--
 			nav_controller's set_root_controller(title_controller)
-			
+
 			my debug_log(1, my class & "'s Controller Stack: " & nav_controller's to_string())
-			
+
 			(* == UI == *)
-			
+
 			--
 			-- This is the main UI/View event loop. It will loop through the
 			-- controller stack until the stack is empty (prompting the user
@@ -326,26 +326,26 @@ on make_app_controller()
 				--
 				set this_controller to nav_controller's peek()
 				set ret_val to run this_controller --> returns boolean
-				
+
 				my debug_log(1, my class & "'s Controller Stack: " & nav_controller's to_string())
-				
+
 				if not ret_val then -- {FileEditor,FileViewer}Controller will return false
 					my debug_log(1, "--->  finished " & my class & "; no post-processing.")
 					return -- don't do any post-processing
 				end if
 			end repeat
-			
+
 			(* == Processing == *)
-			
+
 			--
 			-- All that's left is to append the data to the log file.
 			--
 			page_log's write_record()
-			
+
 			my debug_log(1, "--->  finished " & my class)
 		end run
 	end script
-	
+
 	my debug_log(1, "--->  new " & this's class & "()")
 	return this
 end make_app_controller
@@ -360,7 +360,7 @@ on make_page_log(settings_model)
 		property parent : make_observable() -- extends Observable
 		property _settings : settings_model --> Settings
 		property _io : missing value --> IO
-		
+
 		-- Sample categories (labels) if the bookmarks log file is new.
 		-- After sample categories have been written to file, any of
 		-- them can be deleted, modified or added to there.
@@ -382,10 +382,10 @@ General"
 			{_label:"Development:AppleScript", _title:"Log Page - AppleScript for Plain Text, Timestamped, Categorized Web Bookmarks", _url:"http://jazzheaddesign.com/work/code/log-page/", _note:"Developer notes:  OOP, MVC, object-oriented design patterns"}, Â
 			{_label:"Development:AppleScript:Safari", _title:"Resize Window - AppleScript for Mac OS X That Quickly Resizes Windows", _url:"http://jazzheaddesign.com/work/code/resize-window/", _note:"Useful when designing responsive websites that adapt to different sizes."}, Â
 			{_label:"Development:Shell:Bash", _title:"shmark - Categorized Shell Directory Bookmarking for Bash", _url:"http://jazzheaddesign.com/work/code/shmark/", _note:missing value}}
-		
+
 		property _log_header_sep : my multiply_text("#", 80)
 		property _log_record_sep : missing value --> string
-		
+
 		property _page_url : missing value --> string
 		property _page_title : missing value --> string
 		property _page_label : missing value --> string
@@ -393,81 +393,81 @@ General"
 		property _browser_name : missing value --> string
 		property _log_record : missing value --> string
 		property _should_create_file : false --> boolean
-		
+
 		property _root_categories : missing value --> array
 		property _all_categories : missing value --> array
-		
+
 		property _chosen_root_category : missing value --> string -- label view state
 		property _chosen_category : missing value --> string -- label view state
-		
+
 		(* == Setters == *)
-		
+
 		on set_browser_name(this_value) --> void
 			set _browser_name to this_value
 			settings_changed() -- notify observers
 		end set_browser_name
-		
+
 		on set_page_url(this_value) --> void
 			set _page_url to this_value
 			settings_changed() -- notify observers
 		end set_page_url
-		
+
 		on set_page_title(this_value) --> void
 			my debug_log(1, my class & ".set_page_title(" & this_value & ")")
 			set _page_title to this_value
 			settings_changed() -- notify observers
 		end set_page_title
-		
+
 		on set_page_label(this_value) --> void
 			set _page_label to this_value
 			settings_changed() -- notify observers
 		end set_page_label
-		
+
 		on set_page_note(this_value) --> void
 			set _page_note to this_value
 			settings_changed() -- notify observers
 		end set_page_note
-		
+
 		on set_chosen_root_category(this_value) --> void
 			set _chosen_root_category to this_value
 			settings_changed() -- notify observers
 		end set_chosen_root_category
-		
+
 		on set_chosen_category(this_value) --> void
 			set _chosen_category to this_value
 			settings_changed() -- notify observers
 		end set_chosen_category
-		
+
 		(* == Getters == *)
-		
+
 		on get_browser_name() --> string
 			return _browser_name
 		end get_browser_name
-		
+
 		on get_page_url() --> string
 			return _page_url
 		end get_page_url
-		
+
 		on get_page_title() --> string
 			return _page_title
 		end get_page_title
-		
+
 		on get_page_label() --> string
 			return _page_label
 		end get_page_label
-		
+
 		on get_page_note() --> string
 			return _page_note
 		end get_page_note
-		
+
 		on get_all_categories() --> array
 			return _all_categories
 		end get_all_categories
-		
+
 		on get_root_categories() --> array
 			return _root_categories
 		end get_root_categories
-		
+
 		on get_sub_categories() --> array
 			local sub_categories, this_cat
 			set sub_categories to {}
@@ -480,75 +480,75 @@ General"
 			end repeat
 			return sub_categories
 		end get_sub_categories
-		
+
 		on get_chosen_root_category() --> string
 			return _chosen_root_category
 		end get_chosen_root_category
-		
+
 		on get_chosen_category() --> string
 			return _chosen_category
 		end get_chosen_category
-		
+
 		on get_only_category() --> string
 			return _all_categories's last item's contents
 		end get_only_category
-		
+
 		on get_only_sub_category() --> string
 			return get_sub_categories()'s last item's contents
 		end get_only_sub_category
-		
+
 		(* == Actions == *)
-		
+
 		on write_record() --> void
 			local log_file_posix, log_file_mac
-			
+
 			set log_file_posix to expand_home_path(_settings's get_log_file())
 			set log_file_mac to get_mac_path(log_file_posix)
-			
+
 			-- Write last selected category to preferences file (save state)
 			_settings's set_pref(_settings's get_last_category_key(), _page_label)
-			
+
 			set _log_record to _format_record(_page_label, _page_title, _page_url, _page_note)
-			
+
 			_validate_fields()
-			
+
 			-- Create any directories needed in the web page log file path
 			create_directory(first item of split_path_into_dir_and_file(log_file_posix))
-			
+
 			if _should_create_file then _create_log_file()
-			
+
 			if _should_add_log_record_sep(log_file_mac) then
 				set _log_record to _log_record_sep & linefeed & _log_record
 			end if
-			
+
 			_io's append_file(log_file_mac, _log_record)
 		end write_record
-		
+
 		on parse_log() --> void
 			my debug_log(2, my class & ".parse_log()...")
-			
+
 			local log_file_posix, log_file_mac, header_items
 			local all_category_txt, root_category_txt
 			local all_categories, root_categories
-			
+
 			set log_file_posix to expand_home_path(_settings's get_log_file())
 			set log_file_mac to get_mac_path(log_file_posix)
-			
+
 			my debug_log(2, my class & ".parse_log(): file = " & log_file_posix)
-			
+
 			-- Does file exist? Is file empty?
 			--
 			_check_log_file(log_file_mac)
-			
+
 			my debug_log(2, "[debug] " & my class & ".parse_log(): parsing categories from file")
-			
+
 			-- Parse any existing categories from the "Label" fields of the
 			-- bookmarks log file:
 			--
 			set s to "LANG=C sed -n 's/^Label  *|  *//p' " & quoted form of log_file_posix Â
 				& " | sort | uniq"
 			set all_category_txt to do shell script s without altering line endings
-			
+
 			-- If creating a new file, add the sample categories to the list:
 			--
 			if _should_create_file then
@@ -557,7 +557,7 @@ General"
 				set s to "echo \"" & all_category_txt & "\" | egrep -v '^$' | sort | uniq"
 				set all_category_txt to do shell script s without altering line endings
 			end if
-			
+
 			-- Coerce the lines into a list:
 			--
 			set all_categories to paragraphs of all_category_txt
@@ -568,15 +568,15 @@ General"
 			on error -- no categories found
 				set all_categories to {}
 			end try
-			
+
 			my debug_log(2, "[debug] " & my class & ".parse_log(): parsing top-level categories")
-			
+
 			-- Get root-level categories:
 			--
 			set s to "LANG=C echo \"" & all_category_txt Â
 				& "\" | sed -n 's/^\\([^:]\\{1,\\}\\).*/\\1/p' | uniq"
 			set root_category_txt to do shell script s without altering line endings
-			
+
 			-- Coerce the lines into a list:
 			--
 			set root_categories to paragraphs of root_category_txt
@@ -587,17 +587,17 @@ General"
 			on error -- no categories found
 				set root_categories to {}
 			end try
-			
+
 			set _all_categories to all_categories
 			set _root_categories to root_categories
 			settings_changed() -- notify observers
-			
+
 			my debug_log(1, get_root_categories())
 			my debug_log(2, get_all_categories())
-			
+
 			my debug_log(2, my class & ".parse_log() done")
 		end parse_log
-		
+
 		on update_category_state()
 			my debug_log(1, my class & ".update_category_state()")
 			set _page_label to _settings's get_last_category()
@@ -612,17 +612,17 @@ General"
 				set _chosen_root_category to ""
 			end try
 		end update_category_state
-		
+
 		(* == Observer Pattern == *)
-		
+
 		on settings_changed() -- void
 			set_changed()
 			notify_observers()
 			if __DEBUG_LEVEL__ > 0 then identify_observers()
 		end settings_changed
-		
+
 		(* == PRIVATE == *)
-		
+
 		on _validate_fields() --> void
 			if _page_url is missing value then
 				_error_missing("page URL")
@@ -634,11 +634,11 @@ General"
 				_error_missing("formatted page data")
 			end if
 		end _validate_fields
-		
+
 		on _error_missing(this_field) --> void
 			error my class & ": missing value for: " & this_field & " - can't append to log"
 		end _error_missing
-		
+
 		-- Does file exist? Is file empty?
 		on _check_log_file(log_file_mac) --> void (sets '_should_create_file' boolean)
 			try -- nonexistent files will error
@@ -656,13 +656,13 @@ General"
 			end try
 			my debug_log(2, "[debug] " & my class & ".parse_log(): _should_create_file = " & _should_create_file)
 		end _check_log_file
-		
+
 		on _create_log_file() --> void
 			local log_file_posix, log_file_mac, file_header
-			
+
 			set log_file_posix to expand_home_path(_settings's get_log_file())
 			set log_file_mac to get_mac_path(log_file_posix)
-			
+
 			set file_header to _log_header_sep & "
 #  Timestamped and Categorized Web Bookmark Archive               vim:ft=conf:
 #  ================================================
@@ -708,10 +708,10 @@ General"
 #  and category. You can delete these default categories and/or add your
 #  own. They are all optional.
 " & _log_header_sep & linefeed & _format_sample_categories() & linefeed & _log_record_sep & linefeed & _generate_sample_bookmarks()
-			
+
 			_io's append_file(log_file_mac, file_header)
 		end _create_log_file
-		
+
 		on _generate_sample_bookmarks() --> string
 			local sample_bookmarks
 			set sample_bookmarks to {}
@@ -720,7 +720,7 @@ General"
 			end repeat
 			return sample_bookmarks as string
 		end _generate_sample_bookmarks
-		
+
 		-- A bookmark record should always start with a record delimiter.
 		on _should_add_log_record_sep(log_file_mac) --> boolean
 			local last_line, log_lines
@@ -736,7 +736,7 @@ General"
 				return true
 			end if
 		end _should_add_log_record_sep
-		
+
 		on _set_record_delimiter() --> string
 			-- Format the record separator between log entries
 			local rule_char, rule_width, name_col_width
@@ -746,10 +746,10 @@ General"
 			return "" & my multiply_text(rule_char, name_col_width - 1) & Â
 				"+" & my multiply_text(rule_char, rule_width - name_col_width)
 		end _set_record_delimiter
-		
+
 		on _format_record(_label, _title, _url, _note) --> string
 			local field_sep, final_text
-			
+
 			set field_sep to " | "
 			set final_text to join_list({Â
 				"Date " & field_sep & _format_date(), Â
@@ -759,10 +759,10 @@ General"
 			if _note is not missing value then
 				set final_text to final_text & _format_note(_note)
 			end if
-			
+
 			return final_text & _log_record_sep & linefeed
 		end _format_record
-		
+
 		on _format_date() --> string  (YYYY-MM-DD HH:MM:SS)
 			set {year:y, month:m, day:d, hours:hh, minutes:mm, seconds:ss} to current date
 			set m to m as integer -- coerce month string
@@ -776,14 +776,14 @@ General"
 			-- Final string:
 			return join_list({y, m, d}, "-") & space & join_list({hh, mm, ss}, ":")
 		end _format_date
-		
+
 		on _format_note(this_text) --> string
 			-- Line wrap the Note field (and transliterate non-ASCII characters)
 			set s to "LANG=C echo " & quoted form of convert_to_ascii(this_text) Â
 				& "| fmt -w 72 | sed '1 s/^/Note  | /; 2,$ s/^/      | /'"
 			do shell script s without altering line endings
 		end _format_note
-		
+
 		on _format_sample_categories() --> string
 			local these_lines, this_line
 			set these_lines to split_text(_sample_categories, linefeed)
@@ -794,17 +794,17 @@ General"
 			return join_list(these_lines, linefeed)
 		end _format_sample_categories
 	end script
-	
+
 	my debug_log(1, return & "--->  new " & this's class & "()" & return)
-	
+
 	if __NULL_IO__ then
 		set this's _io to make_null_io()
 	else
 		set this's _io to make_io()
 	end if
-	
+
 	set this's _log_record_sep to this's _set_record_delimiter()
-	
+
 	return this
 end make_page_log
 
@@ -813,19 +813,19 @@ on make_web_browser()
 		property class : "WebBrowser" -- abstract
 		property _page_url : missing value
 		property _page_title : missing value
-		
+
 		on fetch_page_info() --> void
 			error my class & ".fetch_page_info(): abstract method not overridden" number -1717
 		end fetch_page_info
-		
+
 		on get_url() --> string
 			return _page_url
 		end get_url
-		
+
 		on get_title() --> string
 			return _page_title
 		end get_title
-		
+
 		on set_values(this_url, this_title) --> void
 			try
 				set _page_url to this_url
@@ -834,16 +834,16 @@ on make_web_browser()
 				handle_error(err_msg, err_num)
 			end try
 		end set_values
-		
+
 		on reset_values() --> void
 			set _page_url to missing value
 			set _page_title to missing value
 		end reset_values
-		
+
 		on to_string() --> string
 			return my short_name
 		end to_string
-		
+
 		on handle_error(page_info, err_msg, err_num) --> void
 			set t to "Error: Can't get " & page_info & " from web browser"
 			set m to "[" & my class & "] " & err_msg & " (" & err_num & ")"
@@ -857,7 +857,7 @@ script SafariBrowser
 	property class : "SafariBrowser"
 	property parent : make_web_browser() -- extends WebBrowser
 	property short_name : "Safari"
-	
+
 	on fetch_page_info() --> void
 		reset_values()
 		using terms from application "Safari" -- for compilation
@@ -891,7 +891,7 @@ script ChromeBrowser
 	property class : "ChromeBrowser"
 	property parent : make_web_browser() -- extends WebBrowser
 	property short_name : "Chrome"
-	
+
 	on fetch_page_info() --> void
 		reset_values()
 		using terms from application "Google Chrome" -- for compilation
@@ -919,11 +919,11 @@ script FirefoxBrowser
 	property class : "FirefoxBrowser"
 	property parent : make_web_browser() -- extends WebBrowser
 	property short_name : "Firefox"
-	
+
 	on fetch_page_info() --> void
 		reset_values()
 		gui_scripting_status() -- Firefox requires GUI scripting
-		
+
 		tell application (my short_name)
 			activate
 			try
@@ -933,12 +933,12 @@ script FirefoxBrowser
 				my handle_error("page title", err_msg, err_num)
 			end try
 		end tell
-		
+
 		try
 			set old_clipboard to the clipboard -- be nice
 		end try
 		set the clipboard to missing value -- so we'll know if the copy op fails
-		
+
 		-- Firefox has very limited AppleScript support, so GUI
 		-- scripting is required.
 		tell application "System Events"
@@ -951,9 +951,9 @@ script FirefoxBrowser
 				my handle_error("URL", err_msg, err_num)
 			end try
 		end tell
-		
+
 		delay 1 -- GUI scripting can be slow; give it a second
-		
+
 		try
 			set this_url to the clipboard
 			get this_url as string -- check if defined ('missing value' can't be coerced)
@@ -963,11 +963,11 @@ script FirefoxBrowser
 			end try
 			my handle_error("URL", err_msg, err_num)
 		end try
-		
+
 		try
 			set the clipboard to old_clipboard
 		end try
-		
+
 		set_values(this_url, this_title)
 	end fetch_page_info
 end script
@@ -975,7 +975,7 @@ end script
 script WebBrowserFactory
 	property class : "WebBrowserFactory"
 	property supported_browsers : {SafariBrowser, ChromeBrowser, FirefoxBrowser, WebKitBrowser}
-	
+
 	on make_browser() --> WebBrowser
 		my debug_log(1, "--->  " & my class & ".make_browser()...")
 		set cur_app to get_front_app_name()
@@ -987,7 +987,7 @@ script WebBrowserFactory
 		end repeat
 		_handle_unsupported(cur_app)
 	end make_browser
-	
+
 	on _handle_unsupported(cur_app) --> void -- PRIVATE
 		set err_msg to "The application " & cur_app & " is not a supported web browser. Currently supported browsers are:" & return & return & tab & get_browser_names()
 		set err_num to -2700
@@ -997,7 +997,7 @@ script WebBrowserFactory
 		display alert t message m buttons {"Cancel"} default button 1 as critical
 		error number -128 -- User canceled
 	end _handle_unsupported
-	
+
 	on get_browser_names() --> string
 		set these_names to ""
 		repeat with i from 1 to supported_browsers's length
@@ -1014,13 +1014,13 @@ end script
 
 script FileApp
 	property class : "FileApp"
-	
+
 	on open_file(this_app, posix_file_path) --> void
 		my debug_log(1, my class & ".open_file()")
-		
+
 		set posix_file_path to expand_home_path(posix_file_path)
 		set mac_file_path to get_mac_path(posix_file_path)
-		
+
 		tell application this_app
 			activate
 			open alias mac_file_path
@@ -1046,7 +1046,7 @@ on make_settings()
 		property _settings : make_associative_list() --> AssociativeList
 		property _default_settings : make_associative_list() --> AssociativeList
 		property _plist : missing value --> Plist (object)
-		
+
 		on init()
 			if __PLIST_DIR__'s last character is not "/" then
 				set __PLIST_DIR__ to __PLIST_DIR__ & "/"
@@ -1054,26 +1054,26 @@ on make_settings()
 			set plist_path to __PLIST_DIR__ & __BUNDLE_ID__ & ".plist"
 			set _plist to make_plist(plist_path, me)
 		end init
-		
+
 		(* == Preferences Methods == *)
-		
+
 		on get_default_item(this_key) --> anything
 			_default_settings's get_item(this_key)
 		end get_default_item
-		
+
 		on get_default_keys() --> list
 			_default_settings's get_keys()
 		end get_default_keys
-		
+
 		(* == Observer Pattern == *)
-		
+
 		on settings_changed() -- void
 			set_changed()
 			notify_observers()
 		end settings_changed
-		
+
 		(* == Associative List Methods (delegate) == *)
-		
+
 		on set_pref(this_key, this_value) --> void
 			--
 			-- Use this method to both set the associative list item and save
@@ -1083,7 +1083,7 @@ on make_settings()
 			_plist's write_pref(this_key, this_value)
 			settings_changed() -- notify observers
 		end set_pref
-		
+
 		on set_item(this_key, this_value) --> void
 			--
 			-- Use this method to only set the associative list item without
@@ -1092,51 +1092,51 @@ on make_settings()
 			_settings's set_item(this_key, this_value)
 			settings_changed() -- notify observers
 		end set_item
-		
+
 		on get_item(this_key) --> anything
 			_settings's get_item(this_key)
 		end get_item
-		
+
 		on count_items() --> integer
 			_settings's count_items()
 		end count_items
-		
+
 		on delete_item(this_key) --> void
 			_settings's delete_item(this_key)
 			settings_changed()
 		end delete_item
-		
+
 		on get_keys() --> list
 			_settings's get_keys()
 		end get_keys
-		
+
 		on get_values() --> list
 			_settings's get_values()
 		end get_values
-		
+
 		on key_exists(this_key) --> boolean
 			_settings's key_exists(this_key)
 		end key_exists
-		
+
 		(* == Plist File Methods (delegate) == *)
-		
+
 		on read_settings(plist_keys) --> void (modifies associative list)
 			_plist's read_settings(plist_keys)
 		end read_settings
-		
+
 		on write_settings() --> void (writes to file)
 			_plist's write_settings()
 		end write_settings
-		
+
 		(*on set_and_write_pref(this_key, this_value) --> void (modifies ass. list, saves file)
 			_plist's set_and_write_pref(this_key, this_value)
 			settings_changed()
 		end set_and_write_pref*)
-		
+
 		on read_pref(pref_key) --> anything
 			_plist's read_pref(pref_key)
 		end read_pref
-		
+
 		on write_pref(pref_key, pref_value) --> void (writes to file)
 			_plist's write_pref(pref_key, pref_value)
 		end write_pref
@@ -1147,7 +1147,7 @@ on make_page_log_settings()
 	script
 		property class : "PageLogSettings" -- model
 		property parent : make_settings() -- extends Settings
-		
+
 		-- Define all preference keys here
 		property _log_file_key : "logFile" -- required pref
 		property _text_editor_key : "textEditor" -- required pref
@@ -1155,64 +1155,64 @@ on make_page_log_settings()
 		--
 		property _warn_before_editing_key : "warnBeforeEditing" -- optional state
 		property _last_category_key : "lastCategory" -- optional state
-		
+
 		property _optional_keys : {_last_category_key, _warn_before_editing_key} --> array
-		
+
 		on init()
 			continue init()
-			
+
 			-- Initialize default values for required preferences
 			my _default_settings's set_item(_text_editor_key, "TextEdit")
 			my _default_settings's set_item(_file_viewer_key, "Safari")
 			my _default_settings's set_item(_log_file_key, __DEFAULT_LOGFILE__)
 		end init
-		
+
 		(* == Preferences Methods == *)
-		
+
 		on get_default_log_file() --> string
 			my _default_settings's get_item(_log_file_key)
 		end get_default_log_file
-		
+
 		on get_default_file_viewer() --> string
 			my _default_settings's get_item(_file_viewer_key)
 		end get_default_file_viewer
-		
+
 		on get_default_text_editor() --> string
 			my _default_settings's get_item(_text_editor_key)
 		end get_default_text_editor
-		
+
 		on get_optional_keys() --> list
 			return _optional_keys
 		end get_optional_keys
-		
+
 		on get_log_file_key() --> string
 			return _log_file_key
 		end get_log_file_key
-		
+
 		on get_file_viewer_key() --> string
 			return _file_viewer_key
 		end get_file_viewer_key
-		
+
 		on get_text_editor_key() --> string
 			return _text_editor_key
 		end get_text_editor_key
-		
+
 		on get_warn_before_editing_key() --> string
 			return _warn_before_editing_key
 		end get_warn_before_editing_key
-		
+
 		on get_log_file() --> string
 			my _settings's get_item(_log_file_key)
 		end get_log_file
-		
+
 		on get_file_viewer() --> string
 			my _settings's get_item(_file_viewer_key)
 		end get_file_viewer
-		
+
 		on get_text_editor() --> string
 			my _settings's get_item(_text_editor_key)
 		end get_text_editor
-		
+
 		on warn_before_editing() --> boolean
 			try
 				my _settings's get_item(_warn_before_editing_key)
@@ -1222,13 +1222,13 @@ on make_page_log_settings()
 				return true -- the default value
 			end try
 		end warn_before_editing
-		
+
 		(* == State Methods == *)
-		
+
 		on get_last_category_key() --> string
 			return _last_category_key
 		end get_last_category_key
-		
+
 		on get_last_category() --> string
 			try
 				my _settings's get_item(_last_category_key)
@@ -1236,9 +1236,9 @@ on make_page_log_settings()
 				return missing value
 			end try
 		end get_last_category
-		
+
 		(* == Associative List Methods (delegate) == *)
-		
+
 		on set_pref(this_key, this_value) --> void
 			--
 			-- Use this method to both set the associative list item and save
@@ -1247,7 +1247,7 @@ on make_page_log_settings()
 			set this_value to _handle_log_file(this_key, this_value)
 			continue set_pref(this_key, this_value)
 		end set_pref
-		
+
 		on set_item(this_key, this_value) --> void
 			--
 			-- Use this method to only set the associative list item without
@@ -1256,9 +1256,9 @@ on make_page_log_settings()
 			set this_value to _handle_log_file(this_key, this_value)
 			continue set_item(this_key, this_value)
 		end set_item
-		
+
 		(* == Utility Methods == *)
-		
+
 		on _handle_log_file(this_key, this_value) --> string -- PRIVATE
 			if this_key is _log_file_key then
 				set this_value to my shorten_home_path(this_value)
@@ -1279,7 +1279,7 @@ on make_plist(plist_path, settings_model)
 		property class : "Plist"
 		property _plist_path : plist_path
 		property _model : settings_model --> Settings
-		
+
 		-- Get the values for each key in the given list
 		on read_settings(plist_keys) --> void (modifies associative list)
 			my debug_log(1, "[debug] read_settings()")
@@ -1295,7 +1295,7 @@ on make_plist(plist_path, settings_model)
 			end try
 			my debug_log(1, "[debug] read_settings(): done")
 		end read_settings
-		
+
 		on write_settings() --> void (writes to file)
 			try
 				repeat with this_key in _model's get_keys()
@@ -1306,12 +1306,12 @@ on make_plist(plist_path, settings_model)
 				error "Can't write_settings(): " & err_msg number err_num
 			end try
 		end write_settings
-		
+
 		(*on set_and_write_pref(this_key, this_value) --> void (modifies ass. list, saves file)
 			_model's set_item(this_key, this_value) -- store value in object
 			write_pref(this_key, this_value) -- write value to file
 		end set_and_write_pref*)
-		
+
 		on read_pref(pref_key) --> anything
 			my debug_log(1, "[debug] read_pref()")
 			local pref_key
@@ -1325,7 +1325,7 @@ on make_plist(plist_path, settings_model)
 				error "Can't read_pref(): " & err_msg number err_num
 			end try
 		end read_pref
-		
+
 		on write_pref(pref_key, pref_value) --> void (writes to file)
 			--
 			-- :XXX: This function only sets string types now. If need
@@ -1366,7 +1366,7 @@ on make_plist(plist_path, settings_model)
 				error "Can't write_pref(): " & err_msg number err_num
 			end try
 		end write_pref
-		
+
 		on _new_plist() -- returns a 'property list file' -- PRIVATE
 			my debug_log(1, "[debug] _new_plist()")
 			local parent_dictionary, this_plistfile
@@ -1395,45 +1395,45 @@ on make_navigation_controller()
 	script this
 		property class : "NavigationController"
 		property controller_stack : make_named_stack("ControllerStack") --> Stack
-		
+
 		on set_root_controller(next_controller) --> void
 			reset() -- clear the controller stack
 			push(next_controller) -- push root controller onto stack
 		end set_root_controller
-		
+
 		on go_back() --> void
 			-- Pop the current controller off the stack so that the
 			-- previous one (next on the stack) will run next.
 			controller_stack's pop()
 		end go_back
-		
+
 		(* == Controller Stack Methods (Delegate) == *)
-		
+
 		on push(this_controller) --> void
 			controller_stack's push(this_controller)
 		end push
-		
+
 		on pop() --> controller object
 			controller_stack's pop()
 		end pop
-		
+
 		on peek() --> controller object
 			controller_stack's peek()
 		end peek
-		
+
 		on reset() --> void
 			controller_stack's reset()
 		end reset
-		
+
 		on is_empty() --> boolean
 			controller_stack's is_empty()
 		end is_empty
-		
+
 		on to_string() --> string
 			controller_stack's to_string()
 		end to_string
 	end script
-	
+
 	my debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_navigation_controller
@@ -1443,24 +1443,24 @@ on make_base_controller()
 		property class : "BaseController"
 		property _nav_controller : missing value -- must be set by subclasses
 		property other_controllers : {} --> array (for pushing on the stack)
-		
+
 		on run
 			my debug_log(1, return & "--->  running " & my class & "...")
 			my debug_log(1, "Other controllers: " & other_controllers_to_string())
 		end run
-		
+
 		on set_controllers(these_controllers) --> void
 			set my other_controllers to these_controllers
 		end set_controllers
-		
+
 		on go_back() --> void
 			my _nav_controller's go_back()
 		end go_back
-		
+
 		on to_string() --> string
 			return my class
 		end to_string
-		
+
 		-- Get the classes of the other_controllers (mostly for testing/debugging)
 		on other_controllers_to_string() --> string
 			if other_controllers's length = 0 then
@@ -1492,7 +1492,7 @@ on make_file_editor_controller(navigation_controller, settings_model)
 		property _model : settings_model
 		property _app : FileApp
 		property _view : missing value
-		
+
 		on run
 			continue run -- call superclass
 			if _model's warn_before_editing() then
@@ -1505,21 +1505,21 @@ on make_file_editor_controller(navigation_controller, settings_model)
 			my debug_log(1, "--->  finished " & my class & return)
 			return ret_val --> false ends controller loop and exits script
 		end run
-		
+
 		on launch_app() --> void
 			my debug_log(1, my class & ".launch_app()")
 			set this_app to _model's get_text_editor()
 			set this_file to _model's get_log_file()
 			_app's open_file(this_app, this_file)
 		end launch_app
-		
+
 		on disable_warning() --> void
 			my debug_log(1, my class & ".disable_warning()")
 			_model's set_pref(_model's get_warn_before_editing_key(), false)
 			launch_app()
 		end disable_warning
 	end script
-	
+
 	my debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_file_editor_controller
@@ -1532,14 +1532,14 @@ on make_file_viewer_controller(navigation_controller, settings_model)
 		property _model : settings_model
 		property _app : FileApp
 		property _view : missing value
-		
+
 		on run
 			continue run -- call superclass
 			launch_app()
 			my debug_log(1, "--->  finished " & my class & return)
 			return false --> false ends controller loop and exits script
 		end run
-		
+
 		on launch_app() --> void
 			my debug_log(1, my class & ".launch_app()")
 			set this_app to _model's get_file_viewer()
@@ -1547,7 +1547,7 @@ on make_file_viewer_controller(navigation_controller, settings_model)
 			_app's open_file(this_app, this_file)
 		end launch_app
 	end script
-	
+
 	my debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_file_viewer_controller
@@ -1558,7 +1558,7 @@ on make_license_controller(navigation_controller)
 		property parent : make_base_controller() -- extends BaseController
 		property _nav_controller : navigation_controller
 		property _buttons : {"Cancel", "OK"}
-		
+
 		on run
 			continue run -- call superclass
 			try
@@ -1582,7 +1582,7 @@ on make_license_controller(navigation_controller)
 			return true --> false ends controller loop and exits script
 		end run
 	end script
-	
+
 	my debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_license_controller
@@ -1593,7 +1593,7 @@ on make_about_controller(navigation_controller)
 		property parent : make_base_controller() -- extends BaseController
 		property _nav_controller : navigation_controller
 		property _view : missing value
-		
+
 		on run
 			continue run -- call superclass
 			_nav_controller's pop() -- remove from history
@@ -1602,18 +1602,18 @@ on make_about_controller(navigation_controller)
 			my debug_log(1, "--->  finished " & my class & return)
 			return ret_val --> false ends controller loop and exits script
 		end run
-		
+
 		on show_license() --> void
 			my debug_log(1, my class & ".show_license()")
 			_nav_controller's push(my other_controllers's item 1)
 		end show_license
-		
+
 		on go_to_website() --> void
 			my debug_log(1, my class & ".go_to_website()")
 			tell me to open location __SCRIPT_WEBSITE__
 		end go_to_website
 	end script
-	
+
 	my debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_about_controller
@@ -1625,7 +1625,7 @@ on make_help_controller(navigation_controller, settings_model)
 		property _nav_controller : navigation_controller
 		property _model : settings_model
 		property _view : missing value
-		
+
 		on run
 			continue run -- call superclass
 			_nav_controller's pop() -- remove from history
@@ -1634,12 +1634,12 @@ on make_help_controller(navigation_controller, settings_model)
 			my debug_log(1, "--->  finished " & my class & return)
 			return true
 		end run
-		
+
 		on change_settings() --> void
 			_nav_controller's push(my other_controllers's item 1)
 		end change_settings
 	end script
-	
+
 	my debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_help_controller
@@ -1650,7 +1650,7 @@ on make_label_help_controller(navigation_controller)
 		property parent : make_base_controller() -- extends BaseController
 		property _nav_controller : navigation_controller
 		property _view : missing value
-		
+
 		on run
 			continue run -- call superclass
 			_nav_controller's pop() -- remove from history
@@ -1660,7 +1660,7 @@ on make_label_help_controller(navigation_controller)
 			return true
 		end run
 	end script
-	
+
 	my debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_label_help_controller
@@ -1672,7 +1672,7 @@ on make_title_controller(navigation_controller, main_model)
 		property _nav_controller : navigation_controller
 		property _model : main_model
 		property _view : missing value
-		
+
 		on run
 			continue run -- call superclass
 			if _view is missing value then set _view to make_title_view(me, _model)
@@ -1680,18 +1680,18 @@ on make_title_controller(navigation_controller, main_model)
 			my debug_log(1, "--->  finished " & my class & return)
 			return true
 		end run
-		
+
 		on show_help() --> void
 			_nav_controller's push(my other_controllers's item 1)
 			-- NOTE: The Help controller will need to pop itself off the stack.
 		end show_help
-		
+
 		on set_page_title(this_value) --> void
 			_model's set_page_title(this_value)
 			_nav_controller's push(my other_controllers's item 2)
 		end set_page_title
 	end script
-	
+
 	my debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_title_controller
@@ -1703,7 +1703,7 @@ on make_url_controller(navigation_controller, main_model)
 		property _nav_controller : navigation_controller
 		property _model : main_model
 		property _view : missing value
-		
+
 		on run
 			continue run -- call superclass
 			if _view is missing value then set _view to make_url_view(me, _model)
@@ -1711,13 +1711,13 @@ on make_url_controller(navigation_controller, main_model)
 			my debug_log(1, "--->  finished " & my class & return)
 			return true
 		end run
-		
+
 		on set_page_url(this_value) --> void
 			_model's set_page_url(this_value)
 			_nav_controller's push(my other_controllers's item 1)
 		end set_page_url
 	end script
-	
+
 	my debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_url_controller
@@ -1726,7 +1726,7 @@ on make_label_base_controller()
 	script this
 		property class : "LabelBaseController"
 		property parent : make_base_controller() -- extends BaseController
-		
+
 		on push_controller(i) --> void
 			my _nav_controller's push(my other_controllers's item i)
 		end push_controller
@@ -1741,7 +1741,7 @@ on make_label_controller(navigation_controller, main_model, label_base_view)
 		property _model : main_model
 		property _view : missing value
 		property _label_base_view : label_base_view
-		
+
 		on run
 			continue run -- call superclass
 			if _model's get_root_categories()'s length < 2 and _model's get_sub_categories()'s length < 2 then
@@ -1757,50 +1757,50 @@ on make_label_controller(navigation_controller, main_model, label_base_view)
 			my debug_log(1, "--->  finished " & my class & return)
 			return true
 		end run
-		
+
 		on _skip_to_edit_label() --> void -- PRIVATE
 			_nav_controller's pop() -- remove from history
 			_nav_controller's push(my other_controllers's item 3)
 		end _skip_to_edit_label
-		
+
 		on set_chosen_root(this_value) --> void
 			_model's set_chosen_root_category(this_value)
 			push_controller(1)
 		end set_chosen_root
-		
+
 		on choose_from_all() --> void
 			push_controller(2)
 		end choose_from_all
-		
+
 		on edit_label() --> void
 			push_controller(3)
 		end edit_label
-		
+
 		on edit_file() --> void
 			push_controller(4)
 		end edit_file
-		
+
 		on view_file() --> void
 			push_controller(5)
 		end view_file
-		
+
 		on change_settings() --> void
 			push_controller(6)
 		end change_settings
-		
+
 		on show_about() --> void
 			push_controller(7)
 		end show_about
-		
+
 		on show_help() --> void
 			push_controller(8)
 		end show_help
-		
+
 		on show_category_help() --> void
 			push_controller(9)
 		end show_category_help
 	end script
-	
+
 	my debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_label_controller
@@ -1813,7 +1813,7 @@ on make_sub_label_controller(navigation_controller, main_model, label_base_view)
 		property _model : main_model
 		property _view : missing value
 		property _label_base_view : label_base_view
-		
+
 		on run
 			continue run -- call superclass
 			if _model's get_sub_categories()'s length < 2 then
@@ -1827,55 +1827,55 @@ on make_sub_label_controller(navigation_controller, main_model, label_base_view)
 			my debug_log(1, "--->  finished " & my class & return)
 			return true
 		end run
-		
+
 		on _skip_to_edit_label() --> void -- PRIVATE
 			tell _nav_controller
 				-- This dialog always follows the root category dialog,
 				-- so remove that last controller from the navigation
 				-- history if it also has less than two items.
 				if _model's get_root_categories()'s length < 2 then pop()
-				
+
 				-- Now go to the next controller w/o keeping this
 				-- controller in the history.
 				pop() -- remove from history
 				push(my other_controllers's item 1)
 			end tell
 		end _skip_to_edit_label
-		
+
 		on set_chosen_category(this_value) --> void
 			_model's set_chosen_category(this_value)
 			push_controller(1)
 		end set_chosen_category
-		
+
 		on choose_from_all() --> void
 			push_controller(2)
 		end choose_from_all
-		
+
 		on edit_file() --> void
 			push_controller(3)
 		end edit_file
-		
+
 		on view_file() --> void
 			push_controller(4)
 		end view_file
-		
+
 		on change_settings() --> void
 			push_controller(5)
 		end change_settings
-		
+
 		on show_about() --> void
 			push_controller(6)
 		end show_about
-		
+
 		on show_help() --> void
 			push_controller(7)
 		end show_help
-		
+
 		on show_category_help() --> void
 			push_controller(8)
 		end show_category_help
 	end script
-	
+
 	my debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_sub_label_controller
@@ -1888,7 +1888,7 @@ on make_all_label_controller(navigation_controller, main_model, label_base_view)
 		property _model : main_model
 		property _view : missing value
 		property _label_base_view : label_base_view
-		
+
 		on run
 			continue run -- call superclass
 			if _view is missing value then set _view to make_all_label_view(me, _label_base_view)
@@ -1896,37 +1896,37 @@ on make_all_label_controller(navigation_controller, main_model, label_base_view)
 			my debug_log(1, "--->  finished " & my class & return)
 			return true
 		end run
-		
+
 		on set_chosen_category(this_value) --> void
 			_model's set_chosen_category(this_value)
 			push_controller(1)
 		end set_chosen_category
-		
+
 		on edit_file() --> void
 			push_controller(2)
 		end edit_file
-		
+
 		on view_file() --> void
 			push_controller(3)
 		end view_file
-		
+
 		on change_settings() --> void
 			push_controller(4)
 		end change_settings
-		
+
 		on show_about() --> void
 			push_controller(5)
 		end show_about
-		
+
 		on show_help() --> void
 			push_controller(6)
 		end show_help
-		
+
 		on show_category_help() --> void
 			push_controller(7)
 		end show_category_help
 	end script
-	
+
 	my debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_all_label_controller
@@ -1938,7 +1938,7 @@ on make_label_edit_controller(navigation_controller, main_model)
 		property _nav_controller : navigation_controller
 		property _model : main_model
 		property _view : missing value
-		
+
 		on run
 			continue run -- call superclass
 			if _view is missing value then set _view to make_label_edit_view(me, _model)
@@ -1946,14 +1946,14 @@ on make_label_edit_controller(navigation_controller, main_model)
 			my debug_log(1, "--->  finished " & my class & return)
 			return true
 		end run
-		
+
 		on set_chosen_category(this_value) --> void
 			_model's set_page_label(this_value)
 			_model's set_chosen_category(this_value)
 			_nav_controller's push(my other_controllers's item 1)
 		end set_chosen_category
 	end script
-	
+
 	my debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_label_edit_controller
@@ -1965,7 +1965,7 @@ on make_note_controller(navigation_controller, main_model)
 		property _nav_controller : navigation_controller
 		property _model : main_model
 		property _view : missing value
-		
+
 		on run
 			continue run -- call superclass
 			if _view is missing value then set _view to make_note_view(me, _model)
@@ -1973,13 +1973,13 @@ on make_note_controller(navigation_controller, main_model)
 			my debug_log(1, "--->  finished " & my class & return)
 			return true
 		end run
-		
+
 		on set_page_note(this_value) --> void
 			if this_value is not missing value then _model's set_page_note(this_value)
 			_nav_controller's reset() -- clear the controller stack to end nav loop
 		end set_page_note
 	end script
-	
+
 	my debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_note_controller
@@ -1995,17 +1995,17 @@ on make_settings_controller(navigation_controller, settings_model, app_model, li
 		property _license_controller : license_controller
 		property _is_first_run : missing value --> boolean
 		property _has_run_this_session : false --> boolean
-		
+
 		-- Controllers instantiated during construction:
 		property settings_nav_controller : make_navigation_controller()
 		property app_settings_controller : missing value
 		property file_settings_controller : missing value
 		-- Controllers instantiated on first run:
 		property main_controller : missing value
-		
+
 		on run
 			my debug_log(1, return & "--->  running " & my class & "...")
-			
+
 			try
 				-- Pop itself off the main app nav stack first thing so that
 				-- it doesn't become part of the main app navigation history.
@@ -2015,7 +2015,7 @@ on make_settings_controller(navigation_controller, settings_model, app_model, li
 			on error
 				my debug_log(2, my class & " is running before the main app navigation loop has started so it did not pop itself off the stack which is currently empty.")
 			end try
-			
+
 			-- Read required keys
 			try
 				_model's read_settings(_model's get_default_keys())
@@ -2024,7 +2024,7 @@ on make_settings_controller(navigation_controller, settings_model, app_model, li
 				set _is_first_run to true
 			end try
 			my debug_log(2, my class & ": first run? " & _is_first_run as string)
-			
+
 			-- Read optional keys (such as saved state)
 			repeat with this_key in _model's get_optional_keys()
 				set this_key to this_key's contents -- dereference
@@ -2035,7 +2035,7 @@ on make_settings_controller(navigation_controller, settings_model, app_model, li
 					_model's set_item(this_key, this_value)
 				end try
 			end repeat
-			
+
 			-- Run the settings user interface only if requested by
 			-- the user or if this is the first time running the script
 			if _has_run_this_session or _is_first_run then
@@ -2044,11 +2044,11 @@ on make_settings_controller(navigation_controller, settings_model, app_model, li
 				set _has_run_this_session to true
 				my debug_log(1, my class & ": skipping settings UI at startup")
 			end if
-			
+
 			my debug_log(1, "--->  finished " & my class & return)
 			return true
 		end run
-		
+
 		on _show_ui() --> void
 			if main_controller is missing value then
 				-- Create main settings view controller
@@ -2056,7 +2056,7 @@ on make_settings_controller(navigation_controller, settings_model, app_model, li
 				-- Inject any controller dependencies
 				main_controller's set_controllers({app_settings_controller, file_settings_controller})
 			end if
-			
+
 			if _is_first_run then
 				-- Before showing any other user interface, show the license
 				run _license_controller
@@ -2066,36 +2066,36 @@ on make_settings_controller(navigation_controller, settings_model, app_model, li
 			else
 				set root_controller to main_controller
 			end if
-			
+
 			-- Load first controller
 			settings_nav_controller's set_root_controller(root_controller)
-			
+
 			my debug_log(1, my class & "'s Controller Stack: " & settings_nav_controller's to_string())
-			
+
 			repeat while not settings_nav_controller's is_empty()
 				set this_controller to settings_nav_controller's peek() -- Get controller from top of stack
 				run this_controller -- Call its run() method
-				
+
 				my debug_log(1, my class & "'s Controller Stack: " & settings_nav_controller's to_string())
 			end repeat
-			
+
 			if _is_first_run then -- clean-up after first run
 				set _is_first_run to false
 				set _has_run_this_session to true
 			end if
 		end _show_ui
-		
+
 		on _create_controllers() --> void -- PRIVATE
 			-- Controllers for the preference editing dialogs:
 			set app_settings_controller to make_settings_app_controller(settings_nav_controller, _model)
 			set file_settings_controller to make_settings_file_controller(settings_nav_controller, _model, _app_model)
 		end _create_controllers
-		
+
 		on to_string() --> string
 			return my class
 		end to_string
 	end script
-	
+
 	my debug_log(1, return & "--->  new " & this's class & "()")
 	this's _create_controllers()
 	return this
@@ -2108,7 +2108,7 @@ on make_settings_first_controller(navigation_controller, settings_model)
 		property _nav_controller : navigation_controller
 		property _model : settings_model
 		property _view : missing value
-		
+
 		on run
 			continue run -- call superclass
 			if _view is missing value then set _view to make_settings_first_view(me, _model)
@@ -2116,18 +2116,18 @@ on make_settings_first_controller(navigation_controller, settings_model)
 			my debug_log(1, "--->  finished " & my class & return)
 			return true
 		end run
-		
+
 		on use_defaults() --> void
 			_set_missing_prefs()
 			_nav_controller's pop() -- done with first-run settings controller
 		end use_defaults
-		
+
 		on change_settings() --> void
 			_set_missing_prefs() -- the main settings view will need the defaults too
 			_nav_controller's pop() -- done with first-run settings controller
 			_nav_controller's push(my other_controllers's item 1) -- main settings controller
 		end change_settings
-		
+
 		on _set_missing_prefs() --> void -- PRIVATE
 			repeat with this_key in _model's get_default_keys()
 				set this_key to this_key's contents -- dereference implicit loop reference
@@ -2140,7 +2140,7 @@ on make_settings_first_controller(navigation_controller, settings_model)
 			end repeat
 		end _set_missing_prefs
 	end script
-	
+
 	my debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_settings_first_controller
@@ -2152,7 +2152,7 @@ on make_settings_main_controller(navigation_controller, settings_model)
 		property _nav_controller : navigation_controller
 		property _model : settings_model
 		property _view : missing value
-		
+
 		on run
 			continue run -- call superclass
 			if _view is missing value then set _view to make_settings_main_view(me, _model)
@@ -2160,20 +2160,20 @@ on make_settings_main_controller(navigation_controller, settings_model)
 			my debug_log(1, "--->  finished " & my class & return)
 			return true
 		end run
-		
+
 		on choose_app() --> void
 			_nav_controller's push(my other_controllers's item 1)
 		end choose_app
-		
+
 		on choose_file() --> void
 			_nav_controller's push(my other_controllers's item 2)
 		end choose_file
-		
+
 		on finish_settings() --> void
 			_nav_controller's pop()
 		end finish_settings
 	end script
-	
+
 	my debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_settings_main_controller
@@ -2187,7 +2187,7 @@ on make_settings_app_controller(navigation_controller, settings_model)
 		property _view : missing value
 		property _editor_controller : missing value
 		property _viewer_controller : missing value
-		
+
 		on run
 			continue run -- call superclass
 			if _view is missing value then
@@ -2197,14 +2197,14 @@ on make_settings_app_controller(navigation_controller, settings_model)
 			my debug_log(1, "--->  finished " & my class & return)
 			return true
 		end run
-		
+
 		on choose_editor() --> void
 			if _editor_controller is missing value then -- lazy instantiation
 				set _editor_controller to make_settings_editor_controller(_nav_controller, _model)
 			end if
 			_nav_controller's push(_editor_controller)
 		end choose_editor
-		
+
 		on choose_viewer() --> void
 			if _viewer_controller is missing value then -- lazy instantiation
 				set _viewer_controller to make_settings_viewer_controller(_nav_controller, _model)
@@ -2212,7 +2212,7 @@ on make_settings_app_controller(navigation_controller, settings_model)
 			_nav_controller's push(_viewer_controller)
 		end choose_viewer
 	end script
-	
+
 	my debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_settings_app_controller
@@ -2221,20 +2221,20 @@ on make_settings_app_base_controller()
 	script this
 		property class : "SettingsAppBaseController" -- abstract
 		property parent : make_base_controller() -- extends BaseController
-		
+
 		on run
 			-- subclasses must instantiate a view first here, then call super
 			my _view's create_view()
 			my debug_log(1, "--->  finished " & my class & return)
 			return true
 		end run
-		
+
 		on set_app(_val) --> void
 			my _model's set_pref(my _app_key, _val)
 			go_back()
 		end set_app
 	end script
-	
+
 	my debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_settings_app_base_controller
@@ -2247,7 +2247,7 @@ on make_settings_editor_controller(navigation_controller, settings_model)
 		property _model : settings_model
 		property _view : missing value
 		property _app_key : _model's get_text_editor_key()
-		
+
 		on run
 			my debug_log(1, return & "--->  running " & my class & "...")
 			if _view is missing value then
@@ -2256,7 +2256,7 @@ on make_settings_editor_controller(navigation_controller, settings_model)
 			continue run -- call superclass
 		end run
 	end script
-	
+
 	my debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_settings_editor_controller
@@ -2269,7 +2269,7 @@ on make_settings_viewer_controller(navigation_controller, settings_model)
 		property _model : settings_model
 		property _view : missing value
 		property _app_key : _model's get_file_viewer_key()
-		
+
 		on run
 			my debug_log(1, return & "--->  running " & my class & "...")
 			if _view is missing value then
@@ -2278,7 +2278,7 @@ on make_settings_viewer_controller(navigation_controller, settings_model)
 			continue run -- call superclass
 		end run
 	end script
-	
+
 	my debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_settings_viewer_controller
@@ -2291,7 +2291,7 @@ on make_settings_file_controller(navigation_controller, settings_model, app_mode
 		property _model : settings_model
 		property _app_model : app_model
 		property _view : missing value
-		
+
 		on run
 			continue run -- call superclass
 			if _view is missing value then
@@ -2301,14 +2301,14 @@ on make_settings_file_controller(navigation_controller, settings_model, app_mode
 			my debug_log(1, "--->  finished " & my class & return)
 			return true
 		end run
-		
+
 		on set_log_file(_val) --> void
 			_model's set_pref(_model's get_log_file_key(), _val)
 			_app_model's parse_log()
 			delay 1 -- script needs time to process before next dialog
 			go_back()
 		end set_log_file
-		
+
 		on reset_warning() --> void
 			my debug_log(1, my class & ".reset_warning()")
 			_model's set_pref(_model's get_warn_before_editing_key(), true)
@@ -2316,7 +2316,7 @@ on make_settings_file_controller(navigation_controller, settings_model, app_mode
 			go_back()
 		end reset_warning
 	end script
-	
+
 	my debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_settings_file_controller
@@ -2328,30 +2328,30 @@ end make_settings_file_controller
 on make_base_view()
 	script this
 		property class : "BaseView"
-		
+
 		property _app_description : "This script will append the URL of the front web browser document to a text file along with the current date/time, the title of the web page, a user-definable category, and an optional note. The script can also open the file for viewing or editing in the apps of your choice (although care should be taken when editing to not alter the format of the file)."
-		
+
 		(* == Unicode Characters for Views == *)
-		
+
 		property u_dash : Çdata utxt2500È as Unicode text -- BOX DRAWINGS LIGHT HORIZONTAL
-		
+
 		property u_back : Çdata utxt276EÈ as Unicode text -- HEAVY LEFT-POINTING ANGLE QUOTATION MARK ORNAMENT
 		-- property u_back : Çdata utxt25C0È as Unicode text -- BLACK LEFT-POINTING TRIANGLE
 		--property u_back : Çdata utxt2B05È as Unicode text -- LEFTWARDS BLACK ARROW
-		
+
 		property u_bullet : Çdata utxt25CFÈ as Unicode text -- BLACK CIRCLE
 		--property u_bullet : "¥" -- standard bullet, but slightly smaller than Unicode black circle
 		--property u_bullet : Çdata utxt2043È as Unicode text -- HYPHEN BULLET
 		--property u_bullet : Çdata utxt25A0È as Unicode text -- BLACK SQUARE
 		--property u_bullet : Çdata utxt25B6È as Unicode text -- BLACK RIGHT-POINTING TRIANGLE
 		--property u_bullet : Çdata utxt27A1È as Unicode text -- BLACK RIGHTWARDS ARROW
-		
+
 		(* == View Components == *)
-		
+
 		property u_back_btn : "" & u_back & "  Back" -- for buttons
 		--property u_back_item : " " & u_back_btn -- for menu items
 		property u_bullet_item : " " & u_bullet & "  " -- for menu items
-		
+
 		-- Making buttons wider is the only way to widen text input
 		-- fields in AppleScript dialogs. It looks a little stupid, but
 		-- it makes the text input fields a little more functional.
@@ -2362,13 +2362,13 @@ on make_base_view()
 		property save_btn_pad : missing value
 		property help_btn_pad : missing value
 		--property cancel_btn_pad : missing value -- this prevents cmd-. from working
-		
+
 		(* == Methods == *)
-		
+
 		on create_view() --> void
 			error my class & ".create_view(): abstract method not overridden" number -1717
 		end create_view
-		
+
 		on handle_cancel_as_back(err_msg, err_num) --> void
 			if err_num is -128 then -- treat Cancel as "Back" button
 				my create_view()
@@ -2376,7 +2376,7 @@ on make_base_view()
 				error err_msg number err_num
 			end if
 		end handle_cancel_as_back
-		
+
 		--
 		-- This method just centers button names a fixed amount and is
 		-- meant to be used on short button names of roughly the same
@@ -2392,14 +2392,14 @@ on make_base_view()
 			return left_pad & str & right_pad as string
 		end _center_button_name
 	end script
-	
+
 	set this's back_btn_pad to this's _center_button_name(this's u_back_btn)
 	set this's ok_btn_pad to this's _center_button_name("OK")
 	set this's next_btn_pad to this's _center_button_name("Next...")
 	set this's save_btn_pad to this's _center_button_name("Save")
 	set this's help_btn_pad to this's _center_button_name("Help")
 	--set this's cancel_btn_pad to this's _center_button_name("Cancel") -- this prevents cmd-. from working
-	
+
 	return this
 end make_base_view
 
@@ -2410,11 +2410,11 @@ on make_about_view(view_controller)
 		property class : "AboutView"
 		property parent : make_base_view() -- extends BaseView
 		property _controller : view_controller
-		
+
 		property _title : __SCRIPT_NAME__
 		property _buttons : {"License", "Website", "OK"}
 		property _prompt : missing value
-		
+
 		on create_view() --> void
 			_set_prompt()
 			with timeout of (10 * 60) seconds
@@ -2423,10 +2423,10 @@ on make_about_view(view_controller)
 				action_performed(action_event) --> returns boolean
 			end timeout
 		end create_view
-		
+
 		on action_performed(action_event) --> void
 			if action_event is false then error number -128 -- User canceled
-			
+
 			set action_event to action_event as string
 			if action_event is _buttons's item 1 then
 				_controller's show_license()
@@ -2436,7 +2436,7 @@ on make_about_view(view_controller)
 			end if
 			return true --> continue controller loop
 		end action_performed
-		
+
 		on _set_prompt() --> void -- PRIVATE
 			set _prompt to Â
 				"Log timestamped, categorized web bookmarks to a text file." & return & return Â
@@ -2453,15 +2453,15 @@ on make_help_view(view_controller, settings_model)
 		property parent : make_base_view() -- extends BaseView
 		property _controller : view_controller
 		property _model : settings_model
-		
+
 		property _log_file : missing value
 		property _file_viewer : missing value
 		property _text_editor : missing value
-		
+
 		property _title : __SCRIPT_NAME__ & " Help"
 		property _prompt : missing value
 		property _buttons : {"Preferences...", "Cancel", "OK"}
-		
+
 		on create_view() --> void
 			_set_prompt()
 			with timeout of (10 * 60) seconds
@@ -2470,20 +2470,20 @@ on make_help_view(view_controller, settings_model)
 				action_performed(action_event)
 			end timeout
 		end create_view
-		
+
 		on action_performed(action_event) --> void
 			if action_event is false then error number -128 -- User canceled
-			
+
 			set action_event to action_event as string
 			if action_event is _buttons's item 1 then _controller's change_settings()
 		end action_performed
-		
+
 		on update() --> void  (Observer Pattern)
 			set _log_file to _model's get_log_file()
 			set _file_viewer to _model's get_file_viewer()
 			set _text_editor to _model's get_text_editor()
 		end update
-		
+
 		on _set_prompt() --> void -- PRIVATE
 			set _prompt to my _app_description & " The current settings are:" & return & return Â
 				& tab & "Log File:" & tab & tab & _log_file & return & return Â
@@ -2492,7 +2492,7 @@ on make_help_view(view_controller, settings_model)
 				& "You can change those settings by clicking \"Preferences\"."
 		end _set_prompt
 	end script
-	
+
 	this's update()
 	this's _model's register_observer(this)
 	return this
@@ -2501,14 +2501,14 @@ end make_help_view
 on make_label_help_view()
 	script
 		property class : "LabelHelpView"
-		
+
 		property _title : __SCRIPT_NAME__ & " Category Help"
 		property _buttons : {"Cancel", "OK"}
 		property _prompt : "Assign a category and/or subcategories to the logged bookmark by using a colon (:) to separate subcategories. Subcategories delimited in such a way represent a nested hierarchy. For example, a category (also called a label in the bookmarks log file) of \"Development:AppleScript:Mail\" could be thought of as a nested list as in:" & return & return Â
 			& tab & "¥ Development" & return Â
 			& tab & tab & "¥ AppleScript" & return Â
 			& tab & tab & tab & "¥ Mail"
-		
+
 		on create_view() --> void
 			with timeout of (10 * 60) seconds
 				display alert _title message _prompt buttons _buttons cancel button 1 default button 2
@@ -2523,11 +2523,11 @@ on make_file_edit_view(view_controller, settings_model)
 		property parent : make_base_view() -- extends BaseView
 		property _controller : view_controller
 		property _model : settings_model
-		
+
 		property _title : "Warning: " & __SCRIPT_NAME__ & " > Edit Log File"
 		property _buttons : {"Don't Show This Warning Again", my u_back_btn, "Edit File"}
 		property _prompt : "If manually editing the log file, take care not to alter the format of the file which could result in file corruption and/or the script no longer being able to use the file." & return & return & "Specifically, don't alter the record separators, the file header (except for the sample categories/labels, which can be modified), the field names in the records, or the field delimiters in the records."
-		
+
 		on create_view() --> void
 			with timeout of (10 * 60) seconds
 				try
@@ -2543,7 +2543,7 @@ on make_file_edit_view(view_controller, settings_model)
 				action_performed(action_event) --> returns boolean
 			end timeout
 		end create_view
-		
+
 		on action_performed(action_event) --> void
 			set action_event to action_event as string
 			if action_event is _buttons's item 1 then
@@ -2565,14 +2565,14 @@ on make_title_view(view_controller, main_model)
 		property parent : make_base_view() -- extends BaseView
 		property _controller : view_controller
 		property _model : main_model
-		
+
 		property _page_title : missing value
-		
+
 		property _title : __SCRIPT_NAME__ & " > Title"
 		property _buttons : {my help_btn_pad, "Cancel", my next_btn_pad}
 		property _prompt : missing value
 		property _text_field : missing value
-		
+
 		on create_view() --> void
 			_set_prompt()
 			repeat
@@ -2587,10 +2587,10 @@ on make_title_view(view_controller, main_model)
 			set _text_field to text_value
 			action_performed(action_event)
 		end create_view
-		
+
 		on action_performed(action_event) --> void
 			if action_event is false then error number -128 -- User canceled
-			
+
 			set action_event to action_event as string
 			if action_event is _buttons's item 1 then
 				_controller's show_help()
@@ -2598,16 +2598,16 @@ on make_title_view(view_controller, main_model)
 				_controller's set_page_title(_text_field)
 			end if
 		end action_performed
-		
+
 		on update() --> void  (Observer Pattern)
 			set _page_title to _model's get_page_title()
 		end update
-		
+
 		on _set_prompt() --> void -- PRIVATE
 			set _prompt to "To log a bookmark for " & _model's get_browser_name() & "'s front document, first edit and/or accept the page title."
 		end _set_prompt
 	end script
-	
+
 	this's update()
 	this's _model's register_observer(this)
 	return this
@@ -2619,15 +2619,15 @@ on make_url_view(view_controller, main_model)
 		property parent : make_base_view() -- extends BaseView
 		property _controller : view_controller
 		property _model : main_model
-		
+
 		property _page_title : missing value
 		property _page_url : missing value
-		
+
 		property _title : __SCRIPT_NAME__ & " > Title > URL"
 		property _buttons : {my back_btn_pad, "Cancel", my next_btn_pad}
 		property _prompt : missing value
 		property _text_field : missing value
-		
+
 		on create_view() --> void
 			_set_prompt()
 			repeat
@@ -2642,10 +2642,10 @@ on make_url_view(view_controller, main_model)
 			set _text_field to text_value
 			action_performed(action_event)
 		end create_view
-		
+
 		on action_performed(action_event) --> void
 			if action_event is false then error number -128 -- User canceled
-			
+
 			set action_event to action_event as string
 			if action_event is _buttons's item 1 then
 				_controller's go_back()
@@ -2653,17 +2653,17 @@ on make_url_view(view_controller, main_model)
 				_controller's set_page_url(_text_field)
 			end if
 		end action_performed
-		
+
 		on update() --> void  (Observer Pattern)
 			set _page_title to _model's get_page_title()
 			set _page_url to _model's get_page_url()
 		end update
-		
+
 		on _set_prompt() --> void -- PRIVATE
 			set _prompt to "TITLE:" & return & tab & _page_title & return & return & "Edit and/or accept the URL."
 		end _set_prompt
 	end script
-	
+
 	this's update()
 	this's _model's register_observer(this)
 	return this
@@ -2674,19 +2674,19 @@ on make_label_base_view(main_model)
 		property class : "LabelBaseView"
 		property parent : make_base_view() -- extends BaseView
 		property _model : main_model
-		
+
 		property _page_label : missing value --> string
 		property _chosen_root : missing value --> string
 		property _chosen_category : missing value --> string
 		property _root_categories : missing value --> array
 		property _sub_categories : missing value --> array
 		property _all_categories : missing value --> array
-		
+
 		property _title : __SCRIPT_NAME__ & " > Title > URL > Category"
 		property _ok_btn : "Next..."
 		property _bullet : my u_bullet_item
 		property _prompt_extra : "(Type a number to jump to the corresponding numbered menu item.)"
-		
+
 		(*
 			Subclasses must define properties for:
 				_menu_items
@@ -2695,20 +2695,20 @@ on make_label_base_view(main_model)
 				_prompt
 				_ok_btn
 		*)
-		
+
 		on create_view() --> void
 			set action_event to choose from list my _menu_items with title _title with prompt my _prompt cancel button name my u_back_btn OK button name _ok_btn default items my _default_item
 			action_performed(action_event)
 		end create_view
-		
+
 		on action_performed() --> void
 			error my class & ".action_performed(): abstract method not overridden" number -1717
 		end action_performed
-		
+
 		on show_invalid() --> void
 			display alert "Invalid selection" message "Please select a category or an action." as warning
 		end show_invalid
-		
+
 		on get_base_menu_items(menu_rule) --> array
 			local menu_rule
 			return {Â
@@ -2724,7 +2724,7 @@ on make_label_base_view(main_model)
 				_bullet & "Quit " & __SCRIPT_NAME__, Â
 				menu_rule}
 		end get_base_menu_items
-		
+
 		on number_menu_items(menu_items, menu_rule) --> array
 			local numbered_menu, menu_items, menu_rule, j
 			set numbered_menu to {}
@@ -2740,7 +2740,7 @@ on make_label_base_view(main_model)
 			end repeat
 			return numbered_menu
 		end number_menu_items
-		
+
 		on update() --> void  (Observer Pattern)
 			set _page_label to _model's get_page_label()
 			set _chosen_root to _model's get_chosen_root_category()
@@ -2750,7 +2750,7 @@ on make_label_base_view(main_model)
 			set _all_categories to _model's get_all_categories()
 		end update
 	end script
-	
+
 	this's update()
 	this's _model's register_observer(this)
 	return this
@@ -2762,20 +2762,20 @@ on make_label_view(view_controller, label_base_view)
 		--property parent : make_label_base_view() -- extends LabelBaseView
 		property parent : label_base_view -- extends LabelBaseView (instance)
 		property _controller : view_controller
-		
+
 		property _bullet : my u_bullet_item
 		property _menu_rule : multiply_text(my u_dash, 18)
 		property _prompt : "Please select a top-level category for the web page you want to log. Next you will be able to select subcategories. " & my _prompt_extra
-		
+
 		property _default_item : missing value
 		property _menu_items : missing value
-		
+
 		on create_view() --> void
 			set _default_item to my _chosen_root
 			set_menu()
 			continue create_view()
 		end create_view
-		
+
 		on action_performed(action_event) --> void
 			if action_event is false then --error number -128 -- User canceled
 				_controller's go_back()
@@ -2807,7 +2807,7 @@ on make_label_view(view_controller, label_base_view)
 				_controller's set_chosen_root(action_event)
 			end if
 		end action_performed
-		
+
 		on set_menu() --> void
 			local these_items
 			set these_items to {Â
@@ -2825,20 +2825,20 @@ on make_sub_label_view(view_controller, label_base_view)
 		--property parent : make_label_base_view() -- extends LabelBaseView
 		property parent : label_base_view -- extends LabelBaseView (instance)
 		property _controller : view_controller
-		
+
 		property _bullet : my u_bullet_item
 		property _menu_rule : multiply_text(my u_dash, 35)
 		property _prompt : "Please select a category or subcategory for the web page you want to log. You will have a chance to edit your choice (to add a new category or subcategory). " & my _prompt_extra
-		
+
 		property _default_item : missing value
 		property _menu_items : missing value
-		
+
 		on create_view() --> void
 			set _default_item to my _chosen_category
 			set_menu()
 			continue create_view()
 		end create_view
-		
+
 		on action_performed(action_event) --> void
 			if action_event is false then --error number -128 -- User canceled
 				_controller's go_back()
@@ -2868,7 +2868,7 @@ on make_sub_label_view(view_controller, label_base_view)
 				_controller's set_chosen_category(action_event)
 			end if
 		end action_performed
-		
+
 		on set_menu() --> void
 			local these_items
 			set these_items to {Â
@@ -2885,20 +2885,20 @@ on make_all_label_view(view_controller, label_base_view)
 		--property parent : make_label_base_view() -- extends LabelBaseView
 		property parent : label_base_view -- extends LabelBaseView (instance)
 		property _controller : view_controller
-		
+
 		property _bullet : my u_bullet_item
 		property _menu_rule : multiply_text(my u_dash, 35)
 		property _prompt : "Please select a category or subcategory for the web page you want to log. You will have a chance to edit your choice (to add a new category or subcategory). " & my _prompt_extra
-		
+
 		property _default_item : missing value
 		property _menu_items : missing value
-		
+
 		on create_view() --> void
 			set _default_item to my _chosen_category
 			set_menu()
 			continue create_view()
 		end create_view
-		
+
 		on action_performed(action_event) --> void
 			if action_event is false then --error number -128 -- User canceled
 				_controller's go_back()
@@ -2926,7 +2926,7 @@ on make_all_label_view(view_controller, label_base_view)
 				_controller's set_chosen_category(action_event)
 			end if
 		end action_performed
-		
+
 		on set_menu() --> void
 			local these_items
 			set these_items to my get_base_menu_items(_menu_rule)
@@ -2941,17 +2941,17 @@ on make_label_edit_view(view_controller, main_model)
 		property parent : make_base_view() -- extends BaseView
 		property _controller : view_controller
 		property _model : main_model
-		
+
 		property _page_title : missing value --> string
 		property _page_url : missing value --> string
 		property _page_label : missing value --> string
-		
+
 		property _chosen_category : missing value --> string
-		
+
 		property _title : __SCRIPT_NAME__ & " > Title > URL > Category"
 		property _buttons : {my back_btn_pad, "Cancel", my next_btn_pad}
 		property _prompt : missing value
-		
+
 		on create_view() --> void
 			_set_prompt()
 			repeat
@@ -2967,10 +2967,10 @@ on make_label_edit_view(view_controller, main_model)
 			set _chosen_category to text_value
 			action_performed(action_event)
 		end create_view
-		
+
 		on action_performed(action_event) --> void
 			if action_event is false then error number -128 -- User canceled
-			
+
 			set action_event to action_event as string
 			if action_event is _buttons's item 1 then
 				_controller's go_back()
@@ -2978,7 +2978,7 @@ on make_label_edit_view(view_controller, main_model)
 				_controller's set_chosen_category(_chosen_category)
 			end if
 		end action_performed
-		
+
 		on _chop_trailing_colons(text_value) --> string -- PRIVATE
 			try
 				repeat until text_value does not end with ":"
@@ -2989,21 +2989,21 @@ on make_label_edit_view(view_controller, main_model)
 			end try
 			return text_value
 		end _chop_trailing_colons
-		
+
 		on update() --> void  (Observer Pattern)
 			set _page_title to _model's get_page_title()
 			set _page_url to _model's get_page_url()
 			set _page_label to _model's get_page_label()
 			set _chosen_category to _model's get_chosen_category()
 		end update
-		
+
 		on _set_prompt() --> void -- PRIVATE
 			set _prompt to "TITLE:" & return & tab & _page_title & return & return Â
 				& "URL:" & return & tab & _page_url & return & return Â
 				& "Please provide a category and any optional subcategories (or edit your selected category) for the web page bookmark. Use a colon to separate subcategories. Example: \"Development:AppleScript:Mail\""
 		end _set_prompt
 	end script
-	
+
 	this's update()
 	this's _model's register_observer(this)
 	return this
@@ -3015,16 +3015,16 @@ on make_note_view(view_controller, main_model)
 		property parent : make_base_view() -- extends BaseView
 		property _controller : view_controller
 		property _model : main_model
-		
+
 		property _page_title : missing value
 		property _page_url : missing value
 		property _page_label : missing value
-		
+
 		property _title : __SCRIPT_NAME__ & " > Title > URL > Category > Note"
 		property _buttons : {my back_btn_pad, "Cancel", my save_btn_pad}
 		property _prompt : missing value
 		property _text_field : missing value
-		
+
 		on create_view() --> void
 			_set_prompt()
 			display dialog _prompt default answer "" with title _title buttons _buttons default button 3
@@ -3032,10 +3032,10 @@ on make_note_view(view_controller, main_model)
 			if text_value is not "" then set _text_field to text_value
 			action_performed(action_event)
 		end create_view
-		
+
 		on action_performed(action_event) --> void
 			if action_event is false then error number -128 -- User canceled
-			
+
 			set action_event to action_event as string
 			if action_event is _buttons's item 1 then
 				_controller's go_back()
@@ -3043,13 +3043,13 @@ on make_note_view(view_controller, main_model)
 				_controller's set_page_note(_text_field)
 			end if
 		end action_performed
-		
+
 		on update() --> void  (Observer Pattern)
 			set _page_title to _model's get_page_title()
 			set _page_url to _model's get_page_url()
 			set _page_label to _model's get_page_label()
 		end update
-		
+
 		on _set_prompt() --> void -- PRIVATE
 			set _prompt to "TITLE:" & return & tab & _page_title & return & return Â
 				& "URL:" & return & tab & _page_url & return & return Â
@@ -3057,7 +3057,7 @@ on make_note_view(view_controller, main_model)
 				& "Optionally add a short note. Just leave the field blank if you don't want to add a note."
 		end _set_prompt
 	end script
-	
+
 	this's update()
 	this's _model's register_observer(this)
 	return this
@@ -3071,11 +3071,11 @@ on make_settings_first_view(settings_controller, settings_model)
 		property parent : make_base_view() -- extends BaseView
 		property _controller : settings_controller
 		property _model : settings_model
-		
+
 		property _title : __SCRIPT_NAME__ --& " (First Run)"
 		property _prompt : missing value
 		property _buttons : {"Change Settings...", "Cancel", "Use Defaults"}
-		
+
 		on create_view() --> void
 			_set_prompt()
 			with timeout of (10 * 60) seconds
@@ -3085,10 +3085,10 @@ on make_settings_first_view(settings_controller, settings_model)
 				action_performed(action_event)
 			end timeout
 		end create_view
-		
+
 		on action_performed(action_event) --> void
 			if action_event is false then error number -128 -- User canceled
-			
+
 			set action_event to action_event as string
 			if action_event is _buttons's item 1 then
 				_controller's change_settings()
@@ -3096,7 +3096,7 @@ on make_settings_first_view(settings_controller, settings_model)
 				_controller's use_defaults()
 			end if
 		end action_performed
-		
+
 		on _set_prompt() --> void -- PRIVATE
 			set _prompt to my _app_description & " The defaults are:" & return & return Â
 				& tab & "Log File:" & tab & tab & _model's get_default_log_file() & return & return Â
@@ -3113,25 +3113,25 @@ on make_settings_main_view(settings_controller, settings_model)
 		property parent : make_base_view() -- extends BaseView
 		property _controller : settings_controller
 		property _model : settings_model
-		
+
 		property _log_file : missing value
 		property _file_viewer : missing value
 		property _text_editor : missing value
-		
+
 		property _title : __SCRIPT_NAME__ & " > Preferences"
 		property _prompt : missing value
 		property _buttons : {"Choose a File Editor/Viewer...", "Choose a Log File...", "OK"}
-		
+
 		on create_view() --> void
 			_set_prompt()
 			display dialog _prompt with title _title buttons _buttons default button 3 with icon note
 			set action_event to result's button returned
 			action_performed(action_event)
 		end create_view
-		
+
 		on action_performed(action_event) --> void
 			if action_event is false then error number -128 -- User canceled
-			
+
 			set action_event to action_event as string
 			if action_event is _buttons's item 1 then
 				_controller's choose_app()
@@ -3141,13 +3141,13 @@ on make_settings_main_view(settings_controller, settings_model)
 				_controller's finish_settings()
 			end if
 		end action_performed
-		
+
 		on update() --> void  (Observer Pattern)
 			set _log_file to _model's get_log_file()
 			set _file_viewer to _model's get_file_viewer()
 			set _text_editor to _model's get_text_editor()
 		end update
-		
+
 		on _set_prompt() --> void -- PRIVATE
 			set _prompt to "Choose a different bookmarks log file, file viewer, or text editor. The current settings are:" & return & return Â
 				& tab & "Log File:" & tab & tab & _log_file & return & return Â
@@ -3155,7 +3155,7 @@ on make_settings_main_view(settings_controller, settings_model)
 				& tab & "Text Editor:" & tab & _text_editor & return & return
 		end _set_prompt
 	end script
-	
+
 	this's update()
 	this's _model's register_observer(this)
 	return this
@@ -3167,24 +3167,24 @@ on make_settings_app_view(settings_controller, settings_model)
 		property parent : make_base_view() -- extends BaseView
 		property _controller : settings_controller
 		property _model : settings_model
-		
+
 		property _title : __SCRIPT_NAME__ & " > Preferences > Choose Application"
 		property _prompt : missing value
 		property _buttons : {my u_back_btn, "Choose a Text Editor...", "Choose a File Viewer..."}
-		
+
 		property _text_editor : missing value
 		property _file_viewer : missing value
-		
+
 		on create_view() --> void
 			_set_prompt()
 			display dialog _prompt with title _title buttons _buttons with icon note
 			set action_event to result's button returned
 			action_performed(action_event)
 		end create_view
-		
+
 		on action_performed(action_event) --> void -- from main view
 			if action_event is false then error number -128 -- User canceled
-			
+
 			set action_event to action_event as string
 			if action_event is _buttons's item 1 then
 				_controller's go_back()
@@ -3194,19 +3194,19 @@ on make_settings_app_view(settings_controller, settings_model)
 				_controller's choose_viewer()
 			end if
 		end action_performed
-		
+
 		on update() --> void  (Observer Pattern)
 			set _text_editor to _model's get_text_editor()
 			set _file_viewer to _model's get_file_viewer()
 		end update
-		
+
 		on _set_prompt() --> void -- PRIVATE
 			set _prompt to "Choose an application for editing or viewing the bookmarks log file. The current settings are:" & return & return Â
 				& tab & "File Viewer:" & tab & _file_viewer & return & return Â
 				& tab & "Text Editor:" & tab & _text_editor & return & return
 		end _set_prompt
 	end script
-	
+
 	this's update()
 	this's _model's register_observer(this)
 	return this
@@ -3218,20 +3218,20 @@ on make_settings_editor_view(settings_controller, settings_model)
 		property parent : make_settings_app_base_view() -- extends SettingsAppBaseView
 		property _controller : settings_controller
 		property _model : settings_model
-		
+
 		property _title : __SCRIPT_NAME__ & " > Preferences > Choose App > Editor"
 		property _prompt : "Choose a text editor application for editing the bookmarks log file." & return & return
 		property _buttons : {my u_back_btn, "Use Default Editor...", "Choose Another Editor..."}
 		property _app_type : "text editor"
 		property _app_usage : "editing"
-		
+
 		property _default_app : missing value
-		
+
 		on update() --> void  (Observer Pattern)
 			set _default_app to _model's get_default_text_editor()
 		end update
 	end script
-	
+
 	this's update()
 	this's _model's register_observer(this)
 	return this
@@ -3243,20 +3243,20 @@ on make_settings_viewer_view(settings_controller, settings_model)
 		property parent : make_settings_app_base_view() -- extends SettingsAppBaseView
 		property _controller : settings_controller
 		property _model : settings_model
-		
+
 		property _title : __SCRIPT_NAME__ & " > Preferences > Choose App > Viewer"
 		property _prompt : "Choose an application for viewing the bookmarks log file." & return & return
 		property _buttons : {my u_back_btn, "Use Default App...", "Choose Another App..."}
 		property _app_type : "file viewer"
 		property _app_usage : "viewing"
-		
+
 		property _default_app : missing value
-		
+
 		on update() --> void  (Observer Pattern)
 			set _default_app to _model's get_default_file_viewer()
 		end update
 	end script
-	
+
 	this's update()
 	this's _model's register_observer(this)
 	return this
@@ -3266,17 +3266,17 @@ on make_settings_app_base_view()
 	script
 		property class : "SettingsAppBaseView" -- abstract app view
 		property parent : make_base_view() -- extends BaseView
-		
+
 		(* == Main View == *)
-		
+
 		on create_view() --> void
 			display dialog my _prompt with title my _title buttons my _buttons default button 3 with icon note
 			set action_event to result's button returned
 			action_performed(action_event)
 		end create_view
-		
+
 		(* == Subviews == *)
-		
+
 		on choose_default() --> void
 			local t, m
 			set t to my _title & " > Default"
@@ -3290,7 +3290,7 @@ on make_settings_app_base_view()
 				my _controller's set_app(my _default_app)
 			end if
 		end choose_default
-		
+
 		on choose_another() --> void
 			local _app, t, m
 			set t to my _title & " > Choose Application"
@@ -3302,12 +3302,12 @@ on make_settings_app_base_view()
 				my handle_cancel_as_back(err_msg, err_num)
 			end try
 		end choose_another
-		
+
 		(* == Actions == *)
-		
+
 		on action_performed(action_event) --> void -- from main view
 			if action_event is false then error number -128 -- User canceled
-			
+
 			set action_event to action_event as string
 			if action_event is my _buttons's item 1 then
 				my _controller's go_back()
@@ -3317,7 +3317,7 @@ on make_settings_app_base_view()
 				choose_another()
 			end if
 		end action_performed
-		
+
 		on update() --> void  (Observer Pattern)
 			error my class & ".update(): abstract method not overridden" number -1717
 		end update
@@ -3330,7 +3330,7 @@ on make_settings_file_view(settings_controller, settings_model)
 		property parent : make_base_view() -- extends BaseView
 		property _controller : settings_controller
 		property _model : settings_model
-		
+
 		property _title : __SCRIPT_NAME__ & " > Preferences > Choose File"
 		property _prompt : "Choose a plain text file in which to save bookmarks:"
 		property _menu_rule : multiply_text(my u_dash, 19)
@@ -3343,12 +3343,12 @@ on make_settings_file_view(settings_controller, settings_model)
 			_menu_rule, Â
 			"Quit " & __SCRIPT_NAME__}
 		property _menu_items : missing value
-		
+
 		property _log_file : missing value
 		property _warn_before_editing : missing value
-		
+
 		(* == Main View == *)
-		
+
 		on create_view() --> void
 			update_menu()
 			repeat -- until a horizontal rule is not selected
@@ -3361,9 +3361,9 @@ on make_settings_file_view(settings_controller, settings_model)
 			end repeat
 			action_performed(action_event)
 		end create_view
-		
+
 		(* == Subviews == *)
-		
+
 		on choose_default() --> void
 			set t to _title & " > Default"
 			set m to "The default bookmarks log file is:" & return & return & tab & _model's get_default_log_file() & return & return & "Use this file?" & return & return
@@ -3377,7 +3377,7 @@ on make_settings_file_view(settings_controller, settings_model)
 				_controller's set_log_file(_log_file)
 			end if
 		end choose_default
-		
+
 		on choose_existing() --> void
 			set m to "Choose an existing bookmarks log file. (Click \"Cancel\" to return to the previous dialog.)"
 			try
@@ -3387,7 +3387,7 @@ on make_settings_file_view(settings_controller, settings_model)
 				my handle_cancel_as_back(err_msg, err_num)
 			end try
 		end choose_existing
-		
+
 		on choose_new() --> void
 			set m to "Choose a file name and location for the bookmarks log file. (Click \"Cancel\" to return to the previous dialog.)"
 			set file_name to item 2 of split_path_into_dir_and_file(_model's get_default_log_file())
@@ -3398,7 +3398,7 @@ on make_settings_file_view(settings_controller, settings_model)
 				my handle_cancel_as_back(err_msg, err_num)
 			end try
 		end choose_new
-		
+
 		on enter_path() --> void
 			set t to _title & " > Enter Path"
 			set m to "Enter a full file path to use for saving the bookmarks." & return & return & "A '~' (tilde) can be used to indicate your home directory. Example:" & return & return & tab & "~/Desktop/urls.txt"
@@ -3417,7 +3417,7 @@ on make_settings_file_view(settings_controller, settings_model)
 				end if
 			end if
 		end enter_path
-		
+
 		on reset_warning() --> void
 			set t to __SCRIPT_NAME__ & " > Preferences > Reset Edit File Warning"
 			set m to "Care should be taken when manually editing the log file because altering the format of the data could result in file corruption and/or the script no longer being able to use the file." & return & return & "Resetting the warning here will cause a warning to be shown each time the file edit action is invoked."
@@ -3430,15 +3430,15 @@ on make_settings_file_view(settings_controller, settings_model)
 				_controller's reset_warning()
 			end if
 		end reset_warning
-		
+
 		(* == Actions == *)
-		
+
 		on action_performed(action_event) --> void -- from main view
 			if action_event is false then --error number -128 -- User canceled
 				_controller's go_back()
 				return
 			end if
-			
+
 			set action_event to action_event as string
 			if action_event is _menu_items's item 1 then
 				choose_default()
@@ -3454,7 +3454,7 @@ on make_settings_file_view(settings_controller, settings_model)
 				reset_warning()
 			end if
 		end action_performed
-		
+
 		on update() --> void  (Observer Pattern)
 			try
 				set _log_file to _model's get_log_file()
@@ -3463,7 +3463,7 @@ on make_settings_file_view(settings_controller, settings_model)
 			end try
 			set _warn_before_editing to _model's warn_before_editing()
 		end update
-		
+
 		on update_menu() --> void
 			if _warn_before_editing then
 				set _menu_items to _menu_items_base
@@ -3473,7 +3473,7 @@ on make_settings_file_view(settings_controller, settings_model)
 			end if
 		end update_menu
 	end script
-	
+
 	this's update()
 	this's _model's register_observer(this)
 	return this
@@ -3486,16 +3486,16 @@ on make_observable()
 		property class : "Observable"
 		property _observers : {}
 		property _changed : false
-		
+
 		on set_changed()
 			set _changed to true
 		end set_changed
-		
+
 		on register_observer(o) -- void
 			my debug_log(1, "  [debug] register_observer(" & o's class & ")")
 			set end of my _observers to o
 		end register_observer
-		
+
 		(* Uncomment if needed. Most of the time, it won't be needed for scripts.
 		on remove_observer(o) -- void
 			my debug_log(1, "  [debug] remove_observer(" & o's class & ")")
@@ -3512,7 +3512,7 @@ on make_observable()
 			set _observers to remaining_observers
 		end remove_observer
 		*)
-		
+
 		on notify_observers() -- void -- (no argument = pull method; best practice)
 			my debug_log(1, "  [debug] notify_observers()")
 			if _changed then
@@ -3525,7 +3525,7 @@ on make_observable()
 			end if
 			return
 		end notify_observers
-		
+
 		-- Display the class names of the observers (for testing/debugging)
 		on identify_observers() --> void
 			my debug_log(1, "  [debug] " & my class & ".identify_observers() [" & _observers's length & "]...")
@@ -3553,13 +3553,13 @@ on make_stack()
 	script
 		property class : "Stack" -- Data Type -- LIFO (last in, first out)
 		property _stack : {}
-		
+
 		-- Push an item onto the top of the stack
 		on push(this_data) --> void
 			set _stack's beginning to this_data
 			return
 		end push
-		
+
 		-- Return the top item of the stack, removing it in the process
 		on pop() --> anything
 			if is_empty() then error my class & ": Can't pop(): stack is empty." number -1730
@@ -3567,23 +3567,23 @@ on make_stack()
 			set _stack to rest of _stack
 			return top_item
 		end pop
-		
+
 		-- Return the top item of the stack without removing it
 		on peek() --> anything
 			if is_empty() then error my class & ": Can't peek(): stack is empty." number -1730
 			return _stack's item 1
 		end peek
-		
+
 		-- Test if stack is empty
 		on is_empty() --> boolean
 			return _stack's length is 0
 		end is_empty
-		
+
 		-- Clear the stack
 		on reset() --> void
 			set _stack to {}
 		end reset
-		
+
 		-- Display the names of the classes in the stack (mostly for testing/debugging)
 		on to_string() --> string
 			if _stack's length = 0 then
@@ -3610,28 +3610,28 @@ on make_named_stack(_name)
 		property class : "Stack (Named)" -- Data Type
 		property parent : make_stack() -- extends Stack
 		property _name : missing value
-		
+
 		on push(this_data) --> void
 			continue push(this_data)
 			my debug_log(1, "[debug] pushing " & this_data's to_string() & " onto " & _name)
 			return
 		end push
-		
+
 		on pop() --> anything
 			set top_item to continue pop()
 			my debug_log(1, "[debug] popping " & top_item's to_string() & " off " & _name)
 			return top_item
 		end pop
-		
+
 		on set_name(_name) --> void
 			set its _name to _name
 		end set_name
-		
+
 		on identify() --> string
 			if _name is not missing value then return _name
 		end identify
 	end script
-	
+
 	set this's _name to _name
 	return this
 end make_named_stack
@@ -3646,7 +3646,7 @@ on make_associative_list()
 	script
 		property class : "AssociativeList" -- Data Type
 		property these_items : {} -- list of two-item key/value records -- see set_item()
-		
+
 		on _find_record_for_key(this_key) -- PRIVATE
 			(* This is a private handler. Users should not use it directly. *)
 			considering diacriticals, hyphens, punctuation and white space but ignoring case
@@ -3656,7 +3656,7 @@ on make_associative_list()
 			end considering
 			return missing value -- The key wasn't found
 		end _find_record_for_key
-		
+
 		on set_item(this_key, this_value)
 			(*
 				Set the value for the given key in an associative list.
@@ -3672,7 +3672,7 @@ on make_associative_list()
 			end if
 			return -- No return value; the handler modifies the existing associative list.
 		end set_item
-		
+
 		on get_item(this_key)
 			(*
 				Get the value for the given key in an associative list.
@@ -3688,7 +3688,7 @@ on make_associative_list()
 			end if
 			return value of record_ref
 		end get_item
-		
+
 		on count_items()
 			(*
 				Return the number of items in an associative list.
@@ -3697,7 +3697,7 @@ on make_associative_list()
 			*)
 			return count my these_items
 		end count_items
-		
+
 		on delete_item(this_key)
 			(*
 				Delete the value for the given key.
@@ -3712,9 +3712,9 @@ on make_associative_list()
 			set my these_items to every record of my these_items
 			return -- No return value; the handler modifies the existing associative list.
 		end delete_item
-		
+
 		(* == Additional methods == *)
-		
+
 		on get_keys()
 			set these_keys to {}
 			repeat with record_ref in my these_items
@@ -3722,7 +3722,7 @@ on make_associative_list()
 			end repeat
 			return these_keys
 		end get_keys
-		
+
 		on get_values()
 			set these_values to {}
 			repeat with record_ref in my these_items
@@ -3730,7 +3730,7 @@ on make_associative_list()
 			end repeat
 			return these_values
 		end get_values
-		
+
 		on key_exists(this_key)
 			if _find_record_for_key(this_key) = missing value then
 				return false
@@ -3745,12 +3745,12 @@ on make_null_io()
 	script
 		property class : "NullIO" -- Utility
 		property parent : make_io()
-		
+
 		on write_file(file_path, this_data)
 			my debug_log(1, "[debug] " & my class & ".write_file(): would write to file")
 			my debug_log(1, linefeed & this_data)
 		end write_file
-		
+
 		on append_file(file_path, this_data)
 			my debug_log(1, "[debug] " & my class & ".append_file(): would append to file")
 			my debug_log(1, linefeed & this_data)
@@ -3761,23 +3761,23 @@ end make_null_io
 on make_io()
 	script
 		property class : "IO" -- Utility
-		
+
 		(* == PUBLIC == *)
-		
+
 		on write_file(file_path, this_data)
 			_write_file(file_path, this_data, string, false) -- overwrite existing file
 		end write_file
-		
+
 		on append_file(file_path, this_data)
 			_write_file(file_path, this_data, string, true) -- append new data to end of existing file
 		end append_file
-		
+
 		on read_file(file_path)
 			_read_file(file_path, string)
 		end read_file
-		
+
 		(* == PRIVATE == *)
-		
+
 		on _write_file(file_path, this_data, data_class, should_append_data)
 			try
 				set file_path to file_path as text
@@ -3796,7 +3796,7 @@ on make_io()
 				return false
 			end try
 		end _write_file
-		
+
 		on _read_file(file_path, data_class)
 			try
 				set file_path to file_path as text
@@ -3818,13 +3818,13 @@ end make_io
 on gui_scripting_status()
 	local os_ver, is_before_mavericks, ui_enabled, apple_accessibility_article
 	local err_msg, err_num, msg, t, b
-	
+
 	set os_ver to system version of (system info)
-	
+
 	considering numeric strings -- version strings
 		set is_before_mavericks to os_ver < "10.9"
 	end considering
-	
+
 	if is_before_mavericks then -- things changed in Mavericks (10.9)
 		-- check to see if assistive devices is enabled
 		tell application "System Events"
@@ -3869,7 +3869,7 @@ end gui_scripting_status
 
 on get_front_app_name()
 	tell application "System Events"
-		
+
 		-- Ignore (Apple)Script Editor and Terminal when getting the front app
 		-- name since they can be used to launch the script
 		repeat 10 times -- limit repetitions just in case
@@ -3894,9 +3894,9 @@ on convert_to_ascii(non_ascii_txt)
 		Transliterate Unicode characters to ASCII, ignoring any that can't be
 		represented. Also compress white space since ignoring characters can
 		leave mulitple adjacent spaces.
-	
+
 		From 'man iconv_open':
-		
+
 			When the string "//TRANSLIT" is appended to _tocode_,
 			transliteration is activated. This means that when a character
 			cannot be represented in the target character set, it can be
@@ -4001,7 +4001,7 @@ end join_list
 
 on trim_whitespace(str)
 	set white_space to space & tab & return & linefeed
-	
+
 	-- trim start
 	try
 		set str to str's items
@@ -4017,7 +4017,7 @@ on trim_whitespace(str)
 	on error err_msg number err_num
 		error "Can't trim start: " & err_msg number err_num
 	end try
-	
+
 	-- trim end
 	try
 		set str to reverse of str's items
