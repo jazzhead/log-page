@@ -184,7 +184,16 @@ on make_app_controller()
 			--
 			-- Get the web page info from the web browser
 			--
-			set browser_model to my WebBrowserFactory's make_browser()
+			set app_factory to make_factory()
+			tell app_factory
+				-- Register supported web browsers
+				register_product(make_safari_browser())
+				register_product(make_chrome_browser())
+				register_product(make_firefox_browser())
+				register_product(make_webkit_browser())
+			end tell
+
+			set browser_model to app_factory's make_browser(get_front_app_name())
 			browser_model's fetch_page_info()
 
 			--
@@ -208,8 +217,8 @@ on make_app_controller()
 				parse_log()
 			end tell
 
-			-- Done with browser. Does this make any difference?
-			set browser_model to missing value
+			-- Done with browser. Does this free up memory/make any difference?
+			set {app_factory, browser_model} to {missing value, missing value}
 
 			(* == Controllers == *)
 
@@ -808,9 +817,69 @@ General"
 	return this
 end make_page_log
 
-on make_web_browser()
+script FileApp
+	property class : "FileApp"
+
+	on open_file(this_app, posix_file_path) --> void
+		my debug_log(1, my class & ".open_file()")
+
+		set posix_file_path to expand_home_path(posix_file_path)
+		set mac_file_path to get_mac_path(posix_file_path)
+
+		tell application this_app
+			activate
+			open alias mac_file_path
+		end tell
+	end open_file
+end script
+
+-- -- -- Factory Pattern -- -- --
+
+on make_factory() --> Factory
 	script
-		property class : "WebBrowser" -- abstract
+		property class : "WebBrowserFactory"
+		property _registered_products : {} -- array (concrete products)
+
+		on register_product(this_product) --> void
+			my debug_log(1, "--->  " & my class & ".register_product(): registering " & this_product's to_string())
+			set end of _registered_products to this_product
+		end register_product
+
+		on make_browser(app_name) --> WebBrowser
+			my debug_log(1, "--->  " & my class & ".make_browser()...")
+			repeat with this_product in _registered_products
+				if app_name is this_product's to_string() then
+					my debug_log(1, "--->  using " & this_product's class)
+					return this_product
+				end if
+			end repeat
+			_handle_unsupported(app_name)
+		end make_browser
+
+		on _handle_unsupported(app_name) --> void -- PRIVATE
+			set err_msg to "The application " & app_name & " is not a supported web browser. Currently supported browsers are:" & return & return & tab & _get_app_names()
+			set err_num to -2700
+			set t to "Error: Unsupported Application (" & err_num & ")"
+			set m to err_msg
+			if __DEBUG_LEVEL__ > 0 then set m to "[" & my class & "]" & return & m
+			display alert t message m buttons {"Cancel"} default button 1 as critical
+			error number -128 -- User canceled
+		end _handle_unsupported
+
+		on _get_app_names() --> string -- PRIVATE
+			set app_names to {}
+			repeat with this_product in _registered_products
+				set end of app_names to this_product's to_string()
+			end repeat
+			--return app_names --> array
+			join_list(app_names, ", ") --> string
+		end _get_app_names
+	end script
+end make_factory
+
+on make_web_browser() --> abstract product
+	script
+		property class : "WebBrowser"
 		property _page_url : missing value
 		property _page_title : missing value
 
@@ -853,180 +922,132 @@ on make_web_browser()
 	end script
 end make_web_browser
 
-script SafariBrowser
-	property class : "SafariBrowser"
-	property parent : make_web_browser() -- extends WebBrowser
-	property short_name : "Safari"
+on make_safari_browser() --> concrete product
+	script
+		property class : "SafariBrowser"
+		property parent : make_web_browser() -- extends WebBrowser
+		property short_name : "Safari"
 
-	on fetch_page_info() --> void
-		reset_values()
-		using terms from application "Safari" -- for compilation
+		on fetch_page_info() --> void
+			reset_values()
+			using terms from application "Safari" -- for compilation
+				tell application (my short_name)
+					activate
+					try
+						set this_title to name of first tab of front window whose visible is true
+						get this_title -- check if defined
+					on error err_msg number err_num
+						my handle_error("page title", err_msg, err_num)
+					end try
+					try
+						set this_url to URL of front document
+						get this_url -- check if defined
+					on error err_msg number err_num
+						my handle_error("URL", err_msg, err_num)
+					end try
+				end tell
+			end using terms from
+			set_values(this_url, this_title)
+		end fetch_page_info
+	end script
+end make_safari_browser
+
+on make_webkit_browser() --> concrete product
+	script
+		property class : "WebKitBrowser"
+		property parent : make_safari_browser() -- extends SafariBrowser
+		property short_name : "WebKit"
+	end script
+end make_webkit_browser
+
+on make_chrome_browser() --> concrete product
+	script
+		property class : "ChromeBrowser"
+		property parent : make_web_browser() -- extends WebBrowser
+		property short_name : "Chrome"
+
+		on fetch_page_info() --> void
+			reset_values()
+			using terms from application "Google Chrome" -- for compilation
+				tell application (my short_name)
+					activate
+					try
+						set this_title to title of (active tab of window 1)
+						get this_title -- check if defined
+					on error err_msg number err_num
+						my handle_error("page title", err_msg, err_num)
+					end try
+					try
+						set this_url to URL of (active tab of window 1)
+						get this_url -- check if defined
+					on error err_msg number err_num
+						my handle_error("URL", err_msg, err_num)
+					end try
+				end tell
+			end using terms from
+			set_values(this_url, this_title)
+		end fetch_page_info
+	end script
+end make_chrome_browser
+
+on make_firefox_browser() --> concrete product
+	script
+		property class : "FirefoxBrowser"
+		property parent : make_web_browser() -- extends WebBrowser
+		property short_name : "Firefox"
+
+		on fetch_page_info() --> void
+			reset_values()
+			gui_scripting_status() -- Firefox requires GUI scripting
+
 			tell application (my short_name)
 				activate
 				try
-					set this_title to name of first tab of front window whose visible is true
+					set this_title to name of front window -- Standard Suite
 					get this_title -- check if defined
 				on error err_msg number err_num
 					my handle_error("page title", err_msg, err_num)
 				end try
-				try
-					set this_url to URL of front document
-					get this_url -- check if defined
-				on error err_msg number err_num
-					my handle_error("URL", err_msg, err_num)
-				end try
 			end tell
-		end using terms from
-		set_values(this_url, this_title)
-	end fetch_page_info
-end script
 
-script WebKitBrowser
-	property class : "WebKitBrowser"
-	property parent : SafariBrowser -- extends SafariBrowser
-	property short_name : "WebKit"
-end script
-
-script ChromeBrowser
-	property class : "ChromeBrowser"
-	property parent : make_web_browser() -- extends WebBrowser
-	property short_name : "Chrome"
-
-	on fetch_page_info() --> void
-		reset_values()
-		using terms from application "Google Chrome" -- for compilation
-			tell application (my short_name)
-				activate
-				try
-					set this_title to title of (active tab of window 1)
-					get this_title -- check if defined
-				on error err_msg number err_num
-					my handle_error("page title", err_msg, err_num)
-				end try
-				try
-					set this_url to URL of (active tab of window 1)
-					get this_url -- check if defined
-				on error err_msg number err_num
-					my handle_error("URL", err_msg, err_num)
-				end try
-			end tell
-		end using terms from
-		set_values(this_url, this_title)
-	end fetch_page_info
-end script
-
-script FirefoxBrowser
-	property class : "FirefoxBrowser"
-	property parent : make_web_browser() -- extends WebBrowser
-	property short_name : "Firefox"
-
-	on fetch_page_info() --> void
-		reset_values()
-		gui_scripting_status() -- Firefox requires GUI scripting
-
-		tell application (my short_name)
-			activate
 			try
-				set this_title to name of front window -- Standard Suite
-				get this_title -- check if defined
-			on error err_msg number err_num
-				my handle_error("page title", err_msg, err_num)
+				set old_clipboard to the clipboard -- be nice
 			end try
-		end tell
+			set the clipboard to missing value -- so we'll know if the copy op fails
 
-		try
-			set old_clipboard to the clipboard -- be nice
-		end try
-		set the clipboard to missing value -- so we'll know if the copy op fails
+			-- Firefox has very limited AppleScript support, so GUI
+			-- scripting is required.
+			tell application "System Events"
+				try
+					keystroke "l" using {command down} -- select the URL field
+					keystroke "c" using {command down} -- copy to clipboard
+					keystroke tab -- tab focus away
+					keystroke tab
+				on error err_msg number err_num
+					my handle_error("URL", err_msg, err_num)
+				end try
+			end tell
 
-		-- Firefox has very limited AppleScript support, so GUI
-		-- scripting is required.
-		tell application "System Events"
+			delay 1 -- GUI scripting can be slow; give it a second
+
 			try
-				keystroke "l" using {command down} -- select the URL field
-				keystroke "c" using {command down} -- copy to clipboard
-				keystroke tab -- tab focus away
-				keystroke tab
+				set this_url to the clipboard
+				get this_url as string -- check if defined ('missing value' can't be coerced)
 			on error err_msg number err_num
+				try
+					set the clipboard to old_clipboard
+				end try
 				my handle_error("URL", err_msg, err_num)
 			end try
-		end tell
 
-		delay 1 -- GUI scripting can be slow; give it a second
-
-		try
-			set this_url to the clipboard
-			get this_url as string -- check if defined ('missing value' can't be coerced)
-		on error err_msg number err_num
 			try
 				set the clipboard to old_clipboard
 			end try
-			my handle_error("URL", err_msg, err_num)
-		end try
 
-		try
-			set the clipboard to old_clipboard
-		end try
-
-		set_values(this_url, this_title)
-	end fetch_page_info
-end script
-
-script WebBrowserFactory
-	property class : "WebBrowserFactory"
-	property supported_browsers : {SafariBrowser, ChromeBrowser, FirefoxBrowser, WebKitBrowser}
-
-	on make_browser() --> WebBrowser
-		my debug_log(1, "--->  " & my class & ".make_browser()...")
-		set cur_app to get_front_app_name()
-		repeat with this_browser in supported_browsers
-			if cur_app is this_browser's to_string() then
-				my debug_log(1, "--->  using " & this_browser's class)
-				return this_browser
-			end if
-		end repeat
-		_handle_unsupported(cur_app)
-	end make_browser
-
-	on _handle_unsupported(cur_app) --> void -- PRIVATE
-		set err_msg to "The application " & cur_app & " is not a supported web browser. Currently supported browsers are:" & return & return & tab & get_browser_names()
-		set err_num to -2700
-		set t to "Error: Unsupported Application (" & err_num & ")"
-		set m to err_msg
-		if __DEBUG_LEVEL__ > 0 then set m to "[" & my class & "]" & return & m
-		display alert t message m buttons {"Cancel"} default button 1 as critical
-		error number -128 -- User canceled
-	end _handle_unsupported
-
-	on get_browser_names() --> string
-		set these_names to ""
-		repeat with i from 1 to supported_browsers's length
-			set this_item to supported_browsers's item i
-			if i = 1 then
-				set these_names to this_item's to_string()
-			else
-				set these_names to these_names & ", " & this_item's to_string()
-			end if
-		end repeat
-		return these_names
-	end get_browser_names
-end script
-
-script FileApp
-	property class : "FileApp"
-
-	on open_file(this_app, posix_file_path) --> void
-		my debug_log(1, my class & ".open_file()")
-
-		set posix_file_path to expand_home_path(posix_file_path)
-		set mac_file_path to get_mac_path(posix_file_path)
-
-		tell application this_app
-			activate
-			open alias mac_file_path
-		end tell
-	end open_file
-end script
+			set_values(this_url, this_title)
+		end fetch_page_info
+	end script
+end make_firefox_browser
 
 -- -- -- Settings Models -- -- --
 
