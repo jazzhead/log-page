@@ -77,7 +77,7 @@ CHROMEDIR_AS := $(subst \,,$(CHROMEDIR))
 # Tools
 RM            = rm -rf
 ED            = ed -s
-SED           = LANG=C sed
+SED           = LC_ALL=C sed
 MKDIR         = mkdir -p
 MARKDOWN      = kramdown
 MARKDOWN_OPT := --no-auto-ids --entity-output :numeric --template $(HTML_LAYOUT)
@@ -284,7 +284,7 @@ define make-alias
 endef
 
 define strip-debug
-	$(SED) -e '/^[[:space:]]*\(my \)\{0,1\}debug_log(/d' "$1"
+	$(SED) -e '/^[[:space:]]*\(my \(Util.s \)\{0,1\}\)\{0,1\}debug_log(/d' "$1"
 endef
 
 define insert-version
