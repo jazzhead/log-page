@@ -86,10 +86,10 @@ on run argv -- argv is for 'run script with parameters' or osascript cli argumen
 	-- Override any default script properties
 	modify_runtime_config(argv)
 
-	my debug_log(2, "[debug] " & name & ".__BUNDLE_ID__: " & __BUNDLE_ID__)
-	my debug_log(2, "[debug] " & name & ".__PLIST_DIR__: " & __PLIST_DIR__)
-	my debug_log(2, "[debug] " & name & ".__DEFAULT_LOGFILE__: " & __DEFAULT_LOGFILE__)
-	my debug_log(2, "[debug] " & name & ".__DEBUG_LEVEL__: " & __DEBUG_LEVEL__)
+	my Util's debug_log(2, "[debug] " & name & ".__BUNDLE_ID__: " & __BUNDLE_ID__)
+	my Util's debug_log(2, "[debug] " & name & ".__PLIST_DIR__: " & __PLIST_DIR__)
+	my Util's debug_log(2, "[debug] " & name & ".__DEFAULT_LOGFILE__: " & __DEFAULT_LOGFILE__)
+	my Util's debug_log(2, "[debug] " & name & ".__DEBUG_LEVEL__: " & __DEBUG_LEVEL__)
 
 	run make_app_controller()
 end run
@@ -115,7 +115,7 @@ on modify_runtime_config(argv) --> void
 	-- Parse arguments into key/value pairs
 	set args to {}
 	repeat with i from 1 to count argv
-		set {k, v} to split_text(argv's item i, ":")
+		set {k, v} to my Util's split_text(argv's item i, ":")
 		set end of args to {key:k, val:v}
 	end repeat
 
@@ -150,7 +150,7 @@ on make_app_controller()
 		property class : "AppController" -- the main controller
 
 		on run
-			my debug_log(1, "--->  running " & my class & "...")
+			my Util's debug_log(1, "--->  running " & my class & "...")
 
 			--
 			-- Create the shared navigation controller first, then
@@ -193,7 +193,7 @@ on make_app_controller()
 				register_product(make_webkit_browser())
 			end tell
 
-			set browser_model to app_factory's make_browser(get_front_app_name())
+			set browser_model to app_factory's make_browser(my Util's get_front_app_name())
 			browser_model's fetch_page_info()
 
 			--
@@ -209,8 +209,8 @@ on make_app_controller()
 				set_page_title(browser_model's get_title())
 				set_browser_name(browser_model's to_string())
 
-				my debug_log(1, "[debug] " & get_page_url())
-				my debug_log(1, "[debug] " & get_page_title())
+				my Util's debug_log(1, "[debug] " & get_page_url())
+				my Util's debug_log(1, "[debug] " & get_page_title())
 
 				-- Parse the categories from the log file
 				--
@@ -297,7 +297,7 @@ on make_app_controller()
 			--
 			nav_controller's set_root_controller(title_controller)
 
-			my debug_log(1, my class & "'s Controller Stack: " & nav_controller's to_string())
+			my Util's debug_log(1, my class & "'s Controller Stack: " & nav_controller's to_string())
 
 			(* == UI == *)
 
@@ -315,7 +315,7 @@ on make_app_controller()
 			if nav_controller's is_empty() then
 				error "The navigation controller stack needs at least one controller."
 			end if
-			my debug_log(1, return & "--->  " & my class & " is starting the nav controller loop...")
+			my Util's debug_log(1, return & "--->  " & my class & " is starting the nav controller loop...")
 			repeat while not nav_controller's is_empty()
 				--
 				-- Run the next (top) controller on the stack by getting a
@@ -336,10 +336,10 @@ on make_app_controller()
 				set this_controller to nav_controller's peek()
 				set ret_val to run this_controller --> returns boolean
 
-				my debug_log(1, my class & "'s Controller Stack: " & nav_controller's to_string())
+				my Util's debug_log(1, my class & "'s Controller Stack: " & nav_controller's to_string())
 
 				if not ret_val then -- {FileEditor,FileViewer}Controller will return false
-					my debug_log(1, "--->  finished " & my class & "; no post-processing.")
+					my Util's debug_log(1, "--->  finished " & my class & "; no post-processing.")
 					return -- don't do any post-processing
 				end if
 			end repeat
@@ -351,11 +351,11 @@ on make_app_controller()
 			--
 			page_log's write_record()
 
-			my debug_log(1, "--->  finished " & my class)
+			my Util's debug_log(1, "--->  finished " & my class)
 		end run
 	end script
 
-	my debug_log(1, "--->  new " & this's class & "()")
+	my Util's debug_log(1, "--->  new " & this's class & "()")
 	return this
 end make_app_controller
 
@@ -392,7 +392,7 @@ General"
 			{_label:"Development:AppleScript:Safari", _title:"Resize Window - AppleScript for Mac OS X That Quickly Resizes Windows", _url:"http://jazzheaddesign.com/work/code/resize-window/", _note:"Useful when designing responsive websites that adapt to different sizes."}, Â
 			{_label:"Development:Shell:Bash", _title:"shmark - Categorized Shell Directory Bookmarking for Bash", _url:"http://jazzheaddesign.com/work/code/shmark/", _note:missing value}}
 
-		property _log_header_sep : my multiply_text("#", 80)
+		property _log_header_sep : my Util's multiply_text("#", 80)
 		property _log_record_sep : missing value --> string
 
 		property _page_url : missing value --> string
@@ -422,7 +422,7 @@ General"
 		end set_page_url
 
 		on set_page_title(this_value) --> void
-			my debug_log(1, my class & ".set_page_title(" & this_value & ")")
+			my Util's debug_log(1, my class & ".set_page_title(" & this_value & ")")
 			set _page_title to this_value
 			settings_changed() -- notify observers
 		end set_page_title
@@ -511,8 +511,8 @@ General"
 		on write_record() --> void
 			local log_file_posix, log_file_mac
 
-			set log_file_posix to expand_home_path(_settings's get_log_file())
-			set log_file_mac to get_mac_path(log_file_posix)
+			set log_file_posix to my Util's expand_home_path(_settings's get_log_file())
+			set log_file_mac to my Util's get_mac_path(log_file_posix)
 
 			-- Write last selected category to preferences file (save state)
 			_settings's set_pref(_settings's get_last_category_key(), _page_label)
@@ -522,7 +522,7 @@ General"
 			_validate_fields()
 
 			-- Create any directories needed in the web page log file path
-			create_directory(first item of split_path_into_dir_and_file(log_file_posix))
+			my Util's create_directory(first item of my Util's split_path_into_dir_and_file(log_file_posix))
 
 			if _should_create_file then _create_log_file()
 
@@ -534,22 +534,22 @@ General"
 		end write_record
 
 		on parse_log() --> void
-			my debug_log(2, my class & ".parse_log()...")
+			my Util's debug_log(2, my class & ".parse_log()...")
 
 			local log_file_posix, log_file_mac, header_items
 			local all_category_txt, root_category_txt
 			local all_categories, root_categories
 
-			set log_file_posix to expand_home_path(_settings's get_log_file())
-			set log_file_mac to get_mac_path(log_file_posix)
+			set log_file_posix to my Util's expand_home_path(_settings's get_log_file())
+			set log_file_mac to my Util's get_mac_path(log_file_posix)
 
-			my debug_log(2, my class & ".parse_log(): file = " & log_file_posix)
+			my Util's debug_log(2, my class & ".parse_log(): file = " & log_file_posix)
 
 			-- Does file exist? Is file empty?
 			--
 			_check_log_file(log_file_mac)
 
-			my debug_log(2, "[debug] " & my class & ".parse_log(): parsing categories from file")
+			my Util's debug_log(2, "[debug] " & my class & ".parse_log(): parsing categories from file")
 
 			-- Parse any existing categories from the "Label" fields of the
 			-- bookmarks log file:
@@ -561,7 +561,7 @@ General"
 			-- If creating a new file, add the sample categories to the list:
 			--
 			if _should_create_file then
-				my debug_log(2, "[debug] " & my class & ".parse_log(): parsing sample categories for new file")
+				my Util's debug_log(2, "[debug] " & my class & ".parse_log(): parsing sample categories for new file")
 				set all_category_txt to _sample_categories & linefeed & all_category_txt
 				set s to "echo \"" & all_category_txt & "\" | egrep -v '^$' | sort | uniq"
 				set all_category_txt to do shell script s without altering line endings
@@ -578,7 +578,7 @@ General"
 				set all_categories to {}
 			end try
 
-			my debug_log(2, "[debug] " & my class & ".parse_log(): parsing top-level categories")
+			my Util's debug_log(2, "[debug] " & my class & ".parse_log(): parsing top-level categories")
 
 			-- Get root-level categories:
 			--
@@ -601,14 +601,14 @@ General"
 			set _root_categories to root_categories
 			settings_changed() -- notify observers
 
-			my debug_log(1, get_root_categories())
-			my debug_log(2, get_all_categories())
+			my Util's debug_log(1, get_root_categories())
+			my Util's debug_log(2, get_all_categories())
 
-			my debug_log(2, my class & ".parse_log() done")
+			my Util's debug_log(2, my class & ".parse_log() done")
 		end parse_log
 
 		on update_category_state()
-			my debug_log(1, my class & ".update_category_state()")
+			my Util's debug_log(1, my class & ".update_category_state()")
 			set _page_label to _settings's get_last_category()
 			if _page_label is missing value or _page_label is "" then
 				set _chosen_category to ""
@@ -616,7 +616,7 @@ General"
 				set _chosen_category to _page_label
 			end if
 			try
-				set _chosen_root_category to my split_text(_page_label, ":")'s item 1
+				set _chosen_root_category to my Util's split_text(_page_label, ":")'s item 1
 			on error
 				set _chosen_root_category to ""
 			end try
@@ -653,24 +653,24 @@ General"
 			try -- nonexistent files will error
 				if (get eof file log_file_mac) is 0 then
 					set _should_create_file to true
-					my debug_log(2, "[debug] " & my class & ".parse_log(): file is empty")
+					my Util's debug_log(2, "[debug] " & my class & ".parse_log(): file is empty")
 				else
 					set _should_create_file to false
-					my debug_log(2, "[debug] " & my class & ".parse_log(): file is not empty")
+					my Util's debug_log(2, "[debug] " & my class & ".parse_log(): file is not empty")
 				end if
 			on error err_msg number err_num
 				set _should_create_file to true
-				my debug_log(2, "[debug] " & my class & ".parse_log(): " & err_msg & "(" & err_num & ")")
-				my debug_log(2, "[debug] " & my class & ".parse_log(): file doesn't exist")
+				my Util's debug_log(2, "[debug] " & my class & ".parse_log(): " & err_msg & "(" & err_num & ")")
+				my Util's debug_log(2, "[debug] " & my class & ".parse_log(): file doesn't exist")
 			end try
-			my debug_log(2, "[debug] " & my class & ".parse_log(): _should_create_file = " & _should_create_file)
+			my Util's debug_log(2, "[debug] " & my class & ".parse_log(): _should_create_file = " & _should_create_file)
 		end _check_log_file
 
 		on _create_log_file() --> void
 			local log_file_posix, log_file_mac, file_header
 
-			set log_file_posix to expand_home_path(_settings's get_log_file())
-			set log_file_mac to get_mac_path(log_file_posix)
+			set log_file_posix to my Util's expand_home_path(_settings's get_log_file())
+			set log_file_mac to my Util's get_mac_path(log_file_posix)
 
 			set file_header to _log_header_sep & "
 #  Timestamped and Categorized Web Bookmark Archive               vim:ft=conf:
@@ -737,7 +737,7 @@ General"
 			set log_lines to paragraphs of (read file log_file_mac)
 			repeat with i from (count log_lines) to 1 by -1
 				set last_line to log_lines's item i
-				if trim_whitespace(last_line) is not "" then exit repeat
+				if my Util's trim_whitespace(last_line) is not "" then exit repeat
 			end repeat
 			if last_line is _log_record_sep then
 				return false
@@ -752,15 +752,15 @@ General"
 			set rule_char to "-"
 			set rule_width to 80 -- total width
 			set name_col_width to 7 -- name column width only
-			return "" & my multiply_text(rule_char, name_col_width - 1) & Â
-				"+" & my multiply_text(rule_char, rule_width - name_col_width)
+			return "" & my Util's multiply_text(rule_char, name_col_width - 1) & Â
+				"+" & my Util's multiply_text(rule_char, rule_width - name_col_width)
 		end _set_record_delimiter
 
 		on _format_record(_label, _title, _url, _note) --> string
 			local field_sep, final_text
 
 			set field_sep to " | "
-			set final_text to join_list({Â
+			set final_text to my Util's join_list({Â
 				"Date " & field_sep & _format_date(), Â
 				"Label" & field_sep & _label, Â
 				"Title" & field_sep & _title, Â
@@ -783,28 +783,28 @@ General"
 			end repeat
 			set {m, d, hh, mm, ss} to tmp_list
 			-- Final string:
-			return join_list({y, m, d}, "-") & space & join_list({hh, mm, ss}, ":")
+			return my Util's join_list({y, m, d}, "-") & space & my Util's join_list({hh, mm, ss}, ":")
 		end _format_date
 
 		on _format_note(this_text) --> string
 			-- Line wrap the Note field (and transliterate non-ASCII characters)
-			set s to "LANG=C echo " & quoted form of convert_to_ascii(this_text) Â
+			set s to "LANG=C echo " & quoted form of my Util's convert_to_ascii(this_text) Â
 				& "| fmt -w 72 | sed '1 s/^/Note  | /; 2,$ s/^/      | /'"
 			do shell script s without altering line endings
 		end _format_note
 
 		on _format_sample_categories() --> string
 			local these_lines, this_line
-			set these_lines to split_text(_sample_categories, linefeed)
+			set these_lines to my Util's split_text(_sample_categories, linefeed)
 			repeat with i from 1 to count these_lines
 				set this_line to "Label | " & these_lines's item i
 				set these_lines's item i to this_line
 			end repeat
-			return join_list(these_lines, linefeed)
+			return my Util's join_list(these_lines, linefeed)
 		end _format_sample_categories
 	end script
 
-	my debug_log(1, return & "--->  new " & this's class & "()" & return)
+	my Util's debug_log(1, return & "--->  new " & this's class & "()" & return)
 
 	if __NULL_IO__ then
 		set this's _io to make_null_io()
@@ -821,10 +821,10 @@ script FileApp
 	property class : "FileApp"
 
 	on open_file(this_app, posix_file_path) --> void
-		my debug_log(1, my class & ".open_file()")
+		my Util's debug_log(1, my class & ".open_file()")
 
-		set posix_file_path to expand_home_path(posix_file_path)
-		set mac_file_path to get_mac_path(posix_file_path)
+		set posix_file_path to my Util's expand_home_path(posix_file_path)
+		set mac_file_path to my Util's get_mac_path(posix_file_path)
 
 		tell application this_app
 			activate
@@ -841,15 +841,15 @@ on make_factory() --> Factory
 		property _registered_products : {} -- array (concrete products)
 
 		on register_product(this_product) --> void
-			my debug_log(1, "--->  " & my class & ".register_product(): registering " & this_product's to_string())
+			my Util's debug_log(1, "--->  " & my class & ".register_product(): registering " & this_product's to_string())
 			set end of _registered_products to this_product
 		end register_product
 
 		on make_browser(app_name) --> WebBrowser
-			my debug_log(1, "--->  " & my class & ".make_browser()...")
+			my Util's debug_log(1, "--->  " & my class & ".make_browser()...")
 			repeat with this_product in _registered_products
 				if app_name is this_product's to_string() then
-					my debug_log(1, "--->  using " & this_product's class)
+					my Util's debug_log(1, "--->  using " & this_product's class)
 					return this_product
 				end if
 			end repeat
@@ -872,7 +872,7 @@ on make_factory() --> Factory
 				set end of app_names to this_product's to_string()
 			end repeat
 			--return app_names --> array
-			join_list(app_names, ", ") --> string
+			my Util's join_list(app_names, ", ") --> string
 		end _get_app_names
 	end script
 end make_factory
@@ -898,7 +898,7 @@ on make_web_browser() --> abstract product
 		on set_values(this_url, this_title) --> void
 			try
 				set _page_url to this_url
-				set _page_title to convert_to_ascii(this_title) -- Transliterate non-ASCII
+				set _page_title to my Util's convert_to_ascii(this_title) -- Transliterate non-ASCII
 			on error err_msg number err_num
 				handle_error(err_msg, err_num)
 			end try
@@ -998,7 +998,7 @@ on make_firefox_browser() --> concrete product
 
 		on fetch_page_info() --> void
 			reset_values()
-			gui_scripting_status() -- Firefox requires GUI scripting
+			my Util's gui_scripting_status() -- Firefox requires GUI scripting
 
 			tell application (my short_name)
 				activate
@@ -1282,7 +1282,7 @@ on make_page_log_settings()
 
 		on _handle_log_file(this_key, this_value) --> string -- PRIVATE
 			if this_key is _log_file_key then
-				set this_value to my shorten_home_path(this_value)
+				set this_value to my Util's shorten_home_path(this_value)
 			end if
 			return this_value
 		end _handle_log_file
@@ -1303,7 +1303,7 @@ on make_plist(plist_path, settings_model)
 
 		-- Get the values for each key in the given list
 		on read_settings(plist_keys) --> void (modifies associative list)
-			my debug_log(1, "[debug] read_settings()")
+			my Util's debug_log(1, "[debug] read_settings()")
 			try
 				repeat with this_key in plist_keys
 					set this_key to this_key's contents -- dereference implicit loop reference
@@ -1311,10 +1311,10 @@ on make_plist(plist_path, settings_model)
 					_model's set_item(this_key, this_value)
 				end repeat
 			on error err_msg number err_num
-				my debug_log(2, "[debug] Can't read_settings(): " & err_msg & "(" & err_num & ")")
+				my Util's debug_log(2, "[debug] Can't read_settings(): " & err_msg & "(" & err_num & ")")
 				error "Can't read_settings(): " & err_msg number err_num
 			end try
-			my debug_log(1, "[debug] read_settings(): done")
+			my Util's debug_log(1, "[debug] read_settings(): done")
 		end read_settings
 
 		on write_settings() --> void (writes to file)
@@ -1334,7 +1334,7 @@ on make_plist(plist_path, settings_model)
 		end set_and_write_pref*)
 
 		on read_pref(pref_key) --> anything
-			my debug_log(1, "[debug] read_pref()")
+			my Util's debug_log(1, "[debug] read_pref()")
 			local pref_key
 			try
 				tell application "System Events"
@@ -1357,15 +1357,15 @@ on make_plist(plist_path, settings_model)
 			-- detected and the "kind" automatically overridden. I only
 			-- tested strings, integers and booleans though.
 			--
-			my debug_log(1, "[debug] write_pref(" & pref_key & ", " & pref_value & ")")
+			my Util's debug_log(1, "[debug] write_pref(" & pref_key & ", " & pref_value & ")")
 			local pref_key, pref_value, this_plistfile
 			try
 				tell application "System Events"
 					-- Make a new plist file if one doesn't exist
 					if not (exists disk item _plist_path) then
 						-- Create any missing directories first
-						set plist_dir to item 1 of my split_path_into_dir_and_file(_plist_path)
-						my create_directory(plist_dir)
+						set plist_dir to item 1 of my Util's split_path_into_dir_and_file(_plist_path)
+						my Util's create_directory(plist_dir)
 						-- Create the plist
 						set this_plistfile to my _new_plist()
 					else
@@ -1378,7 +1378,7 @@ on make_plist(plist_path, settings_model)
 							my read_pref(pref_key)
 							set value of property list item pref_key to pref_value
 						on error
-							my debug_log(1, tab & "[debug] write_pref(): writing new item")
+							my Util's debug_log(1, tab & "[debug] write_pref(): writing new item")
 							make new property list item at end of property list items with properties {kind:string, name:pref_key, value:pref_value}
 						end try
 					end tell
@@ -1389,7 +1389,7 @@ on make_plist(plist_path, settings_model)
 		end write_pref
 
 		on _new_plist() -- returns a 'property list file' -- PRIVATE
-			my debug_log(1, "[debug] _new_plist()")
+			my Util's debug_log(1, "[debug] _new_plist()")
 			local parent_dictionary, this_plistfile
 			try
 				tell application "System Events"
@@ -1455,7 +1455,7 @@ on make_navigation_controller()
 		end to_string
 	end script
 
-	my debug_log(1, return & "--->  new " & this's class & "()")
+	my Util's debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_navigation_controller
 
@@ -1466,8 +1466,8 @@ on make_base_controller()
 		property other_controllers : {} --> array (for pushing on the stack)
 
 		on run
-			my debug_log(1, return & "--->  running " & my class & "...")
-			my debug_log(1, "Other controllers: " & other_controllers_to_string())
+			my Util's debug_log(1, return & "--->  running " & my class & "...")
+			my Util's debug_log(1, "Other controllers: " & other_controllers_to_string())
 		end run
 
 		on set_controllers(these_controllers) --> void
@@ -1523,25 +1523,25 @@ on make_file_editor_controller(navigation_controller, settings_model)
 				launch_app()
 				set ret_val to false
 			end if
-			my debug_log(1, "--->  finished " & my class & return)
+			my Util's debug_log(1, "--->  finished " & my class & return)
 			return ret_val --> false ends controller loop and exits script
 		end run
 
 		on launch_app() --> void
-			my debug_log(1, my class & ".launch_app()")
+			my Util's debug_log(1, my class & ".launch_app()")
 			set this_app to _model's get_text_editor()
 			set this_file to _model's get_log_file()
 			_app's open_file(this_app, this_file)
 		end launch_app
 
 		on disable_warning() --> void
-			my debug_log(1, my class & ".disable_warning()")
+			my Util's debug_log(1, my class & ".disable_warning()")
 			_model's set_pref(_model's get_warn_before_editing_key(), false)
 			launch_app()
 		end disable_warning
 	end script
 
-	my debug_log(1, return & "--->  new " & this's class & "()")
+	my Util's debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_file_editor_controller
 
@@ -1557,19 +1557,19 @@ on make_file_viewer_controller(navigation_controller, settings_model)
 		on run
 			continue run -- call superclass
 			launch_app()
-			my debug_log(1, "--->  finished " & my class & return)
+			my Util's debug_log(1, "--->  finished " & my class & return)
 			return false --> false ends controller loop and exits script
 		end run
 
 		on launch_app() --> void
-			my debug_log(1, my class & ".launch_app()")
+			my Util's debug_log(1, my class & ".launch_app()")
 			set this_app to _model's get_file_viewer()
 			set this_file to _model's get_log_file()
 			_app's open_file(this_app, this_file)
 		end launch_app
 	end script
 
-	my debug_log(1, return & "--->  new " & this's class & "()")
+	my Util's debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_file_viewer_controller
 
@@ -1585,7 +1585,7 @@ on make_license_controller(navigation_controller)
 			try
 				_nav_controller's pop() -- remove from history
 			on error
-				my debug_log(2, my class & " is running before the main app navigation loop has started so it did not pop itself off the stack which is currently empty.")
+				my Util's debug_log(2, my class & " is running before the main app navigation loop has started so it did not pop itself off the stack which is currently empty.")
 			end try
 			--
 			-- No need to construct and display a custom view object here
@@ -1599,12 +1599,12 @@ on make_license_controller(navigation_controller)
 			end timeout
 			--
 			-- The cancel button will stop the script before it gets here.
-			my debug_log(1, "--->  finished " & my class & return)
+			my Util's debug_log(1, "--->  finished " & my class & return)
 			return true --> false ends controller loop and exits script
 		end run
 	end script
 
-	my debug_log(1, return & "--->  new " & this's class & "()")
+	my Util's debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_license_controller
 
@@ -1620,22 +1620,22 @@ on make_about_controller(navigation_controller)
 			_nav_controller's pop() -- remove from history
 			if _view is missing value then set _view to make_about_view(me)
 			set ret_val to _view's create_view() --> returns boolean
-			my debug_log(1, "--->  finished " & my class & return)
+			my Util's debug_log(1, "--->  finished " & my class & return)
 			return ret_val --> false ends controller loop and exits script
 		end run
 
 		on show_license() --> void
-			my debug_log(1, my class & ".show_license()")
+			my Util's debug_log(1, my class & ".show_license()")
 			_nav_controller's push(my other_controllers's item 1)
 		end show_license
 
 		on go_to_website() --> void
-			my debug_log(1, my class & ".go_to_website()")
+			my Util's debug_log(1, my class & ".go_to_website()")
 			tell me to open location __SCRIPT_WEBSITE__
 		end go_to_website
 	end script
 
-	my debug_log(1, return & "--->  new " & this's class & "()")
+	my Util's debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_about_controller
 
@@ -1652,7 +1652,7 @@ on make_help_controller(navigation_controller, settings_model)
 			_nav_controller's pop() -- remove from history
 			if _view is missing value then set _view to make_help_view(me, _model)
 			_view's create_view()
-			my debug_log(1, "--->  finished " & my class & return)
+			my Util's debug_log(1, "--->  finished " & my class & return)
 			return true
 		end run
 
@@ -1661,7 +1661,7 @@ on make_help_controller(navigation_controller, settings_model)
 		end change_settings
 	end script
 
-	my debug_log(1, return & "--->  new " & this's class & "()")
+	my Util's debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_help_controller
 
@@ -1677,12 +1677,12 @@ on make_label_help_controller(navigation_controller)
 			_nav_controller's pop() -- remove from history
 			if _view is missing value then set _view to make_label_help_view()
 			_view's create_view()
-			my debug_log(1, "--->  finished " & my class & return)
+			my Util's debug_log(1, "--->  finished " & my class & return)
 			return true
 		end run
 	end script
 
-	my debug_log(1, return & "--->  new " & this's class & "()")
+	my Util's debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_label_help_controller
 
@@ -1698,7 +1698,7 @@ on make_title_controller(navigation_controller, main_model)
 			continue run -- call superclass
 			if _view is missing value then set _view to make_title_view(me, _model)
 			_view's create_view()
-			my debug_log(1, "--->  finished " & my class & return)
+			my Util's debug_log(1, "--->  finished " & my class & return)
 			return true
 		end run
 
@@ -1713,7 +1713,7 @@ on make_title_controller(navigation_controller, main_model)
 		end set_page_title
 	end script
 
-	my debug_log(1, return & "--->  new " & this's class & "()")
+	my Util's debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_title_controller
 
@@ -1729,7 +1729,7 @@ on make_url_controller(navigation_controller, main_model)
 			continue run -- call superclass
 			if _view is missing value then set _view to make_url_view(me, _model)
 			_view's create_view()
-			my debug_log(1, "--->  finished " & my class & return)
+			my Util's debug_log(1, "--->  finished " & my class & return)
 			return true
 		end run
 
@@ -1739,7 +1739,7 @@ on make_url_controller(navigation_controller, main_model)
 		end set_page_url
 	end script
 
-	my debug_log(1, return & "--->  new " & this's class & "()")
+	my Util's debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_url_controller
 
@@ -1769,13 +1769,13 @@ on make_label_controller(navigation_controller, main_model, label_base_view)
 				if _model's get_all_categories()'s length > 0 then
 					_model's set_chosen_category(_model's get_only_category())
 				end if
-				my debug_log(2, "[debug] 01/10 " & my class & " skipping to edit category")
+				my Util's debug_log(2, "[debug] 01/10 " & my class & " skipping to edit category")
 				_skip_to_edit_label()
 			else
 				if _view is missing value then set _view to make_label_view(me, _label_base_view)
 				_view's create_view()
 			end if
-			my debug_log(1, "--->  finished " & my class & return)
+			my Util's debug_log(1, "--->  finished " & my class & return)
 			return true
 		end run
 
@@ -1822,7 +1822,7 @@ on make_label_controller(navigation_controller, main_model, label_base_view)
 		end show_category_help
 	end script
 
-	my debug_log(1, return & "--->  new " & this's class & "()")
+	my Util's debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_label_controller
 
@@ -1839,13 +1839,13 @@ on make_sub_label_controller(navigation_controller, main_model, label_base_view)
 			continue run -- call superclass
 			if _model's get_sub_categories()'s length < 2 then
 				_model's set_chosen_category(_model's get_only_sub_category())
-				my debug_log(2, "[debug] 01/10 " & my class & " skipping to edit category w/pre-fill")
+				my Util's debug_log(2, "[debug] 01/10 " & my class & " skipping to edit category w/pre-fill")
 				_skip_to_edit_label()
 			else
 				if _view is missing value then set _view to make_sub_label_view(me, _label_base_view)
 				_view's create_view()
 			end if
-			my debug_log(1, "--->  finished " & my class & return)
+			my Util's debug_log(1, "--->  finished " & my class & return)
 			return true
 		end run
 
@@ -1897,7 +1897,7 @@ on make_sub_label_controller(navigation_controller, main_model, label_base_view)
 		end show_category_help
 	end script
 
-	my debug_log(1, return & "--->  new " & this's class & "()")
+	my Util's debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_sub_label_controller
 
@@ -1914,7 +1914,7 @@ on make_all_label_controller(navigation_controller, main_model, label_base_view)
 			continue run -- call superclass
 			if _view is missing value then set _view to make_all_label_view(me, _label_base_view)
 			_view's create_view()
-			my debug_log(1, "--->  finished " & my class & return)
+			my Util's debug_log(1, "--->  finished " & my class & return)
 			return true
 		end run
 
@@ -1948,7 +1948,7 @@ on make_all_label_controller(navigation_controller, main_model, label_base_view)
 		end show_category_help
 	end script
 
-	my debug_log(1, return & "--->  new " & this's class & "()")
+	my Util's debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_all_label_controller
 
@@ -1964,7 +1964,7 @@ on make_label_edit_controller(navigation_controller, main_model)
 			continue run -- call superclass
 			if _view is missing value then set _view to make_label_edit_view(me, _model)
 			_view's create_view()
-			my debug_log(1, "--->  finished " & my class & return)
+			my Util's debug_log(1, "--->  finished " & my class & return)
 			return true
 		end run
 
@@ -1975,7 +1975,7 @@ on make_label_edit_controller(navigation_controller, main_model)
 		end set_chosen_category
 	end script
 
-	my debug_log(1, return & "--->  new " & this's class & "()")
+	my Util's debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_label_edit_controller
 
@@ -1991,7 +1991,7 @@ on make_note_controller(navigation_controller, main_model)
 			continue run -- call superclass
 			if _view is missing value then set _view to make_note_view(me, _model)
 			_view's create_view()
-			my debug_log(1, "--->  finished " & my class & return)
+			my Util's debug_log(1, "--->  finished " & my class & return)
 			return true
 		end run
 
@@ -2001,7 +2001,7 @@ on make_note_controller(navigation_controller, main_model)
 		end set_page_note
 	end script
 
-	my debug_log(1, return & "--->  new " & this's class & "()")
+	my Util's debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_note_controller
 
@@ -2025,16 +2025,16 @@ on make_settings_controller(navigation_controller, settings_model, app_model, li
 		property main_controller : missing value
 
 		on run
-			my debug_log(1, return & "--->  running " & my class & "...")
+			my Util's debug_log(1, return & "--->  running " & my class & "...")
 
 			try
 				-- Pop itself off the main app nav stack first thing so that
 				-- it doesn't become part of the main app navigation history.
 				--
-				my debug_log(2, my class & " is immediately popping itself off the main navigation stack so that it won't be part of the navigation history and control will be returned to the controller that launched it when it completes.")
+				my Util's debug_log(2, my class & " is immediately popping itself off the main navigation stack so that it won't be part of the navigation history and control will be returned to the controller that launched it when it completes.")
 				nav_controller's pop()
 			on error
-				my debug_log(2, my class & " is running before the main app navigation loop has started so it did not pop itself off the stack which is currently empty.")
+				my Util's debug_log(2, my class & " is running before the main app navigation loop has started so it did not pop itself off the stack which is currently empty.")
 			end try
 
 			-- Read required keys
@@ -2044,15 +2044,15 @@ on make_settings_controller(navigation_controller, settings_model, app_model, li
 			on error err_msg number err_num
 				set _is_first_run to true
 			end try
-			my debug_log(2, my class & ": first run? " & _is_first_run as string)
+			my Util's debug_log(2, my class & ": first run? " & _is_first_run as string)
 
 			-- Read optional keys (such as saved state)
 			repeat with this_key in _model's get_optional_keys()
 				set this_key to this_key's contents -- dereference
-				my debug_log(2, my class & ": trying to read " & this_key & " pref")
+				my Util's debug_log(2, my class & ": trying to read " & this_key & " pref")
 				try
 					set this_value to _model's read_pref(this_key)
-					my debug_log(2, my class & ": " & this_key & " = " & this_value)
+					my Util's debug_log(2, my class & ": " & this_key & " = " & this_value)
 					_model's set_item(this_key, this_value)
 				end try
 			end repeat
@@ -2063,10 +2063,10 @@ on make_settings_controller(navigation_controller, settings_model, app_model, li
 				_show_ui()
 			else
 				set _has_run_this_session to true
-				my debug_log(1, my class & ": skipping settings UI at startup")
+				my Util's debug_log(1, my class & ": skipping settings UI at startup")
 			end if
 
-			my debug_log(1, "--->  finished " & my class & return)
+			my Util's debug_log(1, "--->  finished " & my class & return)
 			return true
 		end run
 
@@ -2091,13 +2091,13 @@ on make_settings_controller(navigation_controller, settings_model, app_model, li
 			-- Load first controller
 			settings_nav_controller's set_root_controller(root_controller)
 
-			my debug_log(1, my class & "'s Controller Stack: " & settings_nav_controller's to_string())
+			my Util's debug_log(1, my class & "'s Controller Stack: " & settings_nav_controller's to_string())
 
 			repeat while not settings_nav_controller's is_empty()
 				set this_controller to settings_nav_controller's peek() -- Get controller from top of stack
 				run this_controller -- Call its run() method
 
-				my debug_log(1, my class & "'s Controller Stack: " & settings_nav_controller's to_string())
+				my Util's debug_log(1, my class & "'s Controller Stack: " & settings_nav_controller's to_string())
 			end repeat
 
 			if _is_first_run then -- clean-up after first run
@@ -2117,7 +2117,7 @@ on make_settings_controller(navigation_controller, settings_model, app_model, li
 		end to_string
 	end script
 
-	my debug_log(1, return & "--->  new " & this's class & "()")
+	my Util's debug_log(1, return & "--->  new " & this's class & "()")
 	this's _create_controllers()
 	return this
 end make_settings_controller
@@ -2134,7 +2134,7 @@ on make_settings_first_controller(navigation_controller, settings_model)
 			continue run -- call superclass
 			if _view is missing value then set _view to make_settings_first_view(me, _model)
 			_view's create_view()
-			my debug_log(1, "--->  finished " & my class & return)
+			my Util's debug_log(1, "--->  finished " & my class & return)
 			return true
 		end run
 
@@ -2155,14 +2155,14 @@ on make_settings_first_controller(navigation_controller, settings_model)
 				try
 					_model's get_item(this_key)
 				on error
-					my debug_log(1, my class & ".set_missing_prefs(): setting missing pref")
+					my Util's debug_log(1, my class & ".set_missing_prefs(): setting missing pref")
 					_model's set_pref(this_key, _model's get_default_item(this_key))
 				end try
 			end repeat
 		end _set_missing_prefs
 	end script
 
-	my debug_log(1, return & "--->  new " & this's class & "()")
+	my Util's debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_settings_first_controller
 
@@ -2178,7 +2178,7 @@ on make_settings_main_controller(navigation_controller, settings_model)
 			continue run -- call superclass
 			if _view is missing value then set _view to make_settings_main_view(me, _model)
 			_view's create_view()
-			my debug_log(1, "--->  finished " & my class & return)
+			my Util's debug_log(1, "--->  finished " & my class & return)
 			return true
 		end run
 
@@ -2195,7 +2195,7 @@ on make_settings_main_controller(navigation_controller, settings_model)
 		end finish_settings
 	end script
 
-	my debug_log(1, return & "--->  new " & this's class & "()")
+	my Util's debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_settings_main_controller
 
@@ -2215,7 +2215,7 @@ on make_settings_app_controller(navigation_controller, settings_model)
 				set _view to make_settings_app_view(me, _model)
 			end if
 			_view's create_view()
-			my debug_log(1, "--->  finished " & my class & return)
+			my Util's debug_log(1, "--->  finished " & my class & return)
 			return true
 		end run
 
@@ -2234,7 +2234,7 @@ on make_settings_app_controller(navigation_controller, settings_model)
 		end choose_viewer
 	end script
 
-	my debug_log(1, return & "--->  new " & this's class & "()")
+	my Util's debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_settings_app_controller
 
@@ -2246,7 +2246,7 @@ on make_settings_app_base_controller()
 		on run
 			-- subclasses must instantiate a view first here, then call super
 			my _view's create_view()
-			my debug_log(1, "--->  finished " & my class & return)
+			my Util's debug_log(1, "--->  finished " & my class & return)
 			return true
 		end run
 
@@ -2256,7 +2256,7 @@ on make_settings_app_base_controller()
 		end set_app
 	end script
 
-	my debug_log(1, return & "--->  new " & this's class & "()")
+	my Util's debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_settings_app_base_controller
 
@@ -2270,7 +2270,7 @@ on make_settings_editor_controller(navigation_controller, settings_model)
 		property _app_key : _model's get_text_editor_key()
 
 		on run
-			my debug_log(1, return & "--->  running " & my class & "...")
+			my Util's debug_log(1, return & "--->  running " & my class & "...")
 			if _view is missing value then
 				set _view to make_settings_editor_view(me, _model)
 			end if
@@ -2278,7 +2278,7 @@ on make_settings_editor_controller(navigation_controller, settings_model)
 		end run
 	end script
 
-	my debug_log(1, return & "--->  new " & this's class & "()")
+	my Util's debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_settings_editor_controller
 
@@ -2292,7 +2292,7 @@ on make_settings_viewer_controller(navigation_controller, settings_model)
 		property _app_key : _model's get_file_viewer_key()
 
 		on run
-			my debug_log(1, return & "--->  running " & my class & "...")
+			my Util's debug_log(1, return & "--->  running " & my class & "...")
 			if _view is missing value then
 				set _view to make_settings_viewer_view(me, _model)
 			end if
@@ -2300,7 +2300,7 @@ on make_settings_viewer_controller(navigation_controller, settings_model)
 		end run
 	end script
 
-	my debug_log(1, return & "--->  new " & this's class & "()")
+	my Util's debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_settings_viewer_controller
 
@@ -2319,7 +2319,7 @@ on make_settings_file_controller(navigation_controller, settings_model, app_mode
 				set _view to make_settings_file_view(me, _model)
 			end if
 			_view's create_view()
-			my debug_log(1, "--->  finished " & my class & return)
+			my Util's debug_log(1, "--->  finished " & my class & return)
 			return true
 		end run
 
@@ -2331,14 +2331,14 @@ on make_settings_file_controller(navigation_controller, settings_model, app_mode
 		end set_log_file
 
 		on reset_warning() --> void
-			my debug_log(1, my class & ".reset_warning()")
+			my Util's debug_log(1, my class & ".reset_warning()")
 			_model's set_pref(_model's get_warn_before_editing_key(), true)
 			delay 1 -- script needs time to process before next dialog
 			go_back()
 		end reset_warning
 	end script
 
-	my debug_log(1, return & "--->  new " & this's class & "()")
+	my Util's debug_log(1, return & "--->  new " & this's class & "()")
 	return this
 end make_settings_file_controller
 
@@ -2408,8 +2408,8 @@ on make_base_view()
 		on _center_button_name(str) --> void -- PRIVATE
 			-- Oddly, the left and right sides need different amounts of padding
 			-- to (mostly) center the button name. It's never exact though.
-			set left_pad to multiply_text(tab, 2) & multiply_text(space, 2)
-			set right_pad to multiply_text(tab, 3)
+			set left_pad to my Util's multiply_text(tab, 2) & my Util's multiply_text(space, 2)
+			set right_pad to my Util's multiply_text(tab, 3)
 			return left_pad & str & right_pad as string
 		end _center_button_name
 	end script
@@ -2785,7 +2785,7 @@ on make_label_view(view_controller, label_base_view)
 		property _controller : view_controller
 
 		property _bullet : my u_bullet_item
-		property _menu_rule : multiply_text(my u_dash, 18)
+		property _menu_rule : my Util's multiply_text(my u_dash, 18)
 		property _prompt : "Please select a top-level category for the web page you want to log. Next you will be able to select subcategories. " & my _prompt_extra
 
 		property _default_item : missing value
@@ -2848,7 +2848,7 @@ on make_sub_label_view(view_controller, label_base_view)
 		property _controller : view_controller
 
 		property _bullet : my u_bullet_item
-		property _menu_rule : multiply_text(my u_dash, 35)
+		property _menu_rule : my Util's multiply_text(my u_dash, 35)
 		property _prompt : "Please select a category or subcategory for the web page you want to log. You will have a chance to edit your choice (to add a new category or subcategory). " & my _prompt_extra
 
 		property _default_item : missing value
@@ -2908,7 +2908,7 @@ on make_all_label_view(view_controller, label_base_view)
 		property _controller : view_controller
 
 		property _bullet : my u_bullet_item
-		property _menu_rule : multiply_text(my u_dash, 35)
+		property _menu_rule : my Util's multiply_text(my u_dash, 35)
 		property _prompt : "Please select a category or subcategory for the web page you want to log. You will have a chance to edit your choice (to add a new category or subcategory). " & my _prompt_extra
 
 		property _default_item : missing value
@@ -3354,7 +3354,7 @@ on make_settings_file_view(settings_controller, settings_model)
 
 		property _title : __SCRIPT_NAME__ & " > Preferences > Choose File"
 		property _prompt : "Choose a plain text file in which to save bookmarks:"
-		property _menu_rule : multiply_text(my u_dash, 19)
+		property _menu_rule : my Util's multiply_text(my u_dash, 19)
 		property _menu_items_base : {Â
 			"Use Default File...", Â
 			"Choose Existing File...", Â
@@ -3411,7 +3411,7 @@ on make_settings_file_view(settings_controller, settings_model)
 
 		on choose_new() --> void
 			set m to "Choose a file name and location for the bookmarks log file. (Click \"Cancel\" to return to the previous dialog.)"
-			set file_name to item 2 of split_path_into_dir_and_file(_model's get_default_log_file())
+			set file_name to item 2 of my Util's split_path_into_dir_and_file(_model's get_default_log_file())
 			try
 				set _log_file to POSIX path of (choose file name with prompt m default name file_name default location path to desktop folder from user domain)
 				_controller's set_log_file(_log_file)
@@ -3513,21 +3513,21 @@ on make_observable()
 		end set_changed
 
 		on register_observer(o) -- void
-			my debug_log(1, "  [debug] register_observer(" & o's class & ")")
+			my Util's debug_log(1, "  [debug] register_observer(" & o's class & ")")
 			set end of my _observers to o
 		end register_observer
 
 		(* Uncomment if needed. Most of the time, it won't be needed for scripts.
 		on remove_observer(o) -- void
-			my debug_log(1, "  [debug] remove_observer(" & o's class & ")")
+			my Util's debug_log(1, "  [debug] remove_observer(" & o's class & ")")
 			set remaining_observers to {}
 			repeat with this_observer in _observers
 				set this_observer to this_observer's contents -- dereference
-				my debug_log(1, "  [debug] remove_observer(): comparing " & this_observer's class)
+				my Util's debug_log(1, "  [debug] remove_observer(): comparing " & this_observer's class)
 				if this_observer is not o then
 					set end of remaining_observers to this_observer
 				else
-					my debug_log(1, "  [debug] remove_observer(): removing " & this_observer's class)
+					my Util's debug_log(1, "  [debug] remove_observer(): removing " & this_observer's class)
 				end if
 			end repeat
 			set _observers to remaining_observers
@@ -3535,9 +3535,9 @@ on make_observable()
 		*)
 
 		on notify_observers() -- void -- (no argument = pull method; best practice)
-			my debug_log(1, "  [debug] notify_observers()")
+			my Util's debug_log(1, "  [debug] notify_observers()")
 			if _changed then
-				my debug_log(1, "  [debug] " & my class & ".notify_observers(): calling update()")
+				my Util's debug_log(1, "  [debug] " & my class & ".notify_observers(): calling update()")
 				repeat with i from 1 to count of _observers
 					set this_observer to _observers's item i
 					this_observer's update()
@@ -3549,9 +3549,9 @@ on make_observable()
 
 		-- Display the class names of the observers (for testing/debugging)
 		on identify_observers() --> void
-			my debug_log(1, "  [debug] " & my class & ".identify_observers() [" & _observers's length & "]...")
+			my Util's debug_log(1, "  [debug] " & my class & ".identify_observers() [" & _observers's length & "]...")
 			if _observers's length = 0 then
-				my debug_log(1, "  [debug] " & my class & ".identify_observers(): no observers")
+				my Util's debug_log(1, "  [debug] " & my class & ".identify_observers(): no observers")
 				return ""
 			else if _observers's length = 1 then
 				return _observers's item 1's class
@@ -3565,7 +3565,7 @@ on make_observable()
 					set observers_items to observers_items & ", " & this_item's class
 				end if
 			end repeat
-			my debug_log(2, "    [debug] " & observers_items)
+			my Util's debug_log(2, "    [debug] " & observers_items)
 		end identify_observers
 	end script
 end make_observable
@@ -3634,13 +3634,13 @@ on make_named_stack(_name)
 
 		on push(this_data) --> void
 			continue push(this_data)
-			my debug_log(1, "[debug] pushing " & this_data's to_string() & " onto " & _name)
+			my Util's debug_log(1, "[debug] pushing " & this_data's to_string() & " onto " & _name)
 			return
 		end push
 
 		on pop() --> anything
 			set top_item to continue pop()
-			my debug_log(1, "[debug] popping " & top_item's to_string() & " off " & _name)
+			my Util's debug_log(1, "[debug] popping " & top_item's to_string() & " off " & _name)
 			return top_item
 		end pop
 
@@ -3768,13 +3768,13 @@ on make_null_io()
 		property parent : make_io()
 
 		on write_file(file_path, this_data)
-			my debug_log(1, "[debug] " & my class & ".write_file(): would write to file")
-			my debug_log(1, linefeed & this_data)
+			my Util's debug_log(1, "[debug] " & my class & ".write_file(): would write to file")
+			my Util's debug_log(1, linefeed & this_data)
 		end write_file
 
 		on append_file(file_path, this_data)
-			my debug_log(1, "[debug] " & my class & ".append_file(): would append to file")
-			my debug_log(1, linefeed & this_data)
+			my Util's debug_log(1, "[debug] " & my class & ".append_file(): would append to file")
+			my Util's debug_log(1, linefeed & this_data)
 		end append_file
 	end script
 end make_null_io
@@ -3834,84 +3834,86 @@ on make_io()
 	end script
 end make_io
 
-(* ==== Utility Functions (Global) ==== *)
 
-on gui_scripting_status()
-	local os_ver, is_before_mavericks, ui_enabled, apple_accessibility_article
-	local err_msg, err_num, msg, t, b
+(* ==== Miscellaneous Classes ==== *)
 
-	set os_ver to system version of (system info)
+script Util -- Utility Functions
+	on gui_scripting_status()
+		local os_ver, is_before_mavericks, ui_enabled, apple_accessibility_article
+		local err_msg, err_num, msg, t, b
 
-	considering numeric strings -- version strings
-		set is_before_mavericks to os_ver < "10.9"
-	end considering
+		set os_ver to system version of (system info)
 
-	if is_before_mavericks then -- things changed in Mavericks (10.9)
-		-- check to see if assistive devices is enabled
-		tell application "System Events"
-			set ui_enabled to UI elements enabled
-		end tell
-		if ui_enabled is false then
-			tell application "System Preferences"
-				activate
-				set current pane to pane id "com.apple.preference.universalaccess"
-				display dialog "This script utilizes the built-in Graphic User Interface Scripting architecture of Mac OS X which is currently disabled." & return & return & "You can activate GUI Scripting by selecting the checkbox \"Enable access for assistive devices\" in the Accessibility preference pane." with icon 1 buttons {"Cancel"} default button 1
-			end tell
-		end if
-	else
-		-- In Mavericks (10.9) and later, the system should prompt the user with
-		-- instructions on granting accessibility access, so try to trigger that.
-		try
+		considering numeric strings -- version strings
+			set is_before_mavericks to os_ver < "10.9"
+		end considering
+
+		if is_before_mavericks then -- things changed in Mavericks (10.9)
+			-- check to see if assistive devices is enabled
 			tell application "System Events"
-				tell (first process whose frontmost is true)
-					set frontmost to true
-					tell window 1
-						UI elements
+				set ui_enabled to UI elements enabled
+			end tell
+			if ui_enabled is false then
+				tell application "System Preferences"
+					activate
+					set current pane to pane id "com.apple.preference.universalaccess"
+					display dialog "This script utilizes the built-in Graphic User Interface Scripting architecture of Mac OS X which is currently disabled." & return & return & "You can activate GUI Scripting by selecting the checkbox \"Enable access for assistive devices\" in the Accessibility preference pane." with icon 1 buttons {"Cancel"} default button 1
+				end tell
+			end if
+		else
+			-- In Mavericks (10.9) and later, the system should prompt the user with
+			-- instructions on granting accessibility access, so try to trigger that.
+			try
+				tell application "System Events"
+					tell (first process whose frontmost is true)
+						set frontmost to true
+						tell window 1
+							UI elements
+						end tell
 					end tell
 				end tell
-			end tell
-		on error err_msg number err_num
-			-- In some cases, the system prompt doesn't appear, so always give some info.
-			set msg to "Error: " & err_msg & " (" & err_num & ")"
-			if err_num is -1719 then
-				set apple_accessibility_article to "http://support.apple.com/en-us/HT202802"
-				set t to "GUI Scripting needs to be activated"
-				set msg to msg & return & return & "This script utilizes the built-in Graphic User Interface Scripting architecture of Mac OS X which is currently disabled." & return & return & "If the system doesn't prompt you with instructions for how to enable GUI scripting access, then see Apple's article at: " & return & apple_accessibility_article
-				set b to {"Go to Apple's Webpage", "Cancel"}
-				display alert t message msg buttons b default button 2
-				if button returned of result is b's item 1 then
-					tell me to open location apple_accessibility_article
+			on error err_msg number err_num
+				-- In some cases, the system prompt doesn't appear, so always give some info.
+				set msg to "Error: " & err_msg & " (" & err_num & ")"
+				if err_num is -1719 then
+					set apple_accessibility_article to "http://support.apple.com/en-us/HT202802"
+					set t to "GUI Scripting needs to be activated"
+					set msg to msg & return & return & "This script utilizes the built-in Graphic User Interface Scripting architecture of Mac OS X which is currently disabled." & return & return & "If the system doesn't prompt you with instructions for how to enable GUI scripting access, then see Apple's article at: " & return & apple_accessibility_article
+					set b to {"Go to Apple's Webpage", "Cancel"}
+					display alert t message msg buttons b default button 2
+					if button returned of result is b's item 1 then
+						tell me to open location apple_accessibility_article
+					end if
+					error number -128 --> User canceled
 				end if
-				error number -128 --> User canceled
-			end if
-		end try
-	end if
-end gui_scripting_status
+			end try
+		end if
+	end gui_scripting_status
 
-on get_front_app_name()
-	tell application "System Events"
+	on get_front_app_name()
+		tell application "System Events"
 
-		-- Ignore (Apple)Script Editor and Terminal when getting the front app
-		-- name since they can be used to launch the script
-		repeat 10 times -- limit repetitions just in case
-			set frontmost_process to first process where it is frontmost
-			if short name of frontmost_process is in {"Script Editor", "AppleScript Editor", "Terminal"} then
-				set visible of frontmost_process to false
-				repeat while (frontmost_process is frontmost)
-					delay 0.2
-				end repeat
-			else
-				exit repeat
-			end if
-		end repeat
-		set current_app to short name of first process where it is frontmost
-		--set frontmost of frontmost_process to true -- return orginal app to front
-	end tell
-	return current_app
-end get_front_app_name
+			-- Ignore (Apple)Script Editor and Terminal when getting the front app
+			-- name since they can be used to launch the script
+			repeat 10 times -- limit repetitions just in case
+				set frontmost_process to first process where it is frontmost
+				if short name of frontmost_process is in {"Script Editor", "AppleScript Editor", "Terminal"} then
+					set visible of frontmost_process to false
+					repeat while (frontmost_process is frontmost)
+						delay 0.2
+					end repeat
+				else
+					exit repeat
+				end if
+			end repeat
+			set current_app to short name of first process where it is frontmost
+			--set frontmost of frontmost_process to true -- return orginal app to front
+		end tell
+		return current_app
+	end get_front_app_name
 
-on convert_to_ascii(non_ascii_txt)
-	(*
+	on convert_to_ascii(non_ascii_txt)
+		(*
 		Transliterate Unicode characters to ASCII, ignoring any that can't be
 		represented. Also compress white space since ignoring characters can
 		leave mulitple adjacent spaces.
@@ -3928,134 +3930,135 @@ on convert_to_ascii(non_ascii_txt)
 			cannot be represented in the target character set will be silently
 			discarded.
 	*)
-	set s to "iconv -f UTF-8 -t US-ASCII//TRANSLIT//IGNORE <<<" & quoted form of non_ascii_txt & " | tr -s ' '"
-	do shell script s
-end convert_to_ascii
-
-on create_directory(posix_dir)
-	set this_dir to expand_home_path(posix_dir)
-	try
-		set s to "mkdir -pm700 " & quoted form of this_dir
+		set s to "iconv -f UTF-8 -t US-ASCII//TRANSLIT//IGNORE <<<" & quoted form of non_ascii_txt & " | tr -s ' '"
 		do shell script s
-	on error err_msg number err_num
-		error "Can't create directory: " & err_msg number err_num
-		return "Fatal Error: Can't create directory"
-	end try
-end create_directory
+	end convert_to_ascii
 
-on split_path_into_dir_and_file(file_path)
-	set path_parts to split_text(file_path, "/")
-	set dir_path to join_list(items 1 thru -2 of path_parts, "/")
-	set file_name to path_parts's last item
-	return {dir_path, file_name}
-end split_path_into_dir_and_file
+	on create_directory(posix_dir)
+		set this_dir to expand_home_path(posix_dir)
+		try
+			set s to "mkdir -pm700 " & quoted form of this_dir
+			do shell script s
+		on error err_msg number err_num
+			error "Can't create directory: " & err_msg number err_num
+			return "Fatal Error: Can't create directory"
+		end try
+	end create_directory
 
-on get_mac_path(posix_path)
-	-- Expand '~/' or '$HOME/' at the beginning of a posix file path.
-	set posix_file to expand_home_path(posix_path)
-	return POSIX file posix_file as string
-end get_mac_path
+	on split_path_into_dir_and_file(file_path)
+		set path_parts to split_text(file_path, "/")
+		set dir_path to join_list(items 1 thru -2 of path_parts, "/")
+		set file_name to path_parts's last item
+		return {dir_path, file_name}
+	end split_path_into_dir_and_file
 
--- Could alternatively use 'do shell script "echo" & space & file_path'
--- but it might be slower because of the overhead of starting up a shell.
-on expand_home_path(posix_path) --> string
-	local posix_path, posix_home, char_length
-	if posix_path starts with "~/" then
-		set char_length to 3
-	else if posix_path starts with "$HOME/" then
-		set char_length to 7
-	else
+	on get_mac_path(posix_path)
+		-- Expand '~/' or '$HOME/' at the beginning of a posix file path.
+		set posix_file to expand_home_path(posix_path)
+		return POSIX file posix_file as string
+	end get_mac_path
+
+	-- Could alternatively use 'do shell script "echo" & space & file_path'
+	-- but it might be slower because of the overhead of starting up a shell.
+	on expand_home_path(posix_path) --> string
+		local posix_path, posix_home, char_length
+		if posix_path starts with "~/" then
+			set char_length to 3
+		else if posix_path starts with "$HOME/" then
+			set char_length to 7
+		else
+			return posix_path
+		end if
+		set posix_home to get_posix_home()
+		set posix_path to posix_home & characters char_length thru -1 of posix_path as text
 		return posix_path
-	end if
-	set posix_home to get_posix_home()
-	set posix_path to posix_home & characters char_length thru -1 of posix_path as text
-	return posix_path
-end expand_home_path
+	end expand_home_path
 
-on shorten_home_path(posix_path)
-	local posix_path, posix_home
-	set posix_home to get_posix_home()
-	if posix_path starts with posix_home then
-		set posix_path to "~" & characters (posix_home's length) thru -1 of posix_path as string
-	end if
-	return posix_path
-end shorten_home_path
+	on shorten_home_path(posix_path)
+		local posix_path, posix_home
+		set posix_home to get_posix_home()
+		if posix_path starts with posix_home then
+			set posix_path to "~" & characters (posix_home's length) thru -1 of posix_path as string
+		end if
+		return posix_path
+	end shorten_home_path
 
-on get_posix_home()
-	return POSIX path of (path to home folder from user domain)
-end get_posix_home
+	on get_posix_home()
+		return POSIX path of (path to home folder from user domain)
+	end get_posix_home
 
-on multiply_text(str, n)
-	if n < 1 or str = "" then return ""
-	set lst to {}
-	repeat n times
-		set end of lst to str
-	end repeat
-	return lst as string
-end multiply_text
+	on multiply_text(str, n)
+		if n < 1 or str = "" then return ""
+		set lst to {}
+		repeat n times
+			set end of lst to str
+		end repeat
+		return lst as string
+	end multiply_text
 
-on split_text(txt, delim)
-	set old_tids to AppleScript's text item delimiters
-	try
-		set AppleScript's text item delimiters to (delim as string)
-		set lst to every text item of (txt as string)
-		set AppleScript's text item delimiters to old_tids
-		return lst
-	on error err_msg number err_num
-		set AppleScript's text item delimiters to old_tids
-		error "Can't split_text(): " & err_msg number err_num
-	end try
-end split_text
-
-on join_list(lst, delim)
-	set old_tids to AppleScript's text item delimiters
-	try
-		set AppleScript's text item delimiters to (delim as string)
-		set txt to lst as string
-		set AppleScript's text item delimiters to old_tids
-		return txt
-	on error err_msg number err_num
-		set AppleScript's text item delimiters to old_tids
-		error "Can't join_list(): " & err_msg number err_num
-	end try
-end join_list
-
-on trim_whitespace(str)
-	set white_space to space & tab & return & linefeed
-
-	-- trim start
-	try
-		set str to str's items
-		--log str
+	on split_text(txt, delim)
+		set old_tids to AppleScript's text item delimiters
 		try
-			repeat while str's first item is in white_space
-				set str to rest of str
-			end repeat
-			--return str as text -- don't return yet; still need to trim end
-		on error number -1700 -- empty list or nothing but whitespace
-			return ""
+			set AppleScript's text item delimiters to (delim as string)
+			set lst to every text item of (txt as string)
+			set AppleScript's text item delimiters to old_tids
+			return lst
+		on error err_msg number err_num
+			set AppleScript's text item delimiters to old_tids
+			error "Can't split_text(): " & err_msg number err_num
 		end try
-	on error err_msg number err_num
-		error "Can't trim start: " & err_msg number err_num
-	end try
+	end split_text
 
-	-- trim end
-	try
-		set str to reverse of str's items
-		--log str
+	on join_list(lst, delim)
+		set old_tids to AppleScript's text item delimiters
 		try
-			repeat while str's first item is in white_space
-				set str to rest of str
-			end repeat
-			return str's reverse as text
-		on error number -1700 -- empty list or nothing but whitespace
-			return ""
+			set AppleScript's text item delimiters to (delim as string)
+			set txt to lst as string
+			set AppleScript's text item delimiters to old_tids
+			return txt
+		on error err_msg number err_num
+			set AppleScript's text item delimiters to old_tids
+			error "Can't join_list(): " & err_msg number err_num
 		end try
-	on error err_msg number err_num
-		error "Can't trim end: " & err_msg number err_num
-	end try
-end trim_whitespace
+	end join_list
 
-on debug_log(_level, _msg)
-	if __DEBUG_LEVEL__ is greater than or equal to _level then log _msg
-end debug_log
+	on trim_whitespace(str)
+		set white_space to space & tab & return & linefeed
+
+		-- trim start
+		try
+			set str to str's items
+			--log str
+			try
+				repeat while str's first item is in white_space
+					set str to rest of str
+				end repeat
+				--return str as text -- don't return yet; still need to trim end
+			on error number -1700 -- empty list or nothing but whitespace
+				return ""
+			end try
+		on error err_msg number err_num
+			error "Can't trim start: " & err_msg number err_num
+		end try
+
+		-- trim end
+		try
+			set str to reverse of str's items
+			--log str
+			try
+				repeat while str's first item is in white_space
+					set str to rest of str
+				end repeat
+				return str's reverse as text
+			on error number -1700 -- empty list or nothing but whitespace
+				return ""
+			end try
+		on error err_msg number err_num
+			error "Can't trim end: " & err_msg number err_num
+		end try
+	end trim_whitespace
+
+	on debug_log(_level, _msg)
+		if __DEBUG_LEVEL__ is greater than or equal to _level then log _msg
+	end debug_log
+end script
