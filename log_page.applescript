@@ -554,7 +554,7 @@ General"
 			-- Parse any existing categories from the "Label" fields of the
 			-- bookmarks log file:
 			--
-			set s to "LANG=C sed -n 's/^Label  *|  *//p' " & quoted form of log_file_posix Â
+			set s to "LC_ALL=C sed -n 's/^Label  *|  *//p' " & quoted form of log_file_posix Â
 				& " | sort | uniq"
 			set all_category_txt to do shell script s without altering line endings
 
@@ -582,7 +582,7 @@ General"
 
 			-- Get root-level categories:
 			--
-			set s to "LANG=C echo \"" & all_category_txt Â
+			set s to "LC_ALL=C echo \"" & all_category_txt Â
 				& "\" | sed -n 's/^\\([^:]\\{1,\\}\\).*/\\1/p' | uniq"
 			set root_category_txt to do shell script s without altering line endings
 
@@ -788,7 +788,7 @@ General"
 
 		on _format_note(this_text) --> string
 			-- Line wrap the Note field (and transliterate non-ASCII characters)
-			set s to "LANG=C echo " & quoted form of my Util's convert_to_ascii(this_text) Â
+			set s to "LC_ALL=C echo " & quoted form of my Util's convert_to_ascii(this_text) Â
 				& "| fmt -w 72 | sed '1 s/^/Note  | /; 2,$ s/^/      | /'"
 			do shell script s without altering line endings
 		end _format_note

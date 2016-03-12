@@ -45,7 +45,7 @@ script
 	
 	-- Replace all placeholders
 	on _replace_placeholders(file_path) --> string
-		set s to "LANG=C cat " & file_path & " | sed -E -e " & _timestamp_pattern() & " -e " & _sample_page_pattern() & " -e " & _logfile_pattern() & " -e " & _tmpdir_pattern()
+		set s to "LC_ALL=C cat " & file_path & " | sed -E -e " & _timestamp_pattern() & " -e " & _sample_page_pattern() & " -e " & _logfile_pattern() & " -e " & _tmpdir_pattern()
 		do shell script s without altering line endings
 	end _replace_placeholders
 	
