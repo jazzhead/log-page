@@ -162,6 +162,13 @@ clean:
 	@echo "--->  Deleting distribution files..."
 	@[ -d "$(ARCHIVE)" ] && $(RM) $(ARCHIVE) || true
 	@$(RM) $(PACKAGE)-*.zip 2>/dev/null || true
+	@echo "--->  Deleting temporary test files..."
+	@[ -d "$(TEST_TMP)" ] && $(RM) $(TEST_TMP) || true
+	@echo "--->  Deletion complete"
+
+clean-test:
+	@echo "--->  Deleting temporary test files in '$(TEST_TMP)'..."
+	@[ -d "$(TEST_TMP)" ] && $(RM) $(TEST_TMP) || true
 	@echo "--->  Deletion complete"
 
 doc: $(DOC_TARGET)
@@ -179,24 +186,28 @@ dist: all doc
 
 test:
 	@echo "--->  Running Log Page tests on source script..."
+	@[ -d "$(TEST_TMP)" ] && $(RM) $(TEST_TMP) || true
 	$(PROVE) -v ./t/[0-9][0-9][0-9][0-9]-*.sh :: SKIP_INFO:true
 	@echo "--->  Deleting temporary test files in '$(TEST_TMP)'..."
 	@$(RM) $(TEST_TMP)
 
 test-quiet:
 	@echo "--->  Running Log Page tests on source script..."
+	@[ -d "$(TEST_TMP)" ] && $(RM) $(TEST_TMP) || true
 	$(PROVE) ./t/[0-9][0-9][0-9][0-9]-*.sh :: SKIP_INFO:true
 	@echo "--->  Deleting temporary test files in '$(TEST_TMP)'..."
 	@$(RM) $(TEST_TMP)
 
 test-compiled: all
 	@echo "--->  Running Log Page tests on compiled script..."
+	@[ -d "$(TEST_TMP)" ] && $(RM) $(TEST_TMP) || true
 	$(PROVE) -v ./t/[0-9][0-9][0-9][0-9]-*.sh :: SKIP_INFO:true TEST_COMPILED:true
 	@echo "--->  Deleting temporary test files in '$(TEST_TMP)'..."
 	@$(RM) $(TEST_TMP)
 
 test-compiled-quiet: all
 	@echo "--->  Running Log Page tests on compiled script..."
+	@[ -d "$(TEST_TMP)" ] && $(RM) $(TEST_TMP) || true
 	$(PROVE) ./t/[0-9][0-9][0-9][0-9]-*.sh :: SKIP_INFO:true TEST_COMPILED:true
 	@echo "--->  Deleting temporary test files in '$(TEST_TMP)'..."
 	@$(RM) $(TEST_TMP)
@@ -213,7 +224,7 @@ help:
 	@echo "$$HELPTEXT"
 
 .PHONY: all install uninstall clean doc dist help \
-        test test-quiet check check-quiet \
+        test test-quiet check check-quiet clean-test \
         install-safari install-chrome install-firefox install-webkit
 
 
@@ -345,7 +356,10 @@ make dist
     AppleScript program and the RTFD documentation file.
 
 make clean
-    Delete all build files and distribution files.
+    Delete all build files, distribution files, and temporary test files.
+
+make clean-test
+    Delete all temporary test files.
 
 make help
     Display this help.
