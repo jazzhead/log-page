@@ -17,6 +17,8 @@ user-definable category, and an optional note to a plain text file. The result
 is a categorized, chronological, plain text list of bookmarks --- a bookmarks
 log. Supported browsers: Safari, Google Chrome, Firefox, and WebKit Nightly.
 
+  ![Log Page example usage](../_build/img/log-page.png "Screen shot of Log Page example usage")
+
 
 Why
 ---
@@ -132,58 +134,6 @@ URL   | http://jazzheaddesign.com/work/code/shmark/
 ~~~
 
 
-Usage
------
-
-The following is the basic sequence to save a bookmark for a web page using Log
-Page.
-
-The initial dialog (except on the very first run of the script where you can
-set some initial preferences) displays the web page title that you can either
-edit or accept as is.
-
-  ![Initial page title dialog](img/dialog-1-s.png "Screenshot of page title dialog")
-
-The URL dialog lets you edit the URL or accept it as is.
-
-  ![URL dialog](img/dialog-2-s.png "Screenshot of URL dialog")
-
-Next you choose a top-level category for your bookmark. Limiting the first
-category dialog to just root categories like this really saves time (less
-scrolling) if you have lots of subcategories. You'll also see other actions you
-can take such as viewing some script help or info, setting preferences, editing
-or viewing the bookmarks log file, or just creating a brand new category if you
-know you haven't already defined one that's applicable.
-
-  ![Root category dialog](img/dialog-3-s.png "Screenshot of root category dialog")
-
-The next dialog shows all the subcategories under the top-level category that
-you selected in the previous dialog. If you don't see an applicable
-subcategory, just select any category since you'll be able to edit your
-selection in the next dialog.
-
-  ![Subcategory dialog](img/dialog-4-s.png "Screenshot of subcategory dialog")
-
-Accept the category/subcategories that you selected or edit to create a new
-category/subcategory.
-
-  ![Category edit dialog](img/dialog-5-s.png "Screenshot of category edit dialog")
-
-Add an optional note. The note can be any length; just keep typing. The note
-will be automatically line-wrapped if necessary before it is written to the log
-file.
-
-  ![Note dialog](img/dialog-6-s.png "Screenshot of note dialog")
-
-Click the Save button and your new bookmark will be written to your bookmarks
-log file. Additionally, the category/subcategory that you selected will be the
-default the next time you run the script. That's a real time saver when saving
-a bunch of bookmarks on a particular subject because you can repeatedly hit the
-Return key to quickly cycle through the dialogs. You'll also notice that there
-is always a Back button to take you back to the previous dialog. You can keep
-going back all the way to the first dialog.
-
-
 Installation
 ------------
 
@@ -219,28 +169,33 @@ version of Mac OS X you're running. For Snow Leopard (10.6) and later, it is a
 preference setting in the AppleScript Editor app called "Show Script menu in
 menu bar":
 
-  ![Script menu setting](img/scriptmenu-s.png "Screenshot of Script menu setting")
+  ![Script menu setting](img/common/scriptmenu-s.png "Screen shot of Script menu setting")
 
 
 Development
 -----------
 
 Although the primary function of this script is pretty basic, the user
-interface consists of many different AppleScript dialog windows (only a few are
-shown above) along with full navigation history between those dialogs. To keep
-everything maintainable, the script was written using Model-View-Controller
-(MVC) and other object-oriented design patterns. Additionally, a custom GUI
-AppleScript test suite is included with the [source code] for running
-fully-automated integration tests (over 1,100 currently).
+interface consists of many different AppleScript dialog windows (only a couple
+are shown above) along with full navigation history between those dialogs. To
+keep everything maintainable, the script was written using
+Model-View-Controller (MVC) and other object-oriented design patterns such as
+the Factory Pattern. Additionally, a custom GUI AppleScript test suite is
+included with the [source code] for running fully-automated integration tests
+(over 1,100 currently).
 
 For more developer notes, see the README files included in the [source code]
 repo.
+
+  ![Log Page source code](../_build/img/log-page-dev.png "Screen shot of Log Page source code and test results")
 
 
 Bugs
 ----
 
-Please report any bugs using the GitHub [issue tracker].
+Please report any bugs using the GitHub [issue tracker]. If you don't have a
+GitHub account, you can instead use the email contact form for this project's
+[website].
 
 
 Credits
