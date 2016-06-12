@@ -51,7 +51,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 property __SCRIPT_NAME__ : "Log Page"
 property __SCRIPT_VERSION__ : "@@VERSION@@"
 property __SCRIPT_AUTHOR__ : "Steve Wheeler"
-property __SCRIPT_COPYRIGHT__ : "Copyright © 2011Ð2016 " & __SCRIPT_AUTHOR__
+property __SCRIPT_COPYRIGHT__ : "Copyright ï¿½ 2011ï¿½2016 " & __SCRIPT_AUTHOR__
 property __SCRIPT_WEBSITE__ : "http://jazzheaddesign.com/work/code/log-page/"
 
 property __NAMESPACE__ : "Jazzhead"
@@ -68,19 +68,19 @@ property __SCRIPT_LICENSE__ : __SCRIPT_COPYRIGHT__ & return & "All rights reserv
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
 
-  ¥ Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+  ï¿½ Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
 
-  ¥ Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+  ï¿½ Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
 
-  ¥ Neither the name of the copyright holder nor the names of contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+  ï¿½ Neither the name of the copyright holder nor the names of contributors may be used to endorse or promote products derived from this software without specific prior written permission.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
 
 on run argv -- argv is for 'run script with parameters' or osascript cli arguments
 	-- Initialize any script properties here that should not be hardcoded
 	set __PLIST_DIR__ to POSIX path of (path to preferences from user domain)
-	set __DEFAULT_LOGFILE__ to Â
-		POSIX path of (path to application support folder from user domain) Â
+	set __DEFAULT_LOGFILE__ to ï¿½
+		POSIX path of (path to application support folder from user domain) ï¿½
 		& __NAMESPACE__ & "/" & __SCRIPT_NAME__ & "/urls.txt"
 
 	-- Override any default script properties
@@ -259,36 +259,36 @@ on make_app_controller()
 			--
 			about_controller's set_controllers({license_controller})
 			help_controller's set_controllers({settings_controller})
-			title_controller's set_controllers({Â
-				help_controller, Â
+			title_controller's set_controllers({ï¿½
+				help_controller, ï¿½
 				url_controller})
 			url_controller's set_controllers({label_controller})
-			label_controller's set_controllers({Â
-				sub_label_controller, Â
-				all_label_controller, Â
-				label_edit_controller, Â
-				file_editor_controller, Â
-				file_viewer_controller, Â
-				settings_controller, Â
-				about_controller, Â
-				help_controller, Â
+			label_controller's set_controllers({ï¿½
+				sub_label_controller, ï¿½
+				all_label_controller, ï¿½
+				label_edit_controller, ï¿½
+				file_editor_controller, ï¿½
+				file_viewer_controller, ï¿½
+				settings_controller, ï¿½
+				about_controller, ï¿½
+				help_controller, ï¿½
 				label_help_controller})
-			sub_label_controller's set_controllers({Â
-				label_edit_controller, Â
-				all_label_controller, Â
-				file_editor_controller, Â
-				file_viewer_controller, Â
-				settings_controller, Â
-				about_controller, Â
-				help_controller, Â
+			sub_label_controller's set_controllers({ï¿½
+				label_edit_controller, ï¿½
+				all_label_controller, ï¿½
+				file_editor_controller, ï¿½
+				file_viewer_controller, ï¿½
+				settings_controller, ï¿½
+				about_controller, ï¿½
+				help_controller, ï¿½
 				label_help_controller})
-			all_label_controller's set_controllers({Â
-				label_edit_controller, Â
-				file_editor_controller, Â
-				file_viewer_controller, Â
-				settings_controller, Â
-				about_controller, Â
-				help_controller, Â
+			all_label_controller's set_controllers({ï¿½
+				label_edit_controller, ï¿½
+				file_editor_controller, ï¿½
+				file_viewer_controller, ï¿½
+				settings_controller, ï¿½
+				about_controller, ï¿½
+				help_controller, ï¿½
 				label_help_controller})
 			label_edit_controller's set_controllers({note_controller})
 
@@ -387,9 +387,9 @@ Health:Diet
 Health:Fitness
 General"
 		-- Sample bookmarks if the bookmarks log file is new.
-		property _sample_bookmarks : {Â
-			{_label:"Development:AppleScript", _title:"Log Page - AppleScript for Plain Text, Timestamped, Categorized Web Bookmarks", _url:"http://jazzheaddesign.com/work/code/log-page/", _note:"Developer notes:  OOP, MVC, object-oriented design patterns"}, Â
-			{_label:"Development:AppleScript:Safari", _title:"Resize Window - AppleScript for Mac OS X That Quickly Resizes Windows", _url:"http://jazzheaddesign.com/work/code/resize-window/", _note:"Useful when designing responsive websites that adapt to different sizes."}, Â
+		property _sample_bookmarks : {ï¿½
+			{_label:"Development:AppleScript", _title:"Log Page - AppleScript for Plain Text, Timestamped, Categorized Web Bookmarks", _url:"http://jazzheaddesign.com/work/code/log-page/", _note:"Developer notes:  OOP, MVC, object-oriented design patterns"}, ï¿½
+			{_label:"Development:AppleScript:Safari", _title:"Resize Window - AppleScript for Mac OS X That Quickly Resizes Windows", _url:"http://jazzheaddesign.com/work/code/resize-window/", _note:"Useful when designing responsive websites that adapt to different sizes."}, ï¿½
 			{_label:"Development:Shell:Bash", _title:"shmark - Categorized Shell Directory Bookmarking for Bash", _url:"http://jazzheaddesign.com/work/code/shmark/", _note:missing value}}
 
 		property _log_header_sep : my Util's multiply_text("#", 80)
@@ -482,7 +482,7 @@ General"
 			set sub_categories to {}
 			repeat with this_cat in _all_categories
 				set this_cat to this_cat's contents -- dereference
-				if this_cat is _chosen_root_category Â
+				if this_cat is _chosen_root_category ï¿½
 					or this_cat starts with (_chosen_root_category & ":") then
 					set end of sub_categories to this_cat
 				end if
@@ -554,7 +554,7 @@ General"
 			-- Parse any existing categories from the "Label" fields of the
 			-- bookmarks log file:
 			--
-			set s to "LC_ALL=C sed -n 's/^Label  *|  *//p' " & quoted form of log_file_posix Â
+			set s to "LC_ALL=C sed -n 's/^Label  *|  *//p' " & quoted form of log_file_posix ï¿½
 				& " | sort | uniq"
 			set all_category_txt to do shell script s without altering line endings
 
@@ -582,7 +582,7 @@ General"
 
 			-- Get root-level categories:
 			--
-			set s to "LC_ALL=C echo \"" & all_category_txt Â
+			set s to "LC_ALL=C echo \"" & all_category_txt ï¿½
 				& "\" | sed -n 's/^\\([^:]\\{1,\\}\\).*/\\1/p' | uniq"
 			set root_category_txt to do shell script s without altering line endings
 
@@ -752,7 +752,7 @@ General"
 			set rule_char to "-"
 			set rule_width to 80 -- total width
 			set name_col_width to 7 -- name column width only
-			return "" & my Util's multiply_text(rule_char, name_col_width - 1) & Â
+			return "" & my Util's multiply_text(rule_char, name_col_width - 1) & ï¿½
 				"+" & my Util's multiply_text(rule_char, rule_width - name_col_width)
 		end _set_record_delimiter
 
@@ -760,10 +760,10 @@ General"
 			local field_sep, final_text
 
 			set field_sep to " | "
-			set final_text to my Util's join_list({Â
-				"Date " & field_sep & _format_date(), Â
-				"Label" & field_sep & _label, Â
-				"Title" & field_sep & _title, Â
+			set final_text to my Util's join_list({ï¿½
+				"Date " & field_sep & _format_date(), ï¿½
+				"Label" & field_sep & _label, ï¿½
+				"Title" & field_sep & _title, ï¿½
 				"URL  " & field_sep & _url}, linefeed) & linefeed
 			if _note is not missing value then
 				set final_text to final_text & _format_note(_note)
@@ -788,7 +788,7 @@ General"
 
 		on _format_note(this_text) --> string
 			-- Line wrap the Note field (and transliterate non-ASCII characters)
-			set s to "LC_ALL=C echo " & quoted form of my Util's convert_to_ascii(this_text) Â
+			set s to "LC_ALL=C echo " & quoted form of my Util's convert_to_ascii(this_text) ï¿½
 				& "| fmt -w 72 | sed '1 s/^/Note  | /; 2,$ s/^/      | /'"
 			do shell script s without altering line endings
 		end _format_note
@@ -2354,18 +2354,18 @@ on make_base_view()
 
 		(* == Unicode Characters for Views == *)
 
-		property u_dash : Çdata utxt2500È as Unicode text -- BOX DRAWINGS LIGHT HORIZONTAL
+		property u_dash : ï¿½data utxt2500ï¿½ as Unicode text -- BOX DRAWINGS LIGHT HORIZONTAL
 
-		property u_back : Çdata utxt276EÈ as Unicode text -- HEAVY LEFT-POINTING ANGLE QUOTATION MARK ORNAMENT
-		-- property u_back : Çdata utxt25C0È as Unicode text -- BLACK LEFT-POINTING TRIANGLE
-		--property u_back : Çdata utxt2B05È as Unicode text -- LEFTWARDS BLACK ARROW
+		property u_back : ï¿½data utxt276Eï¿½ as Unicode text -- HEAVY LEFT-POINTING ANGLE QUOTATION MARK ORNAMENT
+		-- property u_back : ï¿½data utxt25C0ï¿½ as Unicode text -- BLACK LEFT-POINTING TRIANGLE
+		--property u_back : ï¿½data utxt2B05ï¿½ as Unicode text -- LEFTWARDS BLACK ARROW
 
-		property u_bullet : Çdata utxt25CFÈ as Unicode text -- BLACK CIRCLE
-		--property u_bullet : "¥" -- standard bullet, but slightly smaller than Unicode black circle
-		--property u_bullet : Çdata utxt2043È as Unicode text -- HYPHEN BULLET
-		--property u_bullet : Çdata utxt25A0È as Unicode text -- BLACK SQUARE
-		--property u_bullet : Çdata utxt25B6È as Unicode text -- BLACK RIGHT-POINTING TRIANGLE
-		--property u_bullet : Çdata utxt27A1È as Unicode text -- BLACK RIGHTWARDS ARROW
+		property u_bullet : ï¿½data utxt25CFï¿½ as Unicode text -- BLACK CIRCLE
+		--property u_bullet : "ï¿½" -- standard bullet, but slightly smaller than Unicode black circle
+		--property u_bullet : ï¿½data utxt2043ï¿½ as Unicode text -- HYPHEN BULLET
+		--property u_bullet : ï¿½data utxt25A0ï¿½ as Unicode text -- BLACK SQUARE
+		--property u_bullet : ï¿½data utxt25B6ï¿½ as Unicode text -- BLACK RIGHT-POINTING TRIANGLE
+		--property u_bullet : ï¿½data utxt27A1ï¿½ as Unicode text -- BLACK RIGHTWARDS ARROW
 
 		(* == View Components == *)
 
@@ -2459,10 +2459,10 @@ on make_about_view(view_controller)
 		end action_performed
 
 		on _set_prompt() --> void -- PRIVATE
-			set _prompt to Â
-				"Log timestamped, categorized web bookmarks to a text file." & return & return Â
-				& "Version " & __SCRIPT_VERSION__ & return & return & return & return Â
-				& __SCRIPT_COPYRIGHT__ & return & return Â
+			set _prompt to ï¿½
+				"Log timestamped, categorized web bookmarks to a text file." & return & return ï¿½
+				& "Version " & __SCRIPT_VERSION__ & return & return & return & return ï¿½
+				& __SCRIPT_COPYRIGHT__ & return & return ï¿½
 				& __SCRIPT_LICENSE_SUMMARY__ & return
 		end _set_prompt
 	end script
@@ -2506,10 +2506,10 @@ on make_help_view(view_controller, settings_model)
 		end update
 
 		on _set_prompt() --> void -- PRIVATE
-			set _prompt to my _app_description & " The current settings are:" & return & return Â
-				& tab & "Log File:" & tab & tab & _log_file & return & return Â
-				& tab & "File Viewer:" & tab & _file_viewer & return & return Â
-				& tab & "Text Editor:" & tab & _text_editor & return & return Â
+			set _prompt to my _app_description & " The current settings are:" & return & return ï¿½
+				& tab & "Log File:" & tab & tab & _log_file & return & return ï¿½
+				& tab & "File Viewer:" & tab & _file_viewer & return & return ï¿½
+				& tab & "Text Editor:" & tab & _text_editor & return & return ï¿½
 				& "You can change those settings by clicking \"Preferences\"."
 		end _set_prompt
 	end script
@@ -2525,10 +2525,10 @@ on make_label_help_view()
 
 		property _title : __SCRIPT_NAME__ & " Category Help"
 		property _buttons : {"Cancel", "OK"}
-		property _prompt : "Assign a category and/or subcategories to the logged bookmark by using a colon (:) to separate subcategories. Subcategories delimited in such a way represent a nested hierarchy. For example, a category (also called a label in the bookmarks log file) of \"Development:AppleScript:Mail\" could be thought of as a nested list as in:" & return & return Â
-			& tab & "¥ Development" & return Â
-			& tab & tab & "¥ AppleScript" & return Â
-			& tab & tab & tab & "¥ Mail"
+		property _prompt : "Assign a category and/or subcategories to the logged bookmark by using a colon (:) to separate subcategories. Subcategories delimited in such a way represent a nested hierarchy. For example, a category (also called a label in the bookmarks log file) of \"Development:AppleScript:Mail\" could be thought of as a nested list as in:" & return & return ï¿½
+			& tab & "ï¿½ Development" & return ï¿½
+			& tab & tab & "ï¿½ AppleScript" & return ï¿½
+			& tab & tab & tab & "ï¿½ Mail"
 
 		on create_view() --> void
 			with timeout of (10 * 60) seconds
@@ -2732,17 +2732,17 @@ on make_label_base_view(main_model)
 
 		on get_base_menu_items(menu_rule) --> array
 			local menu_rule
-			return {Â
-				_bullet & "Edit Log File", Â
-				_bullet & "View Log File", Â
-				menu_rule, Â
-				_bullet & "Preferences...", Â
-				menu_rule, Â
-				_bullet & "About " & __SCRIPT_NAME__, Â
-				_bullet & "Help", Â
-				_bullet & "Category Help", Â
-				menu_rule, Â
-				_bullet & "Quit " & __SCRIPT_NAME__, Â
+			return {ï¿½
+				_bullet & "Edit Log File", ï¿½
+				_bullet & "View Log File", ï¿½
+				menu_rule, ï¿½
+				_bullet & "Preferences...", ï¿½
+				menu_rule, ï¿½
+				_bullet & "About " & __SCRIPT_NAME__, ï¿½
+				_bullet & "Help", ï¿½
+				_bullet & "Category Help", ï¿½
+				menu_rule, ï¿½
+				_bullet & "Quit " & __SCRIPT_NAME__, ï¿½
 				menu_rule}
 		end get_base_menu_items
 
@@ -2831,9 +2831,9 @@ on make_label_view(view_controller, label_base_view)
 
 		on set_menu() --> void
 			local these_items
-			set these_items to {Â
-				_bullet & "Show All Categories...", Â
-				_bullet & "New Category...", Â
+			set these_items to {ï¿½
+				_bullet & "Show All Categories...", ï¿½
+				_bullet & "New Category...", ï¿½
 				_menu_rule} & my get_base_menu_items(_menu_rule)
 			set _menu_items to my number_menu_items(these_items, _menu_rule) & my _root_categories
 		end set_menu
@@ -2892,8 +2892,8 @@ on make_sub_label_view(view_controller, label_base_view)
 
 		on set_menu() --> void
 			local these_items
-			set these_items to {Â
-				_bullet & "Show All Categories...", Â
+			set these_items to {ï¿½
+				_bullet & "Show All Categories...", ï¿½
 				_menu_rule} & my get_base_menu_items(_menu_rule)
 			set _menu_items to my number_menu_items(these_items, _menu_rule) & my _sub_categories
 		end set_menu
@@ -3019,8 +3019,8 @@ on make_label_edit_view(view_controller, main_model)
 		end update
 
 		on _set_prompt() --> void -- PRIVATE
-			set _prompt to "TITLE:" & return & tab & _page_title & return & return Â
-				& "URL:" & return & tab & _page_url & return & return Â
+			set _prompt to "TITLE:" & return & tab & _page_title & return & return ï¿½
+				& "URL:" & return & tab & _page_url & return & return ï¿½
 				& "Please provide a category and any optional subcategories (or edit your selected category) for the web page bookmark. Use a colon to separate subcategories. Example: \"Development:AppleScript:Mail\""
 		end _set_prompt
 	end script
@@ -3072,9 +3072,9 @@ on make_note_view(view_controller, main_model)
 		end update
 
 		on _set_prompt() --> void -- PRIVATE
-			set _prompt to "TITLE:" & return & tab & _page_title & return & return Â
-				& "URL:" & return & tab & _page_url & return & return Â
-				& "CATEGORY:" & return & tab & _page_label & return & return Â
+			set _prompt to "TITLE:" & return & tab & _page_title & return & return ï¿½
+				& "URL:" & return & tab & _page_url & return & return ï¿½
+				& "CATEGORY:" & return & tab & _page_label & return & return ï¿½
 				& "Optionally add a short note. Just leave the field blank if you don't want to add a note."
 		end _set_prompt
 	end script
@@ -3119,10 +3119,10 @@ on make_settings_first_view(settings_controller, settings_model)
 		end action_performed
 
 		on _set_prompt() --> void -- PRIVATE
-			set _prompt to my _app_description & " The defaults are:" & return & return Â
-				& tab & "Log File:" & tab & tab & _model's get_default_log_file() & return & return Â
-				& tab & "File Viewer:" & tab & _model's get_default_file_viewer() & return & return Â
-				& tab & "Text Editor:" & tab & _model's get_default_text_editor() & return & return Â
+			set _prompt to my _app_description & " The defaults are:" & return & return ï¿½
+				& tab & "Log File:" & tab & tab & _model's get_default_log_file() & return & return ï¿½
+				& tab & "File Viewer:" & tab & _model's get_default_file_viewer() & return & return ï¿½
+				& tab & "Text Editor:" & tab & _model's get_default_text_editor() & return & return ï¿½
 				& "You can continue using those defaults or change the settings now. You can also change the settings later by selecting the \"Preferences\" item from any list dialog. (You would have to manually move your old bookmarks log file though if you wanted to keep appending to it.)"
 		end _set_prompt
 	end script
@@ -3170,9 +3170,9 @@ on make_settings_main_view(settings_controller, settings_model)
 		end update
 
 		on _set_prompt() --> void -- PRIVATE
-			set _prompt to "Choose a different bookmarks log file, file viewer, or text editor. The current settings are:" & return & return Â
-				& tab & "Log File:" & tab & tab & _log_file & return & return Â
-				& tab & "File Viewer:" & tab & _file_viewer & return & return Â
+			set _prompt to "Choose a different bookmarks log file, file viewer, or text editor. The current settings are:" & return & return ï¿½
+				& tab & "Log File:" & tab & tab & _log_file & return & return ï¿½
+				& tab & "File Viewer:" & tab & _file_viewer & return & return ï¿½
 				& tab & "Text Editor:" & tab & _text_editor & return & return
 		end _set_prompt
 	end script
@@ -3222,8 +3222,8 @@ on make_settings_app_view(settings_controller, settings_model)
 		end update
 
 		on _set_prompt() --> void -- PRIVATE
-			set _prompt to "Choose an application for editing or viewing the bookmarks log file. The current settings are:" & return & return Â
-				& tab & "File Viewer:" & tab & _file_viewer & return & return Â
+			set _prompt to "Choose an application for editing or viewing the bookmarks log file. The current settings are:" & return & return ï¿½
+				& tab & "File Viewer:" & tab & _file_viewer & return & return ï¿½
 				& tab & "Text Editor:" & tab & _text_editor & return & return
 		end _set_prompt
 	end script
@@ -3355,13 +3355,13 @@ on make_settings_file_view(settings_controller, settings_model)
 		property _title : __SCRIPT_NAME__ & " > Preferences > Choose File"
 		property _prompt : "Choose a plain text file in which to save bookmarks:"
 		property _menu_rule : my Util's multiply_text(my u_dash, 19)
-		property _menu_items_base : {Â
-			"Use Default File...", Â
-			"Choose Existing File...", Â
-			"Create New File...", Â
-			_menu_rule, Â
-			"Type in File Path...		(Advanced)", Â
-			_menu_rule, Â
+		property _menu_items_base : {ï¿½
+			"Use Default File...", ï¿½
+			"Choose Existing File...", ï¿½
+			"Create New File...", ï¿½
+			_menu_rule, ï¿½
+			"Type in File Path...		(Advanced)", ï¿½
+			_menu_rule, ï¿½
 			"Quit " & __SCRIPT_NAME__}
 		property _menu_items : missing value
 
@@ -3489,7 +3489,7 @@ on make_settings_file_view(settings_controller, settings_model)
 			if _warn_before_editing then
 				set _menu_items to _menu_items_base
 			else
-				set _menu_items to _menu_items_base Â
+				set _menu_items to _menu_items_base ï¿½
 					& {_menu_rule, "Reset File Edit Warning..."}
 			end if
 		end update_menu
@@ -3802,9 +3802,9 @@ on make_io()
 		on _write_file(file_path, this_data, data_class, should_append_data)
 			try
 				set file_path to file_path as text
-				set file_handle to Â
+				set file_handle to ï¿½
 					open for access file file_path with write permission
-				if not should_append_data then Â
+				if not should_append_data then ï¿½
 					set eof of the file_handle to 0
 				write this_data as data_class to file_handle starting at eof
 				close access file_handle
@@ -3907,7 +3907,7 @@ script Util -- Utility Functions
 				end if
 			end repeat
 			set current_app to short name of first process where it is frontmost
-			--set frontmost of frontmost_process to true -- return orginal app to front
+			--set frontmost of frontmost_process to true -- return original app to front
 		end tell
 		return current_app
 	end get_front_app_name
