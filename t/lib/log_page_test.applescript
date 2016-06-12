@@ -173,7 +173,7 @@ script
 			--
 			-- The specific process id must be targeted because when running
 			-- the tests from the command-line, there will be at least two
-			-- osascript processes, so targetting by name or reference will not
+			-- osascript processes, so targeting by name or reference will not
 			-- work. The process id is captured in a variable so that it can be
 			-- accessed by any other handlers that need it.
 			--
@@ -529,15 +529,15 @@ script
 				log "# " & err_msg & " (" & err_num & ")"
 			end try
 			if not __SKIP_INFO__ then
-				set m to "Test number " & test_num & " failed (test " & group_count & " of test group " & my name & "/" & test_group & "). The rest of the tests were not run." & return & return & Â
-					"Tests passed:" & return & return Â
+				set m to "Test number " & test_num & " failed (test " & group_count & " of test group " & my name & "/" & test_group & "). The rest of the tests were not run." & return & return & ï¿½
+					"Tests passed:" & return & return ï¿½
 					& my _format_group_list(test_groups_passed)
 				set alert_type to critical
 			end if
 		else
 			if not __SKIP_INFO__ then
-				set m to "All " & _test_count & " tests passed successfully." & return & return & Â
-					"Tests passed (by group):" & return & return Â
+				set m to "All " & _test_count & " tests passed successfully." & return & return & ï¿½
+					"Tests passed (by group):" & return & return ï¿½
 					& my _format_group_list(test_groups_passed)
 				set alert_type to informational
 			end if
